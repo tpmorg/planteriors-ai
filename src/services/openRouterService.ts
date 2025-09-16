@@ -1,5 +1,6 @@
 import { GenerationRequest } from '../types';
 import { env } from '../utils/env';
+import * as FileSystem from 'expo-file-system';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_NAME = 'google/gemini-2.5-flash-image-preview';
@@ -27,12 +28,22 @@ export class OpenRouterService {
       console.log('Image URI:', request.imageUri);
 
       // Check if it's a local file URI and convert to base64
-      let imageUrl = request.imageUri;
+      let imageData = request.imageUri;
       if (request.imageUri.startsWith('file://')) {
         console.log('Converting local file to base64...');
-        // For now, we'll use a placeholder URL since base64 conversion requires additional setup
-        imageUrl = 'https://picsum.photos/800/600?random=1';
-        console.log('Using placeholder image instead of local file');
+        try {
+          const base64 = await FileSystem.readAsStringAsync(request.imageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          // Get the file extension to determine MIME type
+          const extension = request.imageUri.split('.').pop()?.toLowerCase();
+          const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+          imageData = `data:${mimeType};base64,${base64}`;
+          console.log('Successfully converted to base64');
+        } catch (error) {
+          console.error('Failed to convert image to base64:', error);
+          throw new Error('Failed to process image file');
+        }
       }
 
       const response = await fetch(OPENROUTER_API_URL, {
@@ -56,7 +67,7 @@ export class OpenRouterService {
                 {
                   type: 'image_url',
                   image_url: {
-                    url: imageUrl,
+                    url: imageData,
                     detail: 'high'
                   },
                 },
