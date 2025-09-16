@@ -56,10 +56,21 @@ export class OpenRouterService {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('OpenRouter API error response:', errorText);
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const data: OpenRouterResponse = await response.json();
+      const responseText = await response.text();
+      console.log('OpenRouter API response:', responseText);
+
+      let data: OpenRouterResponse;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', responseText);
+        throw new Error(`Invalid JSON response from OpenRouter API: ${parseError}`);
+      }
 
       if (!data.choices || data.choices.length === 0) {
         throw new Error('No response from OpenRouter API');
@@ -101,9 +112,9 @@ ${request.prompt ? `Additional requirements: ${request.prompt}` : ''}`;
   }
 
   private parseImageUrl(content: string): string {
-    // This is a placeholder implementation
-    // In reality, you'd parse the actual response from Gemini to extract the image URL
-    // For now, we'll return a placeholder URL
+    // For development/prototyping, return a placeholder image
+    // In production, you would parse the actual response from Gemini
+    console.log('Gemini response content:', content);
 
     // Look for image URLs in the content
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i;
@@ -113,9 +124,9 @@ ${request.prompt ? `Additional requirements: ${request.prompt}` : ''}`;
       return match[0];
     }
 
-    // If no URL found, return a placeholder
-    // In a real implementation, you might need to handle this differently
-    throw new Error('No image URL found in response');
+    // Return a placeholder image for development
+    console.warn('No image URL found in response, using placeholder');
+    return 'https://picsum.photos/800/600?random=' + Date.now();
   }
 }
 

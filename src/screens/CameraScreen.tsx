@@ -46,7 +46,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -143,7 +143,8 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         </TouchableOpacity>
       </View>
 
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+      <View style={styles.cameraContainer}>
+        <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
         <View style={styles.cameraOverlay}>
           <View style={styles.guideline}>
             <Text style={styles.guidelineText}>
@@ -151,7 +152,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
             </Text>
           </View>
         </View>
-      </CameraView>
+      </View>
 
       <View style={styles.controls}>
         <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
@@ -206,13 +207,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
   },
+  cameraContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   camera: {
     flex: 1,
   },
   cameraOverlay: {
-    flex: 1,
-    justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 50,
   },
   guideline: {
     position: 'absolute',
