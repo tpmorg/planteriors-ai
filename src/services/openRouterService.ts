@@ -33,13 +33,14 @@ export class OpenRouterService {
         console.log('Converting local file to base64...');
         try {
           const base64 = await FileSystem.readAsStringAsync(request.imageUri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64',
           });
+
           // Get the file extension to determine MIME type
           const extension = request.imageUri.split('.').pop()?.toLowerCase();
           const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
           imageData = `data:${mimeType};base64,${base64}`;
-          console.log('Successfully converted to base64');
+          console.log('Successfully converted to base64, length:', base64.length);
         } catch (error) {
           console.error('Failed to convert image to base64:', error);
           throw new Error('Failed to process image file');
