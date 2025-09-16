@@ -1,7 +1,7 @@
 import { GenerationRequest } from '../types';
 import { env } from '../utils/env';
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
 const MODEL_NAME = 'google/gemini-2.5-flash-image-preview';
 
 interface OpenRouterResponse {
