@@ -3,6 +3,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
+import { env } from '../utils/env';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,7 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: 'YOUR_GOOGLE_CLIENT_ID', // Will be configured in app.json
+      clientId: env.getGoogleClientId(),
       scopes: ['openid', 'profile', 'email'],
       additionalParameters: {},
       customParameters: {

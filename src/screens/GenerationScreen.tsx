@@ -19,7 +19,7 @@ interface GenerationScreenProps {
   onBack: () => void;
 }
 
-const OPENROUTER_API_KEY = 'YOUR_OPENROUTER_API_KEY'; // Will be configured in environment
+// API key is now managed through environment configuration
 
 export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   request,
@@ -73,7 +73,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       }
 
       // Actual API call
-      const openRouterService = createOpenRouterService(OPENROUTER_API_KEY);
+      const openRouterService = createOpenRouterService();
       const generatedUri = await openRouterService.generatePlantImage(request);
 
       const result: GeneratedImage = {

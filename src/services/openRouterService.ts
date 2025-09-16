@@ -1,4 +1,5 @@
 import { GenerationRequest } from '../types';
+import { env } from '../utils/env';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_NAME = 'google/gemini-2.5-flash-image-preview';
@@ -118,6 +119,7 @@ ${request.prompt ? `Additional requirements: ${request.prompt}` : ''}`;
   }
 }
 
-export const createOpenRouterService = (apiKey: string) => {
-  return new OpenRouterService(apiKey);
+export const createOpenRouterService = (apiKey?: string) => {
+  const key = apiKey || env.getOpenRouterApiKey();
+  return new OpenRouterService(key);
 };

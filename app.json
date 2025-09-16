@@ -63,7 +63,14 @@
     },
     "extra": {
       "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
-      "openRouterApiKey": "YOUR_OPENROUTER_API_KEY"
+      "googleClientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
+      "openRouterApiKey": "YOUR_OPENROUTER_API_KEY",
+      "appName": "PlantAI Interior",
+      "appScheme": "plant-interior-ai",
+      "appDomain": "plant-interior-ai.app",
+      "appleClientId": "YOUR_APPLE_CLIENT_ID",
+      "debugMode": false,
+      "apiTimeout": 30000
     }
   }
 }

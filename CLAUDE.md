@@ -20,7 +20,19 @@ npm install
 ```
 
 2. **Configure Environment Variables**
-Update `app.json` with your API keys:
+
+Method 1 - Using .env.local (Recommended):
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your actual values:
+```env
+GOOGLE_CLIENT_ID=your_actual_google_client_id
+OPENROUTER_API_KEY=your_actual_openrouter_api_key
+```
+
+Method 2 - Direct app.json configuration:
 ```json
 {
   "expo": {

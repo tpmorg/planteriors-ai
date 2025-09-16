@@ -47,7 +47,18 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 
 3. **Configure your API keys**
 
-   Update the `app.json` file with your credentials:
+   Copy the environment template and add your credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Edit `.env.local` with your actual values:
+   ```env
+   GOOGLE_CLIENT_ID=your_actual_google_client_id
+   OPENROUTER_API_KEY=your_actual_openrouter_api_key
+   ```
+
+   **Alternative:** Update the `app.json` file directly:
    ```json
    {
      "expo": {

@@ -8,6 +8,7 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { CameraScreen } from './src/screens/CameraScreen';
 import { PlantSelectionScreen } from './src/screens/PlantSelectionScreen';
 import { GenerationScreen } from './src/screens/GenerationScreen';
+import { EnvValidator } from './src/components/EnvValidator';
 import { GenerationRequest, GeneratedImage, PlantType, PlantStyle } from './src/types';
 
 type RootStackParamList = {
@@ -105,9 +106,11 @@ function GenerationScreenWrapper({ route, navigation }: any) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <StatusBar style="auto" />
-      <AppContent />
-    </AuthProvider>
+    <EnvValidator>
+      <AuthProvider>
+        <StatusBar style="auto" />
+        <AppContent />
+      </AuthProvider>
+    </EnvValidator>
   );
 }
