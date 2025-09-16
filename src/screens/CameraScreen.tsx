@@ -34,6 +34,8 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           base64: false,
+          skipProcessing: true,
+          mute: true,
         });
         setPreviewImage(photo.uri);
       } catch (error) {

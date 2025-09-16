@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GenerationRequest, GeneratedImage } from '../types';
-import { createOpenRouterService } from '../services/openRouterService';
+import { createGeminiService } from '../services/geminiService';
 
 interface GenerationScreenProps {
   request: GenerationRequest;
@@ -30,6 +30,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
+  const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fadeAnim = new Animated.Value(0);
@@ -73,26 +74,17 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       }
 
       // Actual API call
-      const openRouterService = createOpenRouterService();
-      const generatedUri = await openRouterService.generatePlantImage(request);
-
-      const result: GeneratedImage = {
-        id: Date.now().toString(),
-        originalImageUri: request.imageUri,
-        generatedImageUri: generatedUri,
-        plantType: request.plantType,
-        plantStyle: request.plantStyle,
-        prompt: request.prompt || '',
-        createdAt: new Date(),
-      };
+      const geminiService = createGeminiService();
+      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(request);
 
       setGeneratedImageUri(generatedUri);
+      setIsImageGenerated(isGenerated);
       setIsGenerating(false);
 
-      // Auto-complete after a short delay to show the result
-      setTimeout(() => {
-        onGenerationComplete(result);
-      }, 2000);
+      // Only show success state for actually generated images
+      if (!isGenerated) {
+        setError('AI generation failed - API returned text description instead of image. This might be a temporary issue with the Gemini model.');
+      }
 
     } catch (err) {
       console.error('Generation error:', err);
@@ -128,6 +120,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     setError(null);
     setProgress(0);
     setCurrentStep(0);
+    setGeneratedImageUri(null);
+    setIsImageGenerated(false);
     setIsGenerating(true);
     startGeneration();
   };
@@ -163,6 +157,15 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
           <Text style={styles.errorText}>{error}</Text>
 
+          {generatedImageUri && !isImageGenerated && (
+            <View style={styles.placeholderInfo}>
+              <Text style={styles.placeholderInfoText}>
+                📱 For debugging: A placeholder image was returned instead of a generated one.
+                Check the console logs for API response details.
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
             <Ionicons name="refresh" size={20} color="white" />
             <Text style={styles.retryButtonText}>Try Again</Text>
@@ -176,7 +179,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     );
   }
 
-  if (generatedImageUri && !isGenerating) {
+  if (generatedImageUri && !isGenerating && isImageGenerated) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -491,5 +494,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+  placeholderInfo: {
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  placeholderInfoText: {
+    fontSize: 12,
+    color: '#92400e',
+    lineHeight: 16,
   },
 });

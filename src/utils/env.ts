@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 interface EnvConfig {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  OPENROUTER_API_KEY: string;
+  GEMINI_API_KEY: string;
   APP_NAME: string;
   APP_SCHEME: string;
   APP_DOMAIN: string;
@@ -30,7 +30,7 @@ class EnvironmentManager {
     this.config = {
       GOOGLE_CLIENT_ID: expoConfig.googleClientId || expoConfig.GOOGLE_CLIENT_ID || '',
       GOOGLE_CLIENT_SECRET: expoConfig.googleClientSecret || expoConfig.GOOGLE_CLIENT_SECRET || '',
-      OPENROUTER_API_KEY: expoConfig.openRouterApiKey || expoConfig.OPENROUTER_API_KEY || '',
+      GEMINI_API_KEY: expoConfig.geminiApiKey || expoConfig.GEMINI_API_KEY || '',
       APP_NAME: expoConfig.appName || expoConfig.APP_NAME || 'PlantAI Interior',
       APP_SCHEME: expoConfig.appScheme || expoConfig.APP_SCHEME || 'plant-interior-ai',
       APP_DOMAIN: expoConfig.appDomain || expoConfig.APP_DOMAIN || 'plant-interior-ai.app',
@@ -55,7 +55,7 @@ class EnvironmentManager {
   private isRequired(key: keyof EnvConfig): boolean {
     const required = [
       'GOOGLE_CLIENT_ID',
-      'OPENROUTER_API_KEY',
+      'GEMINI_API_KEY',
     ];
     return required.includes(key);
   }
@@ -65,9 +65,9 @@ class EnvironmentManager {
     return this.get('GOOGLE_CLIENT_ID');
   }
 
-  getOpenRouterApiKey(): string {
-    const key = this.get('OPENROUTER_API_KEY');
-    console.log('Environment OpenRouter key:', key ? `${key.substring(0, 10)}...` : 'MISSING');
+  getGeminiApiKey(): string {
+    const key = this.get('GEMINI_API_KEY');
+    console.log('Environment Gemini API key:', key ? `${key.substring(0, 10)}...` : 'MISSING');
     return key;
   }
 
@@ -89,7 +89,7 @@ class EnvironmentManager {
 
   // Validation method to check if all required env vars are set
   validateConfig(): { isValid: boolean; missingVars: string[] } {
-    const requiredVars = ['GOOGLE_CLIENT_ID', 'OPENROUTER_API_KEY'];
+    const requiredVars = ['GOOGLE_CLIENT_ID', 'GEMINI_API_KEY'];
     const missingVars: string[] = [];
 
     for (const varName of requiredVars) {

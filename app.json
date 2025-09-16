@@ -64,7 +64,7 @@
     "extra": {
       "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
       "googleClientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
-      "openRouterApiKey": "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",
+      "geminiApiKey": "AIzaSyAYQjkpWV7KhRwrSTJCsLIEOc6kqVxwUyc",
       "appName": "PlantAI Interior",
       "appScheme": "plant-interior-ai",
       "appDomain": "plant-interior-ai.app",
