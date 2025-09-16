@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { AuthScreen } from './src/screens/AuthScreen';
@@ -106,11 +107,13 @@ function GenerationScreenWrapper({ route, navigation }: any) {
 
 export default function App() {
   return (
-    <EnvValidator>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <AppContent />
-      </AuthProvider>
-    </EnvValidator>
+    <SafeAreaProvider>
+      <EnvValidator>
+        <AuthProvider>
+          <StatusBar style="auto" />
+          <AppContent />
+        </AuthProvider>
+      </EnvValidator>
+    </SafeAreaProvider>
   );
 }

@@ -37,15 +37,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
 
+  // Handle OAuth configuration with fallback for missing env vars
+  const getOAuthConfig = () => {
+    try {
+      return {
+        clientId: env.getGoogleClientId(),
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri: AuthSession.makeRedirectUri({
+          scheme: env.getAppScheme(),
+          path: 'auth',
+        }),
+        additionalParameters: {},
+        customParameters: {
+          prompt: 'select_account',
+        },
+      };
+    } catch (error) {
+      console.warn('OAuth configuration incomplete:', error);
+      return {
+        clientId: 'placeholder-client-id',
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri: AuthSession.makeRedirectUri({
+          scheme: 'plant-interior-ai',
+          path: 'auth',
+        }),
+        additionalParameters: {},
+        customParameters: {
+          prompt: 'select_account',
+        },
+      };
+    }
+  };
+
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: env.getGoogleClientId(),
-      scopes: ['openid', 'profile', 'email'],
-      additionalParameters: {},
-      customParameters: {
-        prompt: 'select_account',
-      },
-    },
+    getOAuthConfig(),
     discovery
   );
 
