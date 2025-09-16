@@ -89,7 +89,7 @@ plant-interior-ai/
 - **Location**: `src/screens/PlantSelectionScreen.tsx`
 
 ### 4. AI Image Generation
-- **Service**: OpenRouter API with Gemini 2.0 Flash
+- **Service**: OpenRouter API with Gemini 2.5 Flash Image Preview
 - **Input**: Room photo + plant selection
 - **Output**: Enhanced image with integrated plants
 - **Location**: `src/services/openRouterService.ts`
@@ -114,7 +114,7 @@ plant-interior-ai/
 1. Visit [OpenRouter](https://openrouter.ai/)
 2. Create an account and get API key
 3. Update `app.json` with your API key
-4. Ensure you have credits for Gemini 2.0 Flash model
+4. Ensure you have credits for Gemini 2.5 Flash Image Preview model
 
 ## 📱 App Flow
 
