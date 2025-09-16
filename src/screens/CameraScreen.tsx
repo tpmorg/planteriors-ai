@@ -24,6 +24,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(true);
   const cameraRef = useRef<CameraView>(null);
 
   const hasPermission = permission?.granted;
@@ -48,7 +49,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Images],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -56,11 +57,16 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       if (!result.canceled && result.assets[0]) {
         setPreviewImage(result.assets[0].uri);
+        setShowOptions(false);
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
     }
+  };
+
+  const openCamera = () => {
+    setShowOptions(false);
   };
 
   const confirmImage = () => {
@@ -71,6 +77,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const retakePhoto = () => {
     setPreviewImage(null);
+    setShowOptions(true);
   };
 
   if (!permission) {
@@ -94,6 +101,38 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         <TouchableOpacity style={styles.button} onPress={onClose}>
           <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  if (showOptions) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+            <Ionicons name="images" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add Room Photo</Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        <View style={styles.optionsContainer}>
+          <View style={styles.optionsContent}>
+            <Text style={styles.optionsTitle}>How would you like to add a room photo?</Text>
+
+            <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
+              <Ionicons name="camera" size={32} color="#2d5016" />
+              <Text style={styles.optionTitle}>Take Photo</Text>
+              <Text style={styles.optionSubtitle}>Use your camera to capture a room</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
+              <Ionicons name="images" size={32} color="#2d5016" />
+              <Text style={styles.optionTitle}>Import from Gallery</Text>
+              <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -134,7 +173,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-          <Ionicons name="close" size={24} color="white" />
+          <Ionicons name="images" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Take Room Photo</Text>
         <TouchableOpacity
@@ -322,5 +361,56 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  optionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f8f9fa',
+  },
+  optionsContent: {
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  optionsTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2d5016',
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 28,
+  },
+  optionButton: {
+    backgroundColor: 'white',
+    padding: 24,
+    borderRadius: 16,
+    marginBottom: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d5016',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

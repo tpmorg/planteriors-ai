@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   imagePreview: {
-    height: 120,
+    height: 200,
     margin: 16,
     borderRadius: 12,
     overflow: 'hidden',

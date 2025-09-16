@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
@@ -9,24 +9,41 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { CameraScreen } from './src/screens/CameraScreen';
 import { PlantSelectionScreen } from './src/screens/PlantSelectionScreen';
 import { GenerationScreen } from './src/screens/GenerationScreen';
+import { GalleryScreen } from './src/screens/GalleryScreen';
+import { DesignDetailScreen } from './src/screens/DesignDetailScreen';
 import { EnvValidator } from './src/components/EnvValidator';
-import { GenerationRequest, GeneratedImage, PlantType, PlantStyle } from './src/types';
+import { GenerationRequest, GeneratedImage, PlantType, PlantStyle, SavedDesign } from './src/types';
+import { databaseService } from './src/services/databaseService';
 
 type RootStackParamList = {
   Auth: undefined;
   Camera: undefined;
   PlantSelection: { imageUri: string };
   Generation: { request: GenerationRequest };
-  Result: { result: GeneratedImage };
+  Gallery: undefined;
+  DesignDetail: { design: SavedDesign };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [showCamera, setShowCamera] = useState(false);
+  const [dbInitialized, setDbInitialized] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        await databaseService.initialize();
+        setDbInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+      }
+    };
+
+    initializeDatabase();
+  }, []);
+
+  if (isLoading || !dbInitialized) {
     return null; // or a loading screen
   }
 
@@ -40,6 +57,8 @@ function AppContent() {
         <Stack.Screen name="Camera" component={CameraScreenWrapper} />
         <Stack.Screen name="PlantSelection" component={PlantSelectionScreenWrapper} />
         <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
+        <Stack.Screen name="Gallery" component={GalleryScreenWrapper} />
+        <Stack.Screen name="DesignDetail" component={DesignDetailScreenWrapper} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -51,8 +70,7 @@ function CameraScreenWrapper({ navigation }: any) {
   };
 
   const handleClose = () => {
-    // For now, just stay on the camera screen
-    // In a full app, you might navigate to a home screen
+    navigation.navigate('Gallery');
   };
 
   return <CameraScreen onImageTaken={handleImageTaken} onClose={handleClose} />;
@@ -87,9 +105,7 @@ function GenerationScreenWrapper({ route, navigation }: any) {
   const { request } = route.params;
 
   const handleGenerationComplete = (result: GeneratedImage) => {
-    // For now, navigate back to camera to take another photo
-    // In a full app, you might navigate to a gallery or result screen
-    navigation.navigate('Camera');
+    navigation.navigate('Gallery');
   };
 
   const handleBack = () => {
@@ -101,6 +117,43 @@ function GenerationScreenWrapper({ route, navigation }: any) {
       request={request}
       onGenerationComplete={handleGenerationComplete}
       onBack={handleBack}
+    />
+  );
+}
+
+function GalleryScreenWrapper({ navigation }: any) {
+  const handleBack = () => {
+    navigation.navigate('Camera');
+  };
+
+  const handleDesignSelect = (design: SavedDesign) => {
+    navigation.navigate('DesignDetail', { design });
+  };
+
+  return (
+    <GalleryScreen
+      onBack={handleBack}
+      onDesignSelect={handleDesignSelect}
+    />
+  );
+}
+
+function DesignDetailScreenWrapper({ route, navigation }: any) {
+  const { design } = route.params;
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  const handleDesignDeleted = () => {
+    navigation.navigate('Gallery');
+  };
+
+  return (
+    <DesignDetailScreen
+      design={design}
+      onBack={handleBack}
+      onDesignDeleted={handleDesignDeleted}
     />
   );
 }

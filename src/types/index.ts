@@ -38,6 +38,24 @@ export interface GeneratedImage {
   createdAt: Date;
 }
 
+export interface SavedDesign {
+  id: string;
+  originalImageUri: string;
+  generatedImageUri: string;
+  localImagePath?: string | null;
+  plantType: {
+    name: string;
+    description: string;
+  };
+  plantStyle: {
+    name: string;
+    description: string;
+  };
+  customPrompt?: string;
+  createdAt: Date;
+  isFavorite: boolean;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;

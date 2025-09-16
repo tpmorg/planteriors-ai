@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GenerationRequest, GeneratedImage } from '../types';
 import { createGeminiService } from '../services/geminiService';
+import { databaseService } from '../services/databaseService';
 
 interface GenerationScreenProps {
   request: GenerationRequest;
@@ -126,18 +127,37 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     startGeneration();
   };
 
-  const handleUseResult = () => {
-    if (generatedImageUri) {
-      const result: GeneratedImage = {
-        id: Date.now().toString(),
-        originalImageUri: request.imageUri,
-        generatedImageUri: generatedImageUri,
-        plantType: request.plantType,
-        plantStyle: request.plantStyle,
-        prompt: request.prompt || '',
-        createdAt: new Date(),
-      };
-      onGenerationComplete(result);
+  const handleUseResult = async () => {
+    if (generatedImageUri && isImageGenerated) {
+      try {
+        console.log('Saving design to database...');
+
+        const savedDesign = await databaseService.saveDesign({
+          originalImageUri: request.imageUri,
+          generatedImageUri: generatedImageUri,
+          plantTypeName: request.plantType.name,
+          plantTypeDescription: request.plantType.description,
+          plantStyleName: request.plantStyle.name,
+          plantStyleDescription: request.plantStyle.description,
+          customPrompt: request.prompt,
+        });
+
+        const result: GeneratedImage = {
+          id: savedDesign.id,
+          originalImageUri: request.imageUri,
+          generatedImageUri: generatedImageUri,
+          plantType: request.plantType,
+          plantStyle: request.plantStyle,
+          prompt: request.prompt || '',
+          createdAt: new Date(),
+        };
+
+        console.log('Design saved successfully with ID:', savedDesign.id);
+        onGenerationComplete(result);
+      } catch (error) {
+        console.error('Failed to save design:', error);
+        Alert.alert('Error', 'Failed to save design. Please try again.');
+      }
     }
   };
 
