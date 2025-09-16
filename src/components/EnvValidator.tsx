@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { env } from '../utils/env';
 
@@ -52,17 +53,17 @@ export const EnvValidator: React.FC<EnvValidatorProps> = ({ children }) => {
   if (isValid === null) {
     // Loading state
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Ionicons name="settings" size={48} color="#2d5016" />
         <Text style={styles.loadingText}>Validating configuration...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!isValid) {
     // Error state
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Ionicons name="warning" size={48} color="#dc2626" />
         <Text style={styles.errorTitle}>Configuration Required</Text>
         <Text style={styles.errorText}>
@@ -85,7 +86,7 @@ export const EnvValidator: React.FC<EnvValidatorProps> = ({ children }) => {
         <TouchableOpacity style={styles.continueButton} onPress={() => setIsValid(true)}>
           <Text style={styles.continueButtonText}>Continue Anyway</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
