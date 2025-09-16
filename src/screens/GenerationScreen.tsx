@@ -30,24 +30,56 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [isGenerating, setIsGenerating] = useState(true);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState('');
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiCallStarted, setApiCallStarted] = useState(false);
 
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.8);
+  const pulseAnim = new Animated.Value(1);
 
-  const steps = [
-    { text: 'Analyzing your room...', duration: 2000 },
-    { text: 'Understanding plant requirements...', duration: 1500 },
-    { text: 'Designing perfect placement...', duration: 2000 },
-    { text: 'Generating realistic visualization...', duration: 3000 },
-    { text: 'Adding finishing touches...', duration: 1500 },
+  const initialSteps = [
+    { text: 'Preparing your room image...', duration: 1000 },
+    { text: 'Optimizing image for processing...', duration: 800 },
+    { text: 'Connecting...', duration: 700 },
+  ];
+
+  const apiSteps = [
+    { text: 'Sending image for analysis...', duration: 0 },
+    { text: 'Analyzing room layout and lighting...', duration: 0 },
+    { text: 'Designing plant placement...', duration: 0 },
+    { text: 'Generating augmented image...', duration: 0 },
+    { text: 'Processing final image...', duration: 0 },
   ];
 
   useEffect(() => {
     startGeneration();
   }, []);
+
+  useEffect(() => {
+    if (apiCallStarted) {
+      // Start pulsing animation when API call begins
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.3,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+
+      return () => pulse.stop();
+    }
+  }, [apiCallStarted]);
 
   useEffect(() => {
     if (generatedImageUri) {
@@ -68,15 +100,47 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   const startGeneration = async () => {
     try {
-      // Simulate progress through steps
-      for (let i = 0; i < steps.length; i++) {
+      // Phase 1: Initial preparation steps
+      setCurrentStatus('Preparing...');
+      for (let i = 0; i < initialSteps.length; i++) {
         setCurrentStep(i);
-        await simulateStep(steps[i].duration, i);
+        setCurrentStatus(initialSteps[i].text);
+        setProgress((i + 1) / (initialSteps.length + apiSteps.length));
+        await new Promise(resolve => setTimeout(resolve, initialSteps[i].duration));
       }
 
-      // Actual API call
+      // Phase 2: Real API call with live progress updates
+      setApiCallStarted(true);
+      setCurrentStatus('Calling Gemini AI...');
+
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(request);
+
+      // Start the API call and update progress during the call
+      const apiPromise = geminiService.generatePlantImage(request);
+
+      // Simulate API progress steps while the real call is happening
+      let apiStepIndex = 0;
+      const apiProgressInterval = setInterval(() => {
+        if (apiStepIndex < apiSteps.length) {
+          const totalSteps = initialSteps.length + apiSteps.length;
+          const currentProgress = (initialSteps.length + apiStepIndex + 1) / totalSteps;
+
+          setProgress(currentProgress);
+          setCurrentStep(initialSteps.length + apiStepIndex);
+          setCurrentStatus(apiSteps[apiStepIndex].text);
+          apiStepIndex++;
+        }
+      }, 2000); // Update every 2 seconds during API call
+
+      // Wait for the actual API call to complete
+      const { imageUri: generatedUri, isGenerated } = await apiPromise;
+
+      // Clear the interval
+      clearInterval(apiProgressInterval);
+
+      // Complete the progress
+      setProgress(1);
+      setCurrentStatus('Generation complete!');
 
       setGeneratedImageUri(generatedUri);
       setIsImageGenerated(isGenerated);
@@ -94,35 +158,15 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     }
   };
 
-  const simulateStep = (duration: number, stepIndex: number): Promise<void> => {
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-      const startProgress = stepIndex / steps.length;
-      const endProgress = (stepIndex + 1) / steps.length;
-
-      const updateProgress = () => {
-        const elapsed = Date.now() - startTime;
-        const stepProgress = Math.min(elapsed / duration, 1);
-        const currentProgress = startProgress + (endProgress - startProgress) * stepProgress;
-        setProgress(currentProgress);
-
-        if (stepProgress < 1) {
-          requestAnimationFrame(updateProgress);
-        } else {
-          resolve();
-        }
-      };
-
-      updateProgress();
-    });
-  };
 
   const handleRetry = () => {
     setError(null);
     setProgress(0);
     setCurrentStep(0);
+    setCurrentStatus('');
     setGeneratedImageUri(null);
     setIsImageGenerated(false);
+    setApiCallStarted(false);
     setIsGenerating(true);
     startGeneration();
   };
@@ -269,7 +313,20 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         </View>
 
         <View style={styles.stepContainer}>
-          <Text style={styles.stepText}>{steps[currentStep]?.text}</Text>
+          <Text style={styles.stepText}>{currentStatus}</Text>
+          {apiCallStarted && (
+            <View style={styles.apiStatusContainer}>
+              <Animated.View
+                style={[
+                  styles.apiIndicator,
+                  { opacity: pulseAnim }
+                ]}
+              />
+              <Text style={styles.apiStatusText}>
+                Live processing with Gemini AI
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.plantInfo}>
@@ -375,6 +432,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  apiStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(45, 80, 22, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  apiIndicator: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#2d5016',
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  apiStatusText: {
+    fontSize: 12,
+    color: '#2d5016',
+    fontWeight: '600',
   },
   plantInfo: {
     backgroundColor: 'white',
