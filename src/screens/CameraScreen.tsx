@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, CameraType } from 'expo-camera';
+import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,17 +21,12 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   onImageTaken,
   onClose,
 }) => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [type, setType] = useState(CameraType.back);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>('back');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraView>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+  const hasPermission = permission?.granted;
 
   const takePicture = async () => {
     if (cameraRef.current) {
@@ -76,18 +71,21 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     setPreviewImage(null);
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
-      <View style={styles.permissionContainer}>
-        <Text>Requesting camera permission...</Text>
-      </View>
+      <SafeAreaView style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>Requesting camera permission...</Text>
+      </SafeAreaView>
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <SafeAreaView style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>No access to camera</Text>
+        <Text style={styles.permissionText}>Camera permission required</Text>
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={pickImage}>
           <Text style={styles.buttonText}>Choose from Gallery</Text>
         </TouchableOpacity>
@@ -138,14 +136,14 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Take Room Photo</Text>
         <TouchableOpacity
-          onPress={() => setType(type === CameraType.back ? CameraType.front : CameraType.back)}
+          onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
           style={styles.headerButton}
         >
           <Ionicons name="camera-reverse" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
-      <Camera style={styles.camera} type={type} ref={cameraRef}>
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
         <View style={styles.cameraOverlay}>
           <View style={styles.guideline}>
             <Text style={styles.guidelineText}>
@@ -153,7 +151,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
             </Text>
           </View>
         </View>
-      </Camera>
+      </CameraView>
 
       <View style={styles.controls}>
         <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
