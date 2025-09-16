@@ -66,7 +66,9 @@ class EnvironmentManager {
   }
 
   getOpenRouterApiKey(): string {
-    return this.get('OPENROUTER_API_KEY');
+    const key = this.get('OPENROUTER_API_KEY');
+    console.log('Environment OpenRouter key:', key ? `${key.substring(0, 10)}...` : 'MISSING');
+    return key;
   }
 
   getAppScheme(): string {
