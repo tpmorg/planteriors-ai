@@ -10,6 +10,7 @@ WebBrowser.maybeCompleteAuthSession();
 interface AuthContextType extends AuthState {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
+  signInBypass: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -130,6 +131,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInBypass = async () => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+
+      // Create a mock user for development/prototyping
+      const user: User = {
+        id: 'dev-user-' + Date.now(),
+        email: 'developer@plantai.com',
+        name: 'Development User',
+        picture: undefined,
+        provider: 'google', // Use google as default provider
+      };
+
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      setAuthState({
+        isAuthenticated: true,
+        user,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Error with bypass sign in:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
   const signOut = async () => {
     try {
       await AsyncStorage.removeItem('user');
@@ -147,6 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     ...authState,
     signInWithGoogle,
     signInWithApple,
+    signInBypass,
     signOut,
   };
 

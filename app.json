@@ -69,7 +69,7 @@
       "appScheme": "plant-interior-ai",
       "appDomain": "plant-interior-ai.app",
       "appleClientId": "YOUR_APPLE_CLIENT_ID",
-      "debugMode": false,
+      "debugMode": true,
       "apiTimeout": 30000
     }
   }

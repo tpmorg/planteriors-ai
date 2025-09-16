@@ -8,9 +8,11 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { env } from '../utils/env';
 
 export const AuthScreen: React.FC = () => {
-  const { signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInBypass, isLoading } = useAuth();
+  const showBypass = env.isDebugMode() || __DEV__;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -40,6 +42,18 @@ export const AuthScreen: React.FC = () => {
               Continue with Apple
             </Text>
           </TouchableOpacity>
+
+          {showBypass && (
+            <TouchableOpacity
+              style={[styles.button, styles.bypassButton]}
+              onPress={signInBypass}
+              disabled={isLoading}
+            >
+              <Text style={[styles.buttonText, styles.bypassButtonText]}>
+                🚀 Skip Login (Development)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={styles.disclaimer}>
@@ -95,12 +109,20 @@ const styles = StyleSheet.create({
   appleButton: {
     backgroundColor: '#000000',
   },
+  bypassButton: {
+    backgroundColor: '#f59e0b',
+    borderWidth: 1,
+    borderColor: '#d97706',
+  },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#374151',
   },
   appleButtonText: {
+    color: '#ffffff',
+  },
+  bypassButtonText: {
     color: '#ffffff',
   },
   disclaimer: {
