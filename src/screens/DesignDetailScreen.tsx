@@ -3,16 +3,29 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Share,
+  Dimensions,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import {
+  GestureHandlerRootView,
+  PinchGestureHandler,
+  PanGestureHandler,
+  State,
+} from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 
@@ -22,6 +35,8 @@ interface DesignDetailScreenProps {
   onDesignDeleted: () => void;
 }
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   design: initialDesign,
   onBack,
@@ -29,6 +44,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 }) => {
   const [design, setDesign] = useState<SavedDesign>(initialDesign);
   const [isSharing, setIsSharing] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  // Animated values for image zoom and pan
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -89,7 +110,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       const imageUri = getImageUri();
 
       if (imageUri.startsWith('data:')) {
-        // For data URIs, we need to save to a temporary file first
         const fileName = `plant_design_${design.id}.png`;
         const tempPath = `${FileSystem.cacheDirectory}${fileName}`;
 
@@ -104,14 +124,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             dialogTitle: 'Share Plant Design',
           });
         } else {
-          // Fallback to React Native Share for text
           await Share.share({
             message: `Check out my plant design! Created with ${design.plantType.name} in ${design.plantStyle.name} style.`,
             title: 'Plant Interior Design',
           });
         }
       } else if (imageUri.startsWith('file://') || design.localImagePath) {
-        // For local files
         const filePath = design.localImagePath || imageUri;
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(filePath, {
@@ -120,7 +138,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           });
         }
       } else {
-        // For URLs, fallback to text sharing
         await Share.share({
           message: `Check out my plant design! Created with ${design.plantType.name} in ${design.plantStyle.name} style.`,
           url: imageUri,
@@ -135,108 +152,178 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     }
   };
 
+
+  const pinchHandler = (event: any) => {
+    'worklet';
+    if (event.nativeEvent.state === State.ACTIVE) {
+      scale.value = event.nativeEvent.scale;
+    } else if (event.nativeEvent.state === State.END) {
+      if (scale.value < 1) {
+        scale.value = withSpring(1);
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+      } else if (scale.value > 3) {
+        scale.value = withSpring(3);
+      }
+    }
+  };
+
+  const panHandler = (event: any) => {
+    'worklet';
+    if (event.nativeEvent.state === State.ACTIVE && scale.value > 1) {
+      translateX.value = event.nativeEvent.translationX;
+      translateY.value = event.nativeEvent.translationY;
+    }
+  };
+
+  const imageStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  });
+
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={toggleFavorite}
-            style={styles.headerButton}
-          >
-            <Ionicons
-              name={design.isFavorite ? 'heart' : 'heart-outline'}
-              size={24}
-              color={design.isFavorite ? '#dc2626' : 'white'}
-            />
+    <GestureHandlerRootView style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        {/* Header with overlay */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={shareDesign}
-            style={styles.headerButton}
-            disabled={isSharing}
-          >
-            <Ionicons
-              name={isSharing ? 'hourglass-outline' : 'share-outline'}
-              size={24}
-              color="white"
-            />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setShowInfoModal(true)}
+              style={styles.headerButton}
+            >
+              <Ionicons name="information-circle-outline" size={24} color="white" />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={deleteDesign} style={styles.headerButton}>
-            <Ionicons name="trash-outline" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
+            <TouchableOpacity
+              onPress={toggleFavorite}
+              style={styles.headerButton}
+            >
+              <Ionicons
+                name={design.isFavorite ? 'heart' : 'heart-outline'}
+                size={24}
+                color={design.isFavorite ? '#dc2626' : 'white'}
+              />
+            </TouchableOpacity>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: getImageUri() }}
-            style={styles.designImage}
-            resizeMode="contain"
-          />
-        </View>
+            <TouchableOpacity
+              onPress={shareDesign}
+              style={styles.headerButton}
+              disabled={isSharing}
+            >
+              <Ionicons
+                name={isSharing ? 'hourglass-outline' : 'share-outline'}
+                size={24}
+                color="white"
+              />
+            </TouchableOpacity>
 
-        <View style={styles.detailsContainer}>
-          <View style={styles.titleSection}>
-            <Text style={styles.plantTypeTitle}>{design.plantType.name}</Text>
-            <Text style={styles.plantStyleSubtitle}>
-              {design.plantStyle.name} Style
-            </Text>
+            <TouchableOpacity onPress={deleteDesign} style={styles.headerButton}>
+              <Ionicons name="trash-outline" size={24} color="white" />
+            </TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.infoSection}>
-            <View style={styles.infoItem}>
-              <Ionicons name="leaf-outline" size={20} color="#2d5016" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Plant Type</Text>
-                <Text style={styles.infoValue}>{design.plantType.name}</Text>
-                <Text style={styles.infoDescription}>
-                  {design.plantType.description}
-                </Text>
-              </View>
+        {/* Full-screen zoomable image */}
+        <View style={styles.imageContainer}>
+          <PanGestureHandler onGestureEvent={panHandler}>
+            <Animated.View style={styles.imageWrapper}>
+              <PinchGestureHandler onGestureEvent={pinchHandler}>
+                <Animated.Image
+                  source={{ uri: getImageUri() }}
+                  style={[styles.image, imageStyle]}
+                  resizeMode="contain"
+                />
+              </PinchGestureHandler>
+            </Animated.View>
+          </PanGestureHandler>
+        </View>
+
+        {/* Info Modal */}
+        <Modal
+          visible={showInfoModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowInfoModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Design Details</Text>
+              <TouchableOpacity
+                onPress={() => setShowInfoModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.infoItem}>
-              <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Style</Text>
-                <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                <Text style={styles.infoDescription}>
-                  {design.plantStyle.description}
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.titleSection}>
+                <Text style={styles.plantTypeTitle}>{design.plantType.name}</Text>
+                <Text style={styles.plantStyleSubtitle}>
+                  {design.plantStyle.name} Style
                 </Text>
               </View>
-            </View>
 
-            {design.customPrompt && (
-              <View style={styles.infoItem}>
-                <Ionicons name="chatbox-outline" size={20} color="#2d5016" />
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Custom Requirements</Text>
-                  <Text style={styles.infoDescription}>
-                    {design.customPrompt}
-                  </Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <Ionicons name="leaf-outline" size={20} color="#2d5016" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Plant Type</Text>
+                    <Text style={styles.infoValue}>{design.plantType.name}</Text>
+                    <Text style={styles.infoDescription}>
+                      {design.plantType.description}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Style</Text>
+                    <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                    <Text style={styles.infoDescription}>
+                      {design.plantStyle.description}
+                    </Text>
+                  </View>
+                </View>
+
+                {design.customPrompt && (
+                  <View style={styles.infoItem}>
+                    <Ionicons name="chatbox-outline" size={20} color="#2d5016" />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Custom Requirements</Text>
+                      <Text style={styles.infoDescription}>
+                        {design.customPrompt}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.infoItem}>
+                  <Ionicons name="time-outline" size={20} color="#2d5016" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Created</Text>
+                    <Text style={styles.infoValue}>
+                      {formatDate(design.createdAt)}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            )}
-
-            <View style={styles.infoItem}>
-              <Ionicons name="time-outline" size={20} color="#2d5016" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Created</Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(design.createdAt)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -251,12 +338,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1,
+    zIndex: 2,
   },
   headerButton: {
     padding: 8,
@@ -267,69 +354,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  content: {
-    flex: 1,
-  },
   imageContainer: {
-    height: 400,
+    flex: 1,
     backgroundColor: '#000',
+  },
+  imageWrapper: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  designImage: {
-    width: '100%',
-    height: '100%',
+  image: {
+    width: screenWidth,
+    height: screenHeight,
   },
-  detailsContainer: {
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -20,
-    paddingTop: 24,
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2d5016',
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   titleSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 30,
   },
   plantTypeTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2d5016',
     textAlign: 'center',
   },
   plantStyleSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
     marginTop: 4,
   },
-  infoSection: {
+  infoGrid: {
     gap: 24,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 16,
+    gap: 12,
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#2d5016',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6b7280',
-    lineHeight: 20,
+    lineHeight: 16,
   },
 });

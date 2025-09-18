@@ -45,9 +45,10 @@
     },
     "android": {
       "package": "com.plantai.interior",
+      "icon": "./assets/h-plant-ai-logo-sm.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2d5016"
+        "foregroundImage": "./assets/h-plant-ai-logo-sm.png",
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
