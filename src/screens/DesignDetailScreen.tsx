@@ -16,9 +16,8 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import {
   GestureHandlerRootView,
-  PinchGestureHandler,
-  PanGestureHandler,
-  State,
+  Gesture,
+  GestureDetector,
 } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -48,8 +47,11 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   // Animated values for image zoom and pan
   const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -153,28 +155,33 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   };
 
 
-  const pinchHandler = (event: any) => {
-    'worklet';
-    if (event.nativeEvent.state === State.ACTIVE) {
-      scale.value = event.nativeEvent.scale;
-    } else if (event.nativeEvent.state === State.END) {
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      scale.value = Math.max(0.5, Math.min(savedScale.value * event.scale, 3));
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
       if (scale.value < 1) {
         scale.value = withSpring(1);
+        savedScale.value = 1;
         translateX.value = withSpring(0);
         translateY.value = withSpring(0);
-      } else if (scale.value > 3) {
-        scale.value = withSpring(3);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
       }
-    }
-  };
+    });
 
-  const panHandler = (event: any) => {
-    'worklet';
-    if (event.nativeEvent.state === State.ACTIVE && scale.value > 1) {
-      translateX.value = event.nativeEvent.translationX;
-      translateY.value = event.nativeEvent.translationY;
-    }
-  };
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (scale.value > 1) {
+        translateX.value = savedTranslateX.value + event.translationX;
+        translateY.value = savedTranslateY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
 
   const imageStyle = useAnimatedStyle(() => {
     return {
@@ -235,17 +242,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
         {/* Full-screen zoomable image */}
         <View style={styles.imageContainer}>
-          <PanGestureHandler onGestureEvent={panHandler}>
+          <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, panGesture)}>
             <Animated.View style={styles.imageWrapper}>
-              <PinchGestureHandler onGestureEvent={pinchHandler}>
-                <Animated.Image
-                  source={{ uri: getImageUri() }}
-                  style={[styles.image, imageStyle]}
-                  resizeMode="contain"
-                />
-              </PinchGestureHandler>
+              <Animated.Image
+                source={{ uri: getImageUri() }}
+                style={[styles.image, imageStyle]}
+                resizeMode="contain"
+              />
             </Animated.View>
-          </PanGestureHandler>
+          </GestureDetector>
         </View>
 
         {/* Info Modal */}
