@@ -9,6 +9,7 @@ import {
   Dimensions,
   Modal,
   ScrollView,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import Animated, {
   useSharedValue,
   withSpring,
   runOnJS,
+  withTiming,
 } from 'react-native-reanimated';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
@@ -53,6 +55,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  // Modal animation
+  const modalTranslateY = useSharedValue(screenHeight);
+  const backdropOpacity = useSharedValue(0);
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -66,6 +72,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const getImageUri = () => {
     return design.localImagePath || design.generatedImageUri;
+  };
+
+  const showModal = () => {
+    setShowInfoModal(true);
+    modalTranslateY.value = withSpring(screenHeight * 0.5, { damping: 20 });
+    backdropOpacity.value = withTiming(0.5, { duration: 300 });
+  };
+
+  const hideModal = () => {
+    modalTranslateY.value = withSpring(screenHeight, { damping: 20 });
+    backdropOpacity.value = withTiming(0, { duration: 300 });
+    setTimeout(() => setShowInfoModal(false), 300);
   };
 
   const toggleFavorite = async () => {
@@ -183,6 +201,27 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       savedTranslateY.value = translateY.value;
     });
 
+  // Modal pan gesture for pull-to-close
+  const modalPanGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      const newY = screenHeight * 0.5 + Math.max(0, event.translationY);
+      modalTranslateY.value = newY;
+
+      // Update backdrop opacity based on drag distance
+      const dragProgress = Math.max(0, event.translationY) / (screenHeight * 0.5);
+      backdropOpacity.value = 0.5 * (1 - dragProgress);
+    })
+    .onEnd((event) => {
+      if (event.translationY > 100 || event.velocityY > 500) {
+        // Close modal if dragged down enough or with sufficient velocity
+        runOnJS(hideModal)();
+      } else {
+        // Snap back to 50% position
+        modalTranslateY.value = withSpring(screenHeight * 0.5, { damping: 20 });
+        backdropOpacity.value = withTiming(0.5, { duration: 200 });
+      }
+    });
+
   const imageStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -190,6 +229,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         { translateY: translateY.value },
         { scale: scale.value },
       ],
+    };
+  });
+
+  const modalStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: modalTranslateY.value }],
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backdropOpacity.value,
     };
   });
 
@@ -205,7 +256,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
           <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={() => setShowInfoModal(true)}
+              onPress={showModal}
               style={styles.headerButton}
             >
               <Ionicons name="information-circle-outline" size={24} color="white" />
@@ -253,80 +304,95 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           </GestureDetector>
         </View>
 
-        {/* Info Modal */}
-        <Modal
-          visible={showInfoModal}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setShowInfoModal(false)}
-        >
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Design Details</Text>
+        {/* Custom Animated Modal */}
+        {showInfoModal && (
+          <>
+            {/* Backdrop */}
+            <Animated.View style={[styles.backdrop, backdropStyle]}>
               <TouchableOpacity
-                onPress={() => setShowInfoModal(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color="#374151" />
-              </TouchableOpacity>
-            </View>
+                style={styles.backdropTouchable}
+                onPress={hideModal}
+                activeOpacity={1}
+              />
+            </Animated.View>
 
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.titleSection}>
-                <Text style={styles.plantTypeTitle}>{design.plantType.name}</Text>
-                <Text style={styles.plantStyleSubtitle}>
-                  {design.plantStyle.name} Style
-                </Text>
-              </View>
+            {/* Modal Panel */}
+            <Animated.View style={[styles.modalPanel, modalStyle]}>
+              {/* Draggable Header */}
+              <GestureDetector gesture={modalPanGesture}>
+                <Animated.View style={styles.modalHeader}>
+                  <TouchableOpacity
+                    onPress={hideModal}
+                    style={styles.modalHeaderTouchable}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.modalHandle} />
+                    <Text style={styles.modalTitle}>Design Details</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color="#374151" />
+                  </TouchableOpacity>
+                </Animated.View>
+              </GestureDetector>
 
-              <View style={styles.infoGrid}>
-                <View style={styles.infoItem}>
-                  <Ionicons name="leaf-outline" size={20} color="#2d5016" />
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Plant Type</Text>
-                    <Text style={styles.infoValue}>{design.plantType.name}</Text>
-                    <Text style={styles.infoDescription}>
-                      {design.plantType.description}
-                    </Text>
-                  </View>
+              {/* Modal Content */}
+              <ScrollView style={styles.modalContent}>
+                <View style={styles.titleSection}>
+                  <Text style={styles.plantTypeTitle}>{design.plantType.name}</Text>
+                  <Text style={styles.plantStyleSubtitle}>
+                    {design.plantStyle.name} Style
+                  </Text>
                 </View>
 
-                <View style={styles.infoItem}>
-                  <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Style</Text>
-                    <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                    <Text style={styles.infoDescription}>
-                      {design.plantStyle.description}
-                    </Text>
-                  </View>
-                </View>
-
-                {design.customPrompt && (
+                <View style={styles.infoGrid}>
                   <View style={styles.infoItem}>
-                    <Ionicons name="chatbox-outline" size={20} color="#2d5016" />
+                    <Ionicons name="leaf-outline" size={20} color="#2d5016" />
                     <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Custom Requirements</Text>
+                      <Text style={styles.infoLabel}>Plant Type</Text>
+                      <Text style={styles.infoValue}>{design.plantType.name}</Text>
                       <Text style={styles.infoDescription}>
-                        {design.customPrompt}
+                        {design.plantType.description}
                       </Text>
                     </View>
                   </View>
-                )}
 
-                <View style={styles.infoItem}>
-                  <Ionicons name="time-outline" size={20} color="#2d5016" />
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Created</Text>
-                    <Text style={styles.infoValue}>
-                      {formatDate(design.createdAt)}
-                    </Text>
+                  <View style={styles.infoItem}>
+                    <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Style</Text>
+                      <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                      <Text style={styles.infoDescription}>
+                        {design.plantStyle.description}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {design.customPrompt && (
+                    <View style={styles.infoItem}>
+                      <Ionicons name="chatbox-outline" size={20} color="#2d5016" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Custom Requirements</Text>
+                        <Text style={styles.infoDescription}>
+                          {design.customPrompt}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.infoItem}>
+                    <Ionicons name="time-outline" size={20} color="#2d5016" />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Created</Text>
+                      <Text style={styles.infoValue}>
+                        {formatDate(design.createdAt)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
+              </ScrollView>
+            </Animated.View>
+          </>
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -372,9 +438,36 @@ const styles = StyleSheet.create({
     width: screenWidth,
     height: screenHeight,
   },
-  modalContainer: {
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    zIndex: 1000,
+  },
+  backdropTouchable: {
     flex: 1,
+  },
+  modalPanel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: screenHeight * 0.5,
     backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    zIndex: 1001,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -385,10 +478,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
+  modalHeaderTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 40,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#d1d5db',
+    borderRadius: 2,
+    marginRight: 12,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2d5016',
+    flex: 1,
   },
   closeButton: {
     padding: 8,

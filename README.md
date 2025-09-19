@@ -1,6 +1,6 @@
 # 🌱 PlantAI Interior
 
-Transform your interior spaces with AI-powered plant design recommendations. Take a photo of any room and see how it would look with beautiful plants integrated seamlessly into your space.
+Transform your interior spaces with AI-powered plant design recommendations. Take photos of rooms, select plant types and styles, and receive AI-generated images showing how plants would look in your space. Features a modern tab-based interface, gesture-controlled image viewing, and comprehensive gallery management.
 
 <div align="center">
 
@@ -9,19 +9,34 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 [![React Native](https://img.shields.io/badge/React%20Native-0.81.4-blue.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-52.0.0-black.svg)](https://expo.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![OpenRouter](https://img.shields.io/badge/OpenRouter-Gemini%202.5%20Flash-green.svg)](https://openrouter.ai/)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash%20Image%20Preview-green.svg)](https://aistudio.google.com/)
 
 </div>
 
 ## ✨ Features
 
-- 📸 **Smart Camera Integration** - Capture room photos with optimized settings
-- 🔐 **Secure Authentication** - Google and Apple Sign-In support
-- 🌿 **AI-Powered Design** - Generate realistic plant placements using Gemini 2.5 Flash
-- 🎨 **Multiple Plant Styles** - Choose from various plant types and arrangement styles
-- ⚡ **Real-time Processing** - Watch your design come to life with progress animations
-- 💾 **Cloud Storage** - Save and access your designs across devices
-- 📱 **Cross-Platform** - Native iOS and Android experience
+### 🎯 Core Functionality
+- 📸 **Smart Camera Integration** - Capture room photos or select from gallery
+- 🔐 **Secure Authentication** - Google Sign-In with skip option for testing
+- 🌿 **AI-Powered Design** - Generate realistic plant placements using Gemini 2.5 Flash Image Preview
+- 🎨 **Multiple Plant Styles** - 4 plant types with 3+ styles each
+- ⚡ **Real-time Processing** - Live API progress tracking (no fake delays)
+- 💾 **Local Database** - SQLite storage with automatic image caching
+
+### 🚀 Modern Interface
+- 📱 **Tab Navigation** - Gallery, Account, and Settings with auto-hide behavior
+- 🖼️ **Gallery Management** - 2-column grid layout with pull-to-refresh
+- 🔍 **Gesture Controls** - Pinch-to-zoom, pan, and swipe interactions
+- 📋 **Smart Modals** - 50% screen coverage with pull-to-close gestures
+- 💫 **Smooth Animations** - React Native Reanimated for fluid interactions
+- 📐 **Safe Area Support** - Dynamic positioning above native navigation
+
+### 🎨 User Experience
+- ❤️ **Favorites System** - Heart toggle for favorite designs
+- 📤 **Sharing Options** - Export designs with customizable messages
+- 🗑️ **Design Management** - Delete designs with confirmation
+- ⚙️ **Preferences** - High quality modes, auto-save, notifications
+- 📊 **Storage Management** - Cache clearing and download tracking
 
 ## 🚀 Quick Start
 
@@ -30,7 +45,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 - **Node.js** 20.19.4 or higher
 - **Expo CLI** - `npm install -g @expo/cli`
 - **Google OAuth Client ID** - [Get one here](https://console.cloud.google.com/)
-- **OpenRouter API Key** - [Sign up here](https://openrouter.ai/)
+- **Gemini API Key** - [Get one here](https://aistudio.google.com/)
 
 ### Installation
 
@@ -55,7 +70,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
    Edit `.env.local` with your actual values:
    ```env
    GOOGLE_CLIENT_ID=your_actual_google_client_id
-   OPENROUTER_API_KEY=your_actual_openrouter_api_key
+   GEMINI_API_KEY=your_actual_gemini_api_key
    ```
 
    **Alternative:** Update the `app.json` file directly:
@@ -64,7 +79,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
      "expo": {
        "extra": {
          "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
-         "openRouterApiKey": "YOUR_OPENROUTER_API_KEY"
+         "geminiApiKey": "YOUR_GEMINI_API_KEY"
        }
      }
    }
@@ -83,34 +98,46 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 
 ## 📱 How It Works
 
-1. **🔑 Sign In** - Authenticate with Google or Apple
-2. **📸 Capture** - Take a photo of your room or select from gallery
-3. **🌱 Choose Plants** - Select from 4 plant types and multiple styles:
+1. **🔑 Launch & Auth** - App opens with authentication screen (Google Sign-In or skip)
+2. **🏠 Main Interface** - Tab-based navigation: Gallery (home), Account, Settings
+3. **➕ Create Design** - Tap "+" button in gallery to start new design
+4. **📸 Capture** - Take a photo of your room or select from gallery
+5. **🌱 Choose Plants** - Select from 4 plant types and multiple styles:
    - **Succulents** - Modern, Rustic, Minimalist
    - **Tropical Plants** - Jungle, Contemporary, Bohemian
    - **Flowering Plants** - Cottage, Elegant, Vibrant
    - **Hanging Plants** - Cascading, Structured, Natural
-4. **🤖 AI Magic** - Watch as AI generates your personalized plant design
-5. **✨ Results** - View and save your transformed space
+6. **🤖 AI Generation** - Real-time progress with live API status updates
+7. **🖼️ View Results** - Full-screen image with pinch-to-zoom and gesture controls
+8. **ℹ️ Design Details** - Pull-up modal (50% screen) with plant information
+9. **💾 Save & Manage** - Auto-save to gallery, favorite, share, or delete designs
 
 ## 🏗️ Architecture
 
 ```
 plant-interior-ai/
 ├── src/
-│   ├── contexts/           # React Context (Auth, State)
+│   ├── contexts/           # React Context
+│   │   ├── AuthContext.tsx         # OAuth authentication
+│   │   └── TabBarContext.tsx       # Tab navigation with scroll behavior
 │   ├── screens/            # Main App Screens
-│   │   ├── AuthScreen.tsx          # Authentication
-│   │   ├── CameraScreen.tsx        # Photo Capture
-│   │   ├── PlantSelectionScreen.tsx # Plant/Style Selection
-│   │   └── GenerationScreen.tsx    # AI Processing & Results
-│   ├── services/           # External APIs
-│   │   └── openRouterService.ts    # Gemini Integration
+│   │   ├── AuthScreen.tsx          # Google Sign-In (launch screen)
+│   │   ├── GalleryScreen.tsx       # Main gallery with saved designs
+│   │   ├── AccountScreen.tsx       # User profile and settings
+│   │   ├── SettingsScreen.tsx      # App preferences
+│   │   ├── CameraScreen.tsx        # Photo capture/selection
+│   │   ├── PlantSelectionScreen.tsx # Plant/style selection
+│   │   ├── GenerationScreen.tsx    # AI processing & progress
+│   │   └── DesignDetailScreen.tsx  # Full-screen image with gestures
+│   ├── services/           # External APIs & Storage
+│   │   ├── geminiService.ts        # Gemini AI integration
+│   │   └── databaseService.ts      # SQLite local storage
 │   ├── types/              # TypeScript Definitions
 │   └── utils/              # Helper Functions
-├── App.tsx                 # Navigation & App Structure
-├── app.json               # Expo Configuration
-└── README.md              # This file
+├── App.tsx                 # Tab navigation & app structure
+├── app.json               # Expo configuration
+├── README.md              # This file
+└── CLAUDE.md              # Detailed technical documentation
 ```
 
 ## 🔧 Configuration
@@ -124,11 +151,11 @@ plant-interior-ai/
 5. Add your bundle ID (iOS) and package name (Android)
 6. Copy the Client ID to `app.json`
 
-### OpenRouter API Setup
+### Gemini API Setup
 
-1. Visit [OpenRouter](https://openrouter.ai/) and create an account
-2. Generate an API key from your dashboard
-3. Ensure you have credits for the Gemini 2.5 Flash model
+1. Visit [Google AI Studio](https://aistudio.google.com/) and create an account
+2. Generate an API key for Gemini
+3. Ensure Gemini 2.5 Flash Image Preview is available in your region
 4. Add the API key to `app.json`
 
 ## 🛠️ Development
@@ -136,28 +163,205 @@ plant-interior-ai/
 ### Available Scripts
 
 ```bash
+# Development
 npm start          # Start Expo development server
 npm run ios        # Run on iOS simulator
 npm run android    # Run on Android emulator
 npm run web        # Run in web browser
+
+# Development with options
+npx expo start --clear         # Start with cleared cache
+npx expo start --dev-client    # Start with development build
+npx expo start --tunnel        # Start with tunnel for external testing
+
+# Code Quality
 npm run lint       # Run ESLint (if configured)
-npx tsc --noEmit   # Type checking
+npx tsc --noEmit   # TypeScript type checking
+npx expo doctor    # Check for common configuration issues
+
+# Platform-specific development
+npx expo run:ios      # Build and run on iOS device/simulator
+npx expo run:android  # Build and run on Android device/emulator
 ```
 
-### Building for Production
+### 📱 Expo Commands & Build Processes
 
+#### Development Setup
 ```bash
-# Install EAS CLI
+# Install Expo CLI globally
+npm install -g @expo/cli
+
+# Install EAS CLI for builds
 npm install -g eas-cli
 
-# Configure build
+# Login to Expo account
+npx expo login
+
+# Check project configuration
+npx expo doctor
+```
+
+#### Local Development
+```bash
+# Start development server
+npx expo start
+
+# Development server options
+npx expo start --clear           # Clear cache before starting
+npx expo start --offline         # Work offline (no network required)
+npx expo start --lan            # Use LAN instead of localhost
+npx expo start --tunnel          # Use ngrok tunnel for external access
+npx expo start --dev-client      # Use development build
+npx expo start --go             # Open in Expo Go app automatically
+
+# Platform-specific development
+npx expo start --ios            # Open iOS simulator automatically
+npx expo start --android        # Open Android emulator automatically
+npx expo start --web            # Open web browser automatically
+```
+
+#### Building & Distribution
+
+##### Development Builds
+```bash
+# Configure EAS build
 eas build:configure
 
-# Build for iOS
-eas build --platform ios
+# Create development build (includes dev tools)
+eas build --profile development --platform ios
+eas build --profile development --platform android
 
-# Build for Android
-eas build --platform android
+# Install development build on device
+eas build:run --profile development --platform ios
+eas build:run --profile development --platform android
+```
+
+##### Production Builds
+```bash
+# Build for app stores
+eas build --profile production --platform ios
+eas build --profile production --platform android
+
+# Build for both platforms
+eas build --profile production --platform all
+
+# Build with custom configuration
+eas build --profile production --platform ios --clear-cache
+eas build --profile production --platform android --local
+```
+
+##### Preview Builds (Internal Testing)
+```bash
+# Create preview build for internal distribution
+eas build --profile preview --platform ios
+eas build --profile preview --platform android
+
+# Submit preview to TestFlight/Internal Testing
+eas submit --profile preview --platform ios
+eas submit --profile preview --platform android
+```
+
+#### App Store Submission
+```bash
+# Configure submission
+eas submit:configure
+
+# Submit to App Store Connect (iOS)
+eas submit --platform ios
+
+# Submit to Google Play Console (Android)
+eas submit --platform android
+
+# Submit with specific build
+eas submit --platform ios --id YOUR_BUILD_ID
+```
+
+#### Updates & Deployment
+```bash
+# Configure EAS Update
+eas update:configure
+
+# Publish update to all users
+eas update --channel production --message "Bug fixes and improvements"
+
+# Publish update to specific channel
+eas update --channel preview --message "Beta features"
+
+# View update history
+eas update:list
+
+# Rollback to previous update
+eas update:rollback --channel production
+```
+
+#### Debugging & Testing
+```bash
+# View build logs
+eas build:list
+eas build:view BUILD_ID
+
+# Test on physical devices
+npx expo start --tunnel        # Share via QR code
+npx expo start --lan          # Share on local network
+
+# Debug specific platforms
+npx expo run:ios --device      # Run on connected iOS device
+npx expo run:android --device  # Run on connected Android device
+
+# Performance profiling
+npx expo start --profiling     # Enable performance profiling
+```
+
+#### Environment Management
+```bash
+# Work with different environments
+eas build --profile development
+eas build --profile preview
+eas build --profile production
+
+# Use custom environment variables
+eas build --profile production --clear-cache
+eas update --channel staging --message "Staging update"
+
+# View project configuration
+npx expo config
+npx expo config --type public    # View public configuration only
+```
+
+#### Maintenance & Utilities
+```bash
+# Clear various caches
+npx expo start --clear           # Clear Expo cache
+npm start -- --reset-cache      # Clear Metro bundler cache
+rm -rf node_modules && npm install  # Clear node modules
+
+# Project health checks
+npx expo doctor                  # Check for common issues
+npx expo install --check        # Check for version mismatches
+npx expo upgrade                 # Upgrade to latest Expo SDK
+
+# Asset optimization
+npx expo export                  # Export static files
+npx expo optimize               # Optimize images and assets
+```
+
+#### Continuous Integration Examples
+```yaml
+# GitHub Actions example
+- name: Setup Expo
+  uses: expo/expo-github-action@v8
+  with:
+    expo-version: latest
+    token: ${{ secrets.EXPO_TOKEN }}
+
+- name: Install dependencies
+  run: npm ci
+
+- name: Build app
+  run: eas build --platform all --non-interactive
+
+- name: Deploy update
+  run: eas update --channel production --message "CI/CD Update"
 ```
 
 ## 🔒 Privacy & Security
@@ -206,7 +410,7 @@ We welcome contributions! Please see our [contributing guidelines](CLAUDE.md#con
 
 **AI generation taking too long?**
 - Check your internet connection
-- Verify OpenRouter API key and credits
+- Verify Gemini API key and quota limits
 
 For more detailed troubleshooting, see [CLAUDE.md](CLAUDE.md#troubleshooting).
 
@@ -216,10 +420,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Expo Team** - For the amazing React Native framework
-- **OpenRouter** - For providing access to cutting-edge AI models
-- **Google** - For robust authentication services
+- **Expo Team** - For the amazing React Native framework and development tools
+- **Google** - For Gemini AI and robust authentication services
 - **React Navigation** - For seamless app navigation
+- **React Native Reanimated** - For smooth gesture interactions and animations
+- **React Native Gesture Handler** - For advanced touch gesture recognition
 
 ## 📞 Support
 

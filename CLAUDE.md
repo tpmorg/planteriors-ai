@@ -1,15 +1,15 @@
 # PlantAI Interior - React Native Expo App
 
-A React Native Expo application that uses AI to generate plant-enhanced interior designs. Users take photos of rooms, select plant types and styles, and receive AI-generated images showing how plants would look in their space.
+A React Native Expo application that uses AI to generate plant-enhanced interior designs. Users authenticate, take photos of rooms, select plant types and styles, and receive AI-generated images showing how plants would look in their space. Features include a modern tab-based interface, gesture-controlled image viewing, and a comprehensive gallery system.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 20.19.4 or higher
-- Expo CLI
+- Expo CLI (`npm install -g @expo/cli`)
 - iOS Simulator (for iOS development) or Android Emulator (for Android development)
-- Google OAuth Client ID
-- OpenRouter API Key
+- Google OAuth Client ID (for authentication)
+- Gemini API Key (for AI image generation)
 
 ### Installation
 
@@ -29,7 +29,7 @@ cp .env.example .env.local
 Edit `.env.local` with your actual values:
 ```env
 GOOGLE_CLIENT_ID=your_actual_google_client_id
-OPENROUTER_API_KEY=your_actual_openrouter_api_key
+GEMINI_API_KEY=your_actual_gemini_api_key
 ```
 
 Method 2 - Direct app.json configuration:
@@ -38,7 +38,7 @@ Method 2 - Direct app.json configuration:
   "expo": {
     "extra": {
       "googleClientId": "YOUR_ACTUAL_GOOGLE_CLIENT_ID",
-      "openRouterApiKey": "YOUR_ACTUAL_OPENROUTER_API_KEY"
+      "geminiApiKey": "YOUR_ACTUAL_GEMINI_API_KEY"
     }
   }
 }
@@ -62,55 +62,88 @@ npm run web
 plant-interior-ai/
 ├── src/
 │   ├── components/          # Reusable UI components
-│   ├── contexts/           # React contexts (Auth, etc.)
-│   │   └── AuthContext.tsx # OAuth authentication context
+│   ├── contexts/           # React contexts
+│   │   ├── AuthContext.tsx # OAuth authentication context
+│   │   └── TabBarContext.tsx # Tab navigation with scroll behavior
 │   ├── screens/            # Main application screens
-│   │   ├── AuthScreen.tsx  # Google/Apple sign-in
+│   │   ├── AuthScreen.tsx  # Google/Apple sign-in (launch screen)
+│   │   ├── GalleryScreen.tsx # Main gallery with saved designs
+│   │   ├── AccountScreen.tsx # User profile and settings
+│   │   ├── SettingsScreen.tsx # App preferences and configuration
 │   │   ├── CameraScreen.tsx # Camera for room photos
 │   │   ├── PlantSelectionScreen.tsx # Plant type & style selection
-│   │   └── GenerationScreen.tsx # AI generation & results
+│   │   ├── GenerationScreen.tsx # AI generation & progress
+│   │   └── DesignDetailScreen.tsx # Full-screen image with gestures
 │   ├── services/           # API services
-│   │   └── openRouterService.ts # OpenRouter/Gemini integration
+│   │   ├── geminiService.ts # Gemini AI integration
+│   │   └── databaseService.ts # SQLite local storage
 │   ├── types/              # TypeScript type definitions
 │   │   └── index.ts        # Core app types
 │   └── utils/              # Utility functions
 ├── assets/                 # Images, icons, fonts
-├── App.tsx                 # Main app component with navigation
+├── App.tsx                 # Main app with tab navigation
 ├── app.json               # Expo configuration
-└── package.json           # Dependencies and scripts
+├── package.json           # Dependencies and scripts
+└── CLAUDE.md             # Documentation
 ```
 
 ## 🔧 Core Features Implementation
 
-### 1. OAuth Authentication
+### 1. Authentication & Navigation
+- **Launch Flow**: App starts with authentication screen
 - **Google Sign-In**: Implemented using `expo-auth-session`
-- **Apple Sign-In**: Placeholder for future implementation
-- **User Persistence**: Uses `AsyncStorage` for user session
-- **Location**: `src/contexts/AuthContext.tsx`
+- **Skip Option**: Users can skip authentication for testing
+- **Tab Navigation**: Bottom tab bar with Gallery, Account, Settings
+- **Auto-Hide Tabs**: Tabs hide on scroll down, show on scroll up
+- **Safe Area Support**: Dynamic positioning above native navigation
+- **Location**: `src/contexts/AuthContext.tsx`, `src/contexts/TabBarContext.tsx`
 
-### 2. Camera Functionality
-- **Camera Access**: Uses `expo-camera` for live camera
-- **Photo Gallery**: Uses `expo-image-picker` for gallery selection
-- **Permissions**: Automatic permission handling
+### 2. Gallery & Design Management
+- **Main Interface**: Gallery is the primary home screen
+- **Design Storage**: SQLite database with local image caching
+- **Grid Layout**: 2-column responsive design grid
+- **Favorites**: Toggle favorite status on designs
+- **Create New**: Floating action button to start new design
+- **Pull-to-Refresh**: Swipe down to reload designs
+- **Location**: `src/screens/GalleryScreen.tsx`, `src/services/databaseService.ts`
+
+### 3. Image Viewing & Interaction
+- **Full-Screen Display**: Maximized image viewing experience
+- **Pinch-to-Zoom**: Multi-touch gesture support using react-native-reanimated
+- **Pan Support**: Drag images when zoomed in
+- **Info Modal**: 50% screen modal with pull-to-close gestures
+- **Multiple Close Options**: Tap backdrop, drag down, tap title bar, X button
+- **Gesture Boundaries**: Smart snap-back and close detection
+- **Location**: `src/screens/DesignDetailScreen.tsx`
+
+### 4. Camera & Photo Capture
+- **Dual Input**: Live camera or gallery photo selection
+- **Permission Handling**: Automatic camera and photo library access
+- **Preview System**: Image confirmation before proceeding
+- **High Quality**: Optimized image capture settings
 - **Location**: `src/screens/CameraScreen.tsx`
 
-### 3. Plant Selection Interface
-- **Plant Types**: Succulents, Tropical, Flowering, Hanging
-- **Style Options**: Modern, Rustic, Minimalist, etc.
-- **Visual Selection**: Card-based UI with icons and descriptions
+### 5. AI Plant Integration
+- **Plant Selection**: 4 plant types with multiple style options
+- **Visual Interface**: Card-based selection with descriptions
+- **Custom Prompts**: Optional user-defined requirements
+- **Style Preview**: Visual examples for each style option
 - **Location**: `src/screens/PlantSelectionScreen.tsx`
 
-### 4. AI Image Generation
-- **Service**: OpenRouter API with Gemini 2.5 Flash Image Preview
-- **Input**: Room photo + plant selection
-- **Output**: Enhanced image with integrated plants
-- **Location**: `src/services/openRouterService.ts`
+### 6. AI Generation & Progress
+- **Real-Time Progress**: Live API call progress tracking (not fake delays)
+- **Two-Phase System**: Preparation phase + actual generation
+- **Visual Feedback**: Pulsing indicators and progress percentages
+- **Error Handling**: Retry mechanisms with user feedback
+- **Gemini Integration**: Direct API calls to Gemini 2.5 Flash Image Preview
+- **Location**: `src/screens/GenerationScreen.tsx`, `src/services/geminiService.ts`
 
-### 5. Loading & Results Display
-- **Progress Animation**: Step-by-step generation process
-- **Error Handling**: Retry mechanisms and user feedback
-- **Result Preview**: Full-screen image display with options
-- **Location**: `src/screens/GenerationScreen.tsx`
+### 7. User Profile & Settings
+- **Account Management**: User profile with sign-out option
+- **App Preferences**: High quality images, auto-save, notifications
+- **Storage Management**: Cache clearing and download management
+- **About Section**: Version info, privacy policy, terms
+- **Location**: `src/screens/AccountScreen.tsx`, `src/screens/SettingsScreen.tsx`
 
 ## 🔑 API Configuration
 
@@ -122,41 +155,53 @@ plant-interior-ai/
 5. Add bundle ID for iOS and package name for Android
 6. Update `app.json` with your client ID
 
-### OpenRouter API Setup
-1. Visit [OpenRouter](https://openrouter.ai/)
-2. Create an account and get API key
+### Gemini API Setup
+1. Visit [Google AI Studio](https://aistudio.google.com/)
+2. Create a new API key for Gemini
 3. Update `app.json` with your API key
-4. Ensure you have credits for Gemini 2.5 Flash Image Preview model
+4. Ensure Gemini 2.5 Flash Image Preview is available in your region
 
 ## 📱 App Flow
 
-1. **Authentication**
-   - User opens app
-   - Sees Google/Apple sign-in options
-   - Authenticates and session is saved
+1. **Launch & Authentication**
+   - App opens with authentication screen
+   - User can sign in with Google or skip for testing
+   - Successful authentication leads to main app interface
 
-2. **Photo Capture**
-   - Camera screen opens
-   - User takes photo of room interior
-   - Can choose from gallery instead
+2. **Main Interface (Tabbed Navigation)**
+   - **Gallery Tab** (Home): View all saved designs in a grid
+   - **Account Tab**: User profile, favorites, app sharing
+   - **Settings Tab**: Preferences, storage, about information
+   - Floating tab bar that auto-hides during scrolling
+
+3. **Create New Design**
+   - Tap "+" button in gallery to start new design
+   - Choose between camera capture or gallery photo
    - Photo preview and confirmation
 
-3. **Plant Selection**
-   - Shows captured room image
-   - User selects plant type (4 options)
-   - User selects style (3 options per type)
-   - Confirmation summary
+4. **Plant Configuration**
+   - Shows captured room image as background
+   - Select plant type: Succulents, Tropical, Flowering, Hanging
+   - Choose style: Modern, Rustic, Minimalist, etc.
+   - Optional custom prompt input
 
-4. **AI Generation**
-   - Shows progress with animated steps
-   - Calls OpenRouter API with Gemini model
-   - Displays loading animation
-   - Shows error handling if needed
+5. **AI Generation Process**
+   - Real-time progress with actual API timing
+   - Two-phase generation: setup + AI processing
+   - Live progress percentages and status updates
+   - Error handling with retry options
 
-5. **Results**
-   - Displays generated image
-   - Options to save or generate again
-   - Navigation back to camera for new photos
+6. **Design Results**
+   - Full-screen image display with pinch-to-zoom
+   - Info modal (50% screen) with design details
+   - Save to gallery, share, favorite, or delete options
+   - Gesture-controlled modal with multiple close methods
+
+7. **Gallery Management**
+   - Browse all saved designs in responsive grid
+   - Pull-to-refresh functionality
+   - Tap designs to view in full-screen detail mode
+   - Heart icons for favoriting designs
 
 ## 🛠️ Development Commands
 
