@@ -14,9 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
+import { useTabBar } from '../contexts/TabBarContext';
 
 interface GalleryScreenProps {
-  onBack: () => void;
+  onNewDesign: () => void;
   onDesignSelect: (design: SavedDesign) => void;
 }
 
@@ -25,12 +26,13 @@ const numColumns = 2;
 const itemSize = (width - 60) / numColumns; // Account for padding and gap
 
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
-  onBack,
+  onNewDesign,
   onDesignSelect,
 }) => {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { handleScroll } = useTabBar();
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -143,11 +145,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#2d5016" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>My Designs</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
+            <Ionicons name="add" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.loadingContainer}>
@@ -160,11 +161,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#2d5016" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>My Designs</Text>
-        <Text style={styles.countText}>{designs.length}</Text>
+        <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
+          <Ionicons name="add" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -175,6 +175,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -199,20 +201,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
-  backButton: {
-    padding: 8,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#2d5016',
+    flex: 1,
   },
-  countText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6b7280',
-    minWidth: 40,
-    textAlign: 'right',
+  newDesignButton: {
+    backgroundColor: '#2d5016',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   placeholder: {
     width: 40,
@@ -228,6 +229,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 20,
+    paddingBottom: 110,
     flexGrow: 1,
   },
   row: {
