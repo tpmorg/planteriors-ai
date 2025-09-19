@@ -13,7 +13,7 @@ import { useTabBar } from '../contexts/TabBarContext';
 
 export const AccountScreen: React.FC = () => {
   const { user, logout } = useAuth();
-  const { handleScroll } = useTabBar();
+  const { handleScroll, tabBarHeight } = useTabBar();
 
   const handleLogout = () => {
     logout();
@@ -23,6 +23,7 @@ export const AccountScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
@@ -90,7 +91,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 110,
   },
   header: {
     paddingHorizontal: 20,

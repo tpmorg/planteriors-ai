@@ -32,7 +32,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { handleScroll } = useTabBar();
+  const { handleScroll, tabBarHeight } = useTabBar();
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -172,7 +172,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         renderItem={renderDesignItem}
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { paddingBottom: tabBarHeight + 20 }]}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
@@ -229,7 +229,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 20,
-    paddingBottom: 110,
     flexGrow: 1,
   },
   row: {

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TouchableOpacity, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -43,6 +44,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 // Custom Tab Bar Component
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { tabBarStyle } = useTabBar();
+  const insets = useSafeAreaInsets();
 
   return (
     <Animated.View
@@ -55,9 +57,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           backgroundColor: '#fff',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
-          paddingBottom: 20,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 12,
-          height: 85,
+          height: 65 + Math.max(insets.bottom, 8),
           shadowColor: '#000',
           shadowOffset: {
             width: 0,
@@ -68,7 +70,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           elevation: 8,
           flexDirection: 'row',
           justifyContent: 'space-around',
-          alignItems: 'center',
+          alignItems: 'flex-start',
+          paddingHorizontal: 0,
         },
         tabBarStyle,
       ]}

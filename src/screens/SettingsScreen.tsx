@@ -15,12 +15,13 @@ export const SettingsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [highQuality, setHighQuality] = useState(false);
-  const { handleScroll } = useTabBar();
+  const { handleScroll, tabBarHeight } = useTabBar();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
@@ -144,7 +145,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 110,
   },
   header: {
     paddingHorizontal: 20,
