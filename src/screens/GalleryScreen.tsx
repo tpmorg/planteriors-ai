@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTabBar } from '../contexts/TabBarContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
@@ -33,6 +34,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
+  const { theme } = useTheme();
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -131,9 +133,11 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     </TouchableOpacity>
   );
 
+  const styles = createStyles(theme);
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="images-outline" size={64} color="#9ca3af" />
+      <Ionicons name="images-outline" size={64} color={theme.colors.textSecondary} />
       <Text style={styles.emptyTitle}>No designs yet</Text>
       <Text style={styles.emptyText}>
         Create your first plant design to see it here
@@ -186,10 +190,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -197,18 +201,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
     flex: 1,
   },
   newDesignButton: {
-    backgroundColor: '#2d5016',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -225,7 +229,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
   },
   listContainer: {
     padding: 20,
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.borderLight,
   },
   designImage: {
     width: '100%',
@@ -279,7 +283,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 11,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -292,13 +296,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

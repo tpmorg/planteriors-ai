@@ -11,6 +11,7 @@ import Animated from 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { TabBarProvider, useTabBar } from './src/contexts/TabBarContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { CameraScreen } from './src/screens/CameraScreen';
 import { PlantSelectionScreen } from './src/screens/PlantSelectionScreen';
@@ -44,6 +45,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 // Custom Tab Bar Component
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { tabBarStyle } = useTabBar();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -54,13 +56,13 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.tabBarBackground,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 12,
           height: 65 + Math.max(insets.bottom, 8),
-          shadowColor: '#000',
+          shadowColor: theme.colors.shadow,
           shadowOffset: {
             width: 0,
             height: -2,
@@ -116,14 +118,14 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             <Ionicons
               name={iconName}
               size={24}
-              color={isFocused ? '#2d5016' : '#9ca3af'}
+              color={isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive}
             />
             <Text
               style={{
                 fontSize: 12,
                 fontWeight: '500',
                 marginTop: 2,
-                color: isFocused ? '#2d5016' : '#9ca3af',
+                color: isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive,
               }}
             >
               {route.name}
@@ -153,6 +155,7 @@ function MainTabNavigator() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
   const [dbInitialized, setDbInitialized] = useState(false);
 
   useEffect(() => {
@@ -174,16 +177,20 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Auth" component={AuthScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <>
+        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Auth" component={AuthScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </>
     );
   }
 
   return (
     <TabBarProvider>
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="MainApp" component={MainTabNavigator} />
@@ -295,10 +302,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <EnvValidator>
-        <AuthProvider>
-          <StatusBar style="auto" />
-          <AppContent />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ThemeProvider>
       </EnvValidator>
     </SafeAreaProvider>
   );

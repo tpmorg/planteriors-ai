@@ -76,12 +76,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const showModal = () => {
     setShowInfoModal(true);
-    modalTranslateY.value = withSpring(screenHeight * 0.5, { damping: 20 });
+    modalTranslateY.value = withTiming(screenHeight * 0.5, { duration: 300 });
     backdropOpacity.value = withTiming(0.5, { duration: 300 });
   };
 
   const hideModal = () => {
-    modalTranslateY.value = withSpring(screenHeight, { damping: 20 });
+    modalTranslateY.value = withTiming(screenHeight, { duration: 300 });
     backdropOpacity.value = withTiming(0, { duration: 300 });
     setTimeout(() => setShowInfoModal(false), 300);
   };
@@ -217,7 +217,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         runOnJS(hideModal)();
       } else {
         // Snap back to 50% position
-        modalTranslateY.value = withSpring(screenHeight * 0.5, { damping: 20 });
+        modalTranslateY.value = withTiming(screenHeight * 0.5, { duration: 200 });
         backdropOpacity.value = withTiming(0.5, { duration: 200 });
       }
     });
@@ -328,9 +328,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   >
                     <View style={styles.modalHandle} />
                     <Text style={styles.modalTitle}>Design Details</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#374151" />
                   </TouchableOpacity>
                 </Animated.View>
               </GestureDetector>
@@ -471,7 +468,7 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -482,7 +479,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 40,
+    justifyContent: 'center',
   },
   modalHandle: {
     width: 40,
@@ -495,12 +492,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2d5016',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    textAlign: 'center',
   },
   modalContent: {
     flex: 1,

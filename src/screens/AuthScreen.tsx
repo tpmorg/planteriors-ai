@@ -8,11 +8,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { env } from '../utils/env';
 
 export const AuthScreen: React.FC = () => {
   const { signInWithGoogle, signInWithApple, signInBypass, isLoading } = useAuth();
+  const { theme } = useTheme();
   const showBypass = env.isDebugMode() || __DEV__;
+  const styles = createStyles(theme);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,10 +67,10 @@ export const AuthScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -81,12 +84,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -102,12 +105,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   googleButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
   },
   appleButton: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.isDark ? '#ffffff' : '#000000',
   },
   bypassButton: {
     backgroundColor: '#f59e0b',
@@ -117,17 +120,17 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
   },
   appleButtonText: {
-    color: '#ffffff',
+    color: theme.isDark ? '#000000' : '#ffffff',
   },
   bypassButtonText: {
     color: '#ffffff',
   },
   disclaimer: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },

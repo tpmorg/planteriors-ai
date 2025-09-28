@@ -10,12 +10,34 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTabBar } from '../contexts/TabBarContext';
+import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 
 export const SettingsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [highQuality, setHighQuality] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
+  const { theme, themeMode, setThemeMode } = useTheme();
+
+  const getThemeModeDisplayName = (mode: ThemeMode): string => {
+    switch (mode) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      case 'system':
+        return 'System';
+    }
+  };
+
+  const cycleThroughThemeModes = () => {
+    const modes: ThemeMode[] = ['system', 'light', 'dark'];
+    const currentIndex = modes.indexOf(themeMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    setThemeMode(modes[nextIndex]);
+  };
+
+  const styles = createStyles(theme);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -30,11 +52,24 @@ export const SettingsScreen: React.FC = () => {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+
+          <TouchableOpacity style={styles.menuItem} onPress={cycleThroughThemeModes}>
+            <Ionicons name="color-palette-outline" size={24} color={theme.colors.text} />
+            <Text style={styles.menuText}>Theme</Text>
+            <View style={styles.menuValue}>
+              <Text style={styles.menuValueText}>{getThemeModeDisplayName(themeMode)}</Text>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Generation</Text>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="image-outline" size={24} color="#374151" />
+              <Ionicons name="image-outline" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>High Quality Images</Text>
                 <Text style={styles.settingDescription}>
@@ -45,14 +80,14 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={highQuality}
               onValueChange={setHighQuality}
-              trackColor={{ false: '#e5e7eb', true: '#86efac' }}
-              thumbColor={highQuality ? '#2d5016' : '#f4f3f4'}
+              trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+              thumbColor={theme.colors.switchThumb}
             />
           </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="save-outline" size={24} color="#374151" />
+              <Ionicons name="save-outline" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Auto-save Designs</Text>
                 <Text style={styles.settingDescription}>
@@ -63,8 +98,8 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={autoSave}
               onValueChange={setAutoSave}
-              trackColor={{ false: '#e5e7eb', true: '#86efac' }}
-              thumbColor={autoSave ? '#2d5016' : '#f4f3f4'}
+              trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+              thumbColor={theme.colors.switchThumb}
             />
           </View>
         </View>
@@ -74,7 +109,7 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="notifications-outline" size={24} color="#374151" />
+              <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Push Notifications</Text>
                 <Text style={styles.settingDescription}>
@@ -85,8 +120,8 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ false: '#e5e7eb', true: '#86efac' }}
-              thumbColor={notifications ? '#2d5016' : '#f4f3f4'}
+              trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+              thumbColor={theme.colors.switchThumb}
             />
           </View>
         </View>
@@ -95,20 +130,20 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Storage</Text>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="trash-outline" size={24} color="#374151" />
+            <Ionicons name="trash-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Clear Cache</Text>
             <View style={styles.menuValue}>
               <Text style={styles.menuValueText}>127 MB</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="download-outline" size={24} color="#374151" />
+            <Ionicons name="download-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Manage Downloads</Text>
             <View style={styles.menuValue}>
               <Text style={styles.menuValueText}>24 items</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
         </View>
@@ -122,15 +157,15 @@ export const SettingsScreen: React.FC = () => {
           </View>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="document-text-outline" size={24} color="#374151" />
+            <Ionicons name="document-text-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="shield-checkmark-outline" size={24} color="#374151" />
+            <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Terms of Service</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -138,10 +173,10 @@ export const SettingsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -149,27 +184,27 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginTop: 20,
     paddingVertical: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.background,
   },
   settingItem: {
     flexDirection: 'row',
@@ -178,7 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: theme.colors.borderLight,
   },
   settingInfo: {
     flexDirection: 'row',
@@ -192,12 +227,12 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
   },
   menuItem: {
     flexDirection: 'row',
@@ -205,12 +240,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: theme.colors.borderLight,
   },
   menuText: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
     marginLeft: 16,
   },
   menuValue: {
@@ -219,7 +254,7 @@ const styles = StyleSheet.create({
   },
   menuValueText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     marginRight: 8,
   },
   infoItem: {
@@ -229,15 +264,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: theme.colors.borderLight,
   },
   infoLabel: {
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
   },
   infoValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
   },
 });

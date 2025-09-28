@@ -10,10 +10,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const AccountScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const { handleScroll, tabBarHeight } = useTabBar();
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   const handleLogout = () => {
     logout();
@@ -34,7 +37,7 @@ export const AccountScreen: React.FC = () => {
         <View style={styles.userSection}>
           <View style={styles.userInfo}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={40} color="#2d5016" />
+              <Ionicons name="person" size={40} color={theme.colors.primary} />
             </View>
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
@@ -49,27 +52,27 @@ export const AccountScreen: React.FC = () => {
 
         <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="heart-outline" size={24} color="#374151" />
+            <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Favorites</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="download-outline" size={24} color="#374151" />
+            <Ionicons name="download-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Downloads</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="share-outline" size={24} color="#374151" />
+            <Ionicons name="share-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Share App</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="help-circle-outline" size={24} color="#374151" />
+            <Ionicons name="help-circle-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -84,10 +87,10 @@ export const AccountScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -95,17 +98,17 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
   },
   userSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 24,
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -129,15 +132,15 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
   },
   menuSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     marginTop: 20,
     paddingVertical: 8,
   },
@@ -147,12 +150,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: theme.colors.borderLight,
   },
   menuText: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
+    color: theme.colors.text,
     marginLeft: 16,
   },
   logoutSection: {
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
