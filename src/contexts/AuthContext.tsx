@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
 import { env } from '../utils/env';
+import { FirebaseAuthService } from '../services/firebaseAuthService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -40,13 +41,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Handle OAuth configuration with fallback for missing env vars
   const getOAuthConfig = () => {
     try {
+      // Use the Web Client ID from Firebase Console
+      const webClientId = '571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com';
+
+      console.log('Using OAuth Web Client ID:', webClientId);
+
+      // Use custom scheme for Dev Client
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'plant-interior-ai',
+        path: 'auth',
+      });
+
+      console.log('OAuth Redirect URI:', redirectUri);
+      console.log('App Scheme:', env.getAppScheme());
+
       return {
-        clientId: env.getGoogleClientId(),
+        clientId: webClientId,
         scopes: ['openid', 'profile', 'email'],
-        redirectUri: AuthSession.makeRedirectUri({
-          scheme: env.getAppScheme(),
-          path: 'auth',
-        }),
+        redirectUri: redirectUri,
+        responseType: AuthSession.ResponseType.Code,
         additionalParameters: {},
         customParameters: {
           prompt: 'select_account',
@@ -86,15 +99,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadStoredAuth = async () => {
     try {
+      console.log('Loading stored authentication...');
       const storedUser = await AsyncStorage.getItem('user');
       if (storedUser) {
         const user: User = JSON.parse(storedUser);
+        console.log('Found stored user:', user.email);
         setAuthState({
           isAuthenticated: true,
           user,
           isLoading: false,
         });
       } else {
+        console.log('No stored user found, showing login screen');
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
@@ -105,22 +121,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleGoogleAuthResponse = async (authentication: any) => {
     try {
-      if (!authentication?.accessToken) return;
+      console.log('Received Google auth response:', authentication);
 
-      // Fetch user info from Google
+      if (!authentication?.accessToken) {
+        console.error('No access token received from Google OAuth');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      // Get user info from Google using access token
+      console.log('Fetching user info from Google...');
       const userInfoResponse = await fetch(
         `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${authentication.accessToken}`
       );
       const userInfo = await userInfoResponse.json();
+      console.log('Google user info:', userInfo);
 
-      const user: User = {
+      // Create user object
+      const user = {
         id: userInfo.id,
         email: userInfo.email,
         name: userInfo.name,
-        picture: userInfo.picture,
-        provider: 'google',
+        avatar: userInfo.picture,
       };
 
+      console.log('Storing user and updating auth state...');
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setAuthState({
         isAuthenticated: true,
@@ -136,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
+      console.log('Starting Google OAuth with expo-auth-session...');
       await promptAsync();
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -183,14 +209,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
+      console.log('Starting complete sign out...');
+
+      // Clear Firebase auth
+      await FirebaseAuthService.signOut();
+
+      // Clear stored user data (keep theme preference)
       await AsyncStorage.removeItem('user');
+
+      // Reset auth state
       setAuthState({
         isAuthenticated: false,
         user: null,
         isLoading: false,
       });
+
+      console.log('Complete sign out successful');
     } catch (error) {
       console.error('Error signing out:', error);
+
+      // Force clear state even if Firebase signout fails
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+      });
     }
   };
 

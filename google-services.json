@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "571611112597",
+    "project_id": "house-plant-ai",
+    "storage_bucket": "house-plant-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571611112597:android:0308a81fb13e569996279c",
+        "android_client_info": {
+          "package_name": "com.plantai.interior"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "571611112597-ff7ra8nu2blpf9qv4767b155ibo1skai.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plantai.interior",
+            "certificate_hash": "24e931fc3eb81d58cfcd9fba4dd2bf8fd971be50"
+          }
+        },
+        {
+          "client_id": "571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_n8fvKog_4uTojuYoh2aSszHpHdMoaoQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -7,8 +7,9 @@ A React Native Expo application that uses AI to generate plant-enhanced interior
 ### Prerequisites
 - Node.js 20.19.4 or higher
 - Expo CLI (`npm install -g @expo/cli`)
+- EAS CLI (`npm install -g eas-cli`) - for development builds
 - iOS Simulator (for iOS development) or Android Emulator (for Android development)
-- Google OAuth Client ID (for authentication)
+- Firebase project with Google Authentication enabled
 - Gemini API Key (for AI image generation)
 
 ### Installation
@@ -62,9 +63,12 @@ npm run web
 plant-interior-ai/
 ├── src/
 │   ├── components/          # Reusable UI components
+│   ├── config/             # Configuration files
+│   │   └── firebase.ts     # Firebase configuration (reads from google-services.json)
 │   ├── contexts/           # React contexts
 │   │   ├── AuthContext.tsx # OAuth authentication context
-│   │   └── TabBarContext.tsx # Tab navigation with scroll behavior
+│   │   ├── TabBarContext.tsx # Tab navigation with scroll behavior
+│   │   └── ThemeContext.tsx # Dark/light mode theme management
 │   ├── screens/            # Main application screens
 │   │   ├── AuthScreen.tsx  # Google/Apple sign-in (launch screen)
 │   │   ├── GalleryScreen.tsx # Main gallery with saved designs
@@ -76,13 +80,15 @@ plant-interior-ai/
 │   │   └── DesignDetailScreen.tsx # Full-screen image with gestures
 │   ├── services/           # API services
 │   │   ├── geminiService.ts # Gemini AI integration
-│   │   └── databaseService.ts # SQLite local storage
+│   │   ├── databaseService.ts # SQLite local storage
+│   │   └── firebaseAuthService.ts # Firebase authentication service
 │   ├── types/              # TypeScript type definitions
 │   │   └── index.ts        # Core app types
 │   └── utils/              # Utility functions
 ├── assets/                 # Images, icons, fonts
 ├── App.tsx                 # Main app with tab navigation
 ├── app.json               # Expo configuration
+├── google-services.json   # Firebase Android configuration
 ├── package.json           # Dependencies and scripts
 └── CLAUDE.md             # Documentation
 ```
@@ -91,8 +97,8 @@ plant-interior-ai/
 
 ### 1. Authentication & Navigation
 - **Launch Flow**: App starts with authentication screen
-- **Google Sign-In**: Implemented using `expo-auth-session`
-- **Skip Option**: Users can skip authentication for testing
+- **Development Mode**: Skip login option available for development (bypass authentication)
+- **Production Ready**: Firebase Google OAuth integration configured for production
 - **Tab Navigation**: Bottom tab bar with Gallery, Account, Settings
 - **Auto-Hide Tabs**: Tabs hide on scroll down, show on scroll up
 - **Safe Area Support**: Dynamic positioning above native navigation
@@ -138,8 +144,17 @@ plant-interior-ai/
 - **Gemini Integration**: Direct API calls to Gemini 2.5 Flash Image Preview
 - **Location**: `src/screens/GenerationScreen.tsx`, `src/services/geminiService.ts`
 
-### 7. User Profile & Settings
+### 7. Dark Mode & Theming
+- **System Integration**: Automatically follows device dark/light mode
+- **Manual Override**: User can force light, dark, or system mode
+- **Persistent Preference**: Theme choice saved across app sessions
+- **Dynamic UI**: All screens and components adapt to theme changes
+- **Status Bar**: Automatically adjusts for proper contrast
+- **Location**: `src/contexts/ThemeContext.tsx`
+
+### 8. User Profile & Settings
 - **Account Management**: User profile with sign-out option
+- **Theme Control**: Dark mode toggle with system/light/dark options
 - **App Preferences**: High quality images, auto-save, notifications
 - **Storage Management**: Cache clearing and download management
 - **About Section**: Version info, privacy policy, terms
@@ -147,13 +162,43 @@ plant-interior-ai/
 
 ## 🔑 API Configuration
 
-### Google OAuth Setup
+### Firebase Setup (Required for Production)
+
+**Current Status**: ✅ Configured and integrated
+
+1. **Create Firebase Project**: [Firebase Console](https://console.firebase.google.com/)
+2. **Add Android App**: Package name `com.plantai.interior`
+3. **Download Configuration**: Place `google-services.json` in project root
+4. **Enable Authentication**: Go to Authentication → Sign-in method → Enable Google
+5. **Configure OAuth**: Copy Web Client ID from Firebase Console to `app.json`
+6. **Add SHA-1 Fingerprints**: Required for Google Sign-In to work
+
+**Generate SHA-1 fingerprints:**
+```bash
+# Development keystore
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+
+# For EAS builds (automatic)
+eas credentials
+```
+
+**Firebase Configuration**:
+The app automatically reads Firebase config from `google-services.json`:
+```typescript
+// src/config/firebase.ts
+const firebaseConfig = {
+  apiKey: googleServices.client[0].api_key[0].current_key,
+  authDomain: `${googleServices.project_info.project_id}.firebaseapp.com`,
+  projectId: googleServices.project_info.project_id,
+  // ... other config values
+};
+```
+
+### Google OAuth Setup (Legacy - for reference)
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add bundle ID for iOS and package name for Android
-6. Update `app.json` with your client ID
+2. Create OAuth 2.0 credentials (Web application type)
+3. Add authorized domains in Firebase Console
+4. Update redirect URIs for production builds
 
 ### Gemini API Setup
 1. Visit [Google AI Studio](https://aistudio.google.com/)
@@ -203,41 +248,81 @@ plant-interior-ai/
    - Tap designs to view in full-screen detail mode
    - Heart icons for favoriting designs
 
+## 🚀 Development Strategy
+
+### Current Approach: Expo Go + Skip Authentication
+For rapid development and prototyping, the app is configured to work with **Expo Go**:
+
+- **Bypass Authentication**: Use "Skip Login" option for development
+- **Hot Reload**: Instant code changes without rebuilds
+- **Cross-Platform**: Test on any device with Expo Go
+- **Fast Iteration**: Perfect for UI/UX development
+
+### Production Approach: Expo Dev Client + Firebase Auth
+When ready for production features, switch to **Expo Dev Client**:
+
+- **Native Modules**: Full Firebase and OAuth support
+- **Real Authentication**: Google Sign-In works properly
+- **Custom Native Code**: Add any native functionality
+- **App Store Ready**: Production builds for distribution
+
+### When to Switch to Dev Client
+Switch from Expo Go to Dev Client when you need:
+- ✅ Real Google OAuth authentication
+- ✅ Push notifications
+- ✅ Native modules (camera, biometrics, etc.)
+- ✅ Custom native code
+- ✅ Production app store builds
+
 ## 🛠️ Development Commands
 
+### Expo Go Development (Current)
 ```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (scan QR with Expo Go)
 npm start
-
-# Run on iOS simulator
-npm run ios
-
-# Run on Android emulator
-npm run android
-
-# Run on web browser
-npm run web
 
 # Type checking
 npx tsc --noEmit
+```
 
-# Linting (if configured)
-npm run lint
+### Dev Client Development (Production Ready)
+```bash
+# Install EAS CLI globally
+npm install -g eas-cli
 
-# Build for production
-expo build
+# Initialize EAS project
+eas init
+
+# Create development build
+eas build --platform android --profile development
+
+# Install APK on device and run
+npm start --dev-client
+```
+
+### Production Builds
+```bash
+# Build for app stores
+eas build --platform android --profile production
+eas build --platform ios --profile production
+
+# Submit to app stores
+eas submit --platform android
+eas submit --platform ios
 ```
 
 ## 🔒 Security Considerations
 
 1. **API Keys**: Never commit real API keys to version control
-2. **OAuth**: Properly configure redirect URIs
-3. **Permissions**: Request minimal required permissions
-4. **Image Handling**: Validate image uploads
-5. **Error Handling**: Don't expose sensitive error details
+2. **Firebase**: `google-services.json` contains public keys (safe to commit)
+3. **OAuth**: Configure authorized domains in Firebase Console
+4. **Redirect URIs**: Use custom scheme `plant-interior-ai://` for production
+5. **Permissions**: Request minimal required permissions
+6. **Image Handling**: Validate image uploads and user input
+7. **Error Handling**: Don't expose sensitive error details in production
 
 ## 📋 TODO: Future Enhancements
 
@@ -267,14 +352,15 @@ expo build
    - Restart app after granting permissions
    - Verify `app.json` camera plugin configuration
 
-2. **OAuth Not Working**
-   - Verify Google Client ID is correct
-   - Check bundle ID/package name matches Google Console
-   - Ensure redirect URI is properly configured
+2. **OAuth Not Working (Expo Go Limitation)**
+   - OAuth requires Expo Dev Client for production use
+   - Use "Skip Login" option for development in Expo Go
+   - Verify Firebase configuration for Dev Client builds
+   - Check SHA-1 fingerprint is added to Firebase project
 
 3. **API Generation Fails**
-   - Check OpenRouter API key is valid
-   - Verify you have sufficient credits
+   - Check Gemini API key is valid
+   - Verify you have sufficient quota
    - Check network connectivity
    - Review error logs for specific issues
 
@@ -295,19 +381,23 @@ expo logs
 ## 📚 Dependencies
 
 ### Core Dependencies
-- `expo`: ~52.0.0
+- `expo`: ~54.0.7
 - `react-native`: 0.81.4
-- `@react-navigation/native`: ^6.x
-- `@react-navigation/stack`: ^6.x
-- `expo-camera`: ^15.x
-- `expo-image-picker`: ^15.x
-- `expo-auth-session`: ^6.x
+- `@react-navigation/native`: ^7.x
+- `@react-navigation/bottom-tabs`: ^7.x
+- `@react-navigation/stack`: ^7.x
+- `expo-camera`: ^17.x
+- `expo-image-picker`: ^17.x
+- `expo-auth-session`: ^7.x
 - `@react-native-async-storage/async-storage`: ^2.x
+- `@react-native-firebase/app`: ^23.x
+- `@react-native-firebase/auth`: ^23.x
+- `@google/genai`: ^1.x
 
 ### Development Dependencies
-- `typescript`: ^5.x
-- `@types/react`: ^18.x
-- `@types/react-native`: ^0.72.x
+- `typescript`: ~5.9.2
+- `@types/react`: ~19.1.0
+- `eas-cli`: Latest (for production builds)
 
 ## 🤝 Contributing
 
@@ -325,6 +415,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Navigation](https://reactnavigation.org/)
-- [OpenRouter API Docs](https://openrouter.ai/docs)
+- [Gemini API Docs](https://ai.google.dev/docs)
+- [Firebase Console](https://console.firebase.google.com/)
+- [EAS CLI Documentation](https://docs.expo.dev/build/introduction/)
 - [Google OAuth Setup](https://developers.google.com/identity/protocols/oauth2)
 - [Apple Sign-In](https://developer.apple.com/documentation/sign_in_with_apple)

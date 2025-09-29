@@ -14,6 +14,7 @@
     },
     "scheme": "plant-interior-ai",
     "plugins": [
+      "expo-dev-client",
       [
         "expo-camera",
         {
@@ -25,8 +26,12 @@
         {
           "photosPermission": "Allow PlantAI Interior to access your photos to select room images."
         }
-      ]
+      ],
+      "@react-native-firebase/app"
     ],
+    "developmentClient": {
+      "silentLaunch": true
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.plantai.interior",
@@ -34,11 +39,15 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "plant-interior-ai",
-            "CFBundleURLSchemes": ["plant-interior-ai"]
+            "CFBundleURLSchemes": [
+              "plant-interior-ai"
+            ]
           },
           {
             "CFBundleURLName": "google-oauth",
-            "CFBundleURLSchemes": ["YOUR_GOOGLE_CLIENT_ID"]
+            "CFBundleURLSchemes": [
+              "YOUR_GOOGLE_CLIENT_ID"
+            ]
           }
         ]
       }
@@ -56,14 +65,15 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
+      "googleClientId": "571611112597-ff7ra8nu2blpf9qv4767b155ibo1skai.apps.googleusercontent.com",
       "googleClientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
       "geminiApiKey": "AIzaSyAYQjkpWV7KhRwrSTJCsLIEOc6kqVxwUyc",
       "appName": "PlantAI Interior",

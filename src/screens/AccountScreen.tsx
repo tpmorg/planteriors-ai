@@ -13,13 +13,13 @@ import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 export const AccountScreen: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
   const handleLogout = () => {
-    logout();
+    signOut();
   };
 
   return (

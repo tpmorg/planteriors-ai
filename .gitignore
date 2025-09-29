@@ -30,8 +30,25 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Environment variables and secrets
 .env*.local
+.env
+.env.production
+.env.development
+.env.staging
+
+# API Keys and secrets
+**/secrets/
+**/*secret*
+**/*key*.json
+**/*credentials*.json
+firebase-adminsdk-*.json
+
+# Firebase private config (keep google-services.json for public config)
+GoogleService-Info.plist
+
+# EAS credentials
+credentials.json
 
 # typescript
 *.tsbuildinfo
