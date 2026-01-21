@@ -3,7 +3,8 @@ import { GenerationRequest } from '../types';
 import { env } from '../utils/env';
 import * as FileSystem from 'expo-file-system/legacy';
 
-const MODEL_NAME = 'gemini-2.5-flash-image-preview';
+// Image generation/editing model - takes input image + prompt to create modified version
+const MODEL_NAME = 'gemini-2.5-flash-image';
 
 export class GeminiService {
   private client: GoogleGenAI;
@@ -52,6 +53,9 @@ export class GeminiService {
       const response = await this.client.models.generateContent({
         model: MODEL_NAME,
         contents: prompt,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
       });
 
       console.log('Gemini API response received');

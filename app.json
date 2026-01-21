@@ -14,7 +14,6 @@
     },
     "scheme": "plant-interior-ai",
     "plugins": [
-      "expo-dev-client",
       [
         "expo-camera",
         {
@@ -26,12 +25,8 @@
         {
           "photosPermission": "Allow PlantAI Interior to access your photos to select room images."
         }
-      ],
-      "@react-native-firebase/app"
+      ]
     ],
-    "developmentClient": {
-      "silentLaunch": true
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.plantai.interior",
