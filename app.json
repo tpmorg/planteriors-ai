@@ -73,15 +73,9 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "googleClientId": "571611112597-ff7ra8nu2blpf9qv4767b155ibo1skai.apps.googleusercontent.com",
-      "googleClientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
-      "geminiApiKey": "AIzaSyAYQjkpWV7KhRwrSTJCsLIEOc6kqVxwUyc",
-      "appName": "PlantAI Interior",
-      "appScheme": "plant-interior-ai",
-      "appDomain": "plant-interior-ai.app",
-      "appleClientId": "YOUR_APPLE_CLIENT_ID",
-      "debugMode": true,
-      "apiTimeout": 30000
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
     }
   }
 }

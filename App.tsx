@@ -21,6 +21,7 @@ import { DesignDetailScreen } from './src/screens/DesignDetailScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { EnvValidator } from './src/components/EnvValidator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { GenerationRequest, GeneratedImage, PlantType, PlantStyle, SavedDesign } from './src/types';
 import { databaseService } from './src/services/databaseService';
 
@@ -301,13 +302,15 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <EnvValidator>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </ThemeProvider>
-      </EnvValidator>
+      <ErrorBoundary>
+        <EnvValidator>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </ThemeProvider>
+        </EnvValidator>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
