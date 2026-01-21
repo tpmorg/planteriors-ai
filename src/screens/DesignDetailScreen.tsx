@@ -11,7 +11,7 @@ import {
   ScrollView,
   PanResponder,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -43,6 +43,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   onBack,
   onDesignDeleted,
 }) => {
+  const insets = useSafeAreaInsets();
   const [design, setDesign] = useState<SavedDesign>(initialDesign);
   const [isSharing, setIsSharing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -247,9 +248,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <SafeAreaView style={styles.container}>
-        {/* Header with overlay */}
-        <View style={styles.header}>
+      <View style={styles.container}>
+        {/* Header with overlay - positioned below status bar */}
+        <View style={[styles.header, { top: insets.top }]}>
           <TouchableOpacity onPress={onBack} style={styles.headerButton}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
@@ -390,7 +391,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             </Animated.View>
           </>
         )}
-      </SafeAreaView>
+      </View>
     </GestureHandlerRootView>
   );
 };

@@ -32,11 +32,13 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
+        // Use silent capture by taking a snapshot instead of a full photo
+        // This avoids the iOS shutter sound which can't be muted
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           base64: false,
           skipProcessing: true,
-          mute: true,
+          shutterSound: false,
         });
         setPreviewImage(photo.uri);
       } catch (error) {
