@@ -21,10 +21,45 @@ export interface PlantType {
   styles: PlantStyle[];
 }
 
+export interface PotStyle {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface PotColor {
+  id: string;
+  name: string;
+  hex: string;
+}
+
+export interface MaintenanceLevel {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface PlacementDensity {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface PlantOptions {
+  potStyle: PotStyle;
+  potColor: PotColor;
+  usePlanterBox: boolean;
+  maintenanceLevel: MaintenanceLevel;
+  placementDensity: PlacementDensity;
+}
+
 export interface GenerationRequest {
   imageUri: string;
   plantType: PlantType;
   plantStyle: PlantStyle;
+  plantOptions?: PlantOptions;
   prompt?: string;
 }
 

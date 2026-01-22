@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   Animated,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { GenerationRequest, GeneratedImage } from '../types';
-import { createGeminiService } from '../services/geminiService';
-import { databaseService } from '../services/databaseService';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { GenerationRequest, GeneratedImage } from "../types";
+import { createGeminiService } from "../services/geminiService";
+import { databaseService } from "../services/databaseService";
 
 interface GenerationScreenProps {
   request: GenerationRequest;
@@ -30,8 +30,10 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [isGenerating, setIsGenerating] = useState(true);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
-  const [currentStatus, setCurrentStatus] = useState('');
-  const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
+  const [currentStatus, setCurrentStatus] = useState("");
+  const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(
+    null,
+  );
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
@@ -41,17 +43,17 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const pulseAnim = new Animated.Value(1);
 
   const initialSteps = [
-    { text: 'Preparing your room image...', duration: 1000 },
-    { text: 'Optimizing image for processing...', duration: 800 },
-    { text: 'Connecting...', duration: 700 },
+    { text: "Preparing your room image...", duration: 1000 },
+    { text: "Optimizing image for processing...", duration: 800 },
+    { text: "Connecting...", duration: 700 },
   ];
 
   const apiSteps = [
-    { text: 'Sending image for analysis...', duration: 0 },
-    { text: 'Analyzing room layout and lighting...', duration: 0 },
-    { text: 'Designing plant placement...', duration: 0 },
-    { text: 'Generating augmented image...', duration: 0 },
-    { text: 'Processing final image...', duration: 0 },
+    { text: "Sending image for analysis...", duration: 0 },
+    { text: "Analyzing room layout and lighting...", duration: 0 },
+    { text: "Designing plant placement...", duration: 0 },
+    { text: "Generating augmented image...", duration: 0 },
+    { text: "Processing final image...", duration: 0 },
   ];
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             duration: 1000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
 
@@ -101,17 +103,19 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const startGeneration = async () => {
     try {
       // Phase 1: Initial preparation steps
-      setCurrentStatus('Preparing...');
+      setCurrentStatus("Preparing...");
       for (let i = 0; i < initialSteps.length; i++) {
         setCurrentStep(i);
         setCurrentStatus(initialSteps[i].text);
         setProgress((i + 1) / (initialSteps.length + apiSteps.length));
-        await new Promise(resolve => setTimeout(resolve, initialSteps[i].duration));
+        await new Promise((resolve) =>
+          setTimeout(resolve, initialSteps[i].duration),
+        );
       }
 
       // Phase 2: Real API call with live progress updates
       setApiCallStarted(true);
-      setCurrentStatus('Calling Gemini AI...');
+      setCurrentStatus("Calling AI...");
 
       const geminiService = createGeminiService();
 
@@ -123,7 +127,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       const apiProgressInterval = setInterval(() => {
         if (apiStepIndex < apiSteps.length) {
           const totalSteps = initialSteps.length + apiSteps.length;
-          const currentProgress = (initialSteps.length + apiStepIndex + 1) / totalSteps;
+          const currentProgress =
+            (initialSteps.length + apiStepIndex + 1) / totalSteps;
 
           setProgress(currentProgress);
           setCurrentStep(initialSteps.length + apiStepIndex);
@@ -140,7 +145,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       // Complete the progress
       setProgress(1);
-      setCurrentStatus('Generation complete!');
+      setCurrentStatus("Generation complete!");
 
       setGeneratedImageUri(generatedUri);
       setIsImageGenerated(isGenerated);
@@ -148,22 +153,22 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       // Only show success state for actually generated images
       if (!isGenerated) {
-        setError('AI generation failed - API returned text description instead of image. This might be a temporary issue with the Gemini model.');
+        setError(
+          "AI generation failed - API returned text description instead of image. This might be a temporary issue with the Gemini model.",
+        );
       }
-
     } catch (err) {
-      console.error('Generation error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate image');
+      console.error("Generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate image");
       setIsGenerating(false);
     }
   };
-
 
   const handleRetry = () => {
     setError(null);
     setProgress(0);
     setCurrentStep(0);
-    setCurrentStatus('');
+    setCurrentStatus("");
     setGeneratedImageUri(null);
     setIsImageGenerated(false);
     setApiCallStarted(false);
@@ -174,7 +179,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const handleUseResult = async () => {
     if (generatedImageUri && isImageGenerated) {
       try {
-        console.log('Saving design to database...');
+        console.log("Saving design to database...");
 
         const savedDesign = await databaseService.saveDesign({
           originalImageUri: request.imageUri,
@@ -192,15 +197,15 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           generatedImageUri: generatedImageUri,
           plantType: request.plantType,
           plantStyle: request.plantStyle,
-          prompt: request.prompt || '',
+          prompt: request.prompt || "",
           createdAt: new Date(),
         };
 
-        console.log('Design saved successfully with ID:', savedDesign.id);
+        console.log("Design saved successfully with ID:", savedDesign.id);
         onGenerationComplete(result);
       } catch (error) {
-        console.error('Failed to save design:', error);
-        Alert.alert('Error', 'Failed to save design. Please try again.');
+        console.error("Failed to save design:", error);
+        Alert.alert("Error", "Failed to save design. Please try again.");
       }
     }
   };
@@ -224,8 +229,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           {generatedImageUri && !isImageGenerated && (
             <View style={styles.placeholderInfo}>
               <Text style={styles.placeholderInfoText}>
-                📱 For debugging: A placeholder image was returned instead of a generated one.
-                Check the console logs for API response details.
+                📱 For debugging: A placeholder image was returned instead of a
+                generated one. Check the console logs for API response details.
               </Text>
             </View>
           )}
@@ -235,7 +240,10 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.backToSelectionButton} onPress={onBack}>
+          <TouchableOpacity
+            style={styles.backToSelectionButton}
+            onPress={onBack}
+          >
             <Text style={styles.backToSelectionText}>Back to Selection</Text>
           </TouchableOpacity>
         </View>
@@ -263,7 +271,10 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             },
           ]}
         >
-          <Image source={{ uri: generatedImageUri }} style={styles.resultImage} />
+          <Image
+            source={{ uri: generatedImageUri }}
+            style={styles.resultImage}
+          />
           <View style={styles.resultOverlay}>
             <Text style={styles.resultTitle}>✨ Design Complete!</Text>
             <Text style={styles.resultSubtitle}>
@@ -273,12 +284,18 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         </Animated.View>
 
         <View style={styles.resultActions}>
-          <TouchableOpacity style={styles.generateAgainButton} onPress={handleRetry}>
+          <TouchableOpacity
+            style={styles.generateAgainButton}
+            onPress={handleRetry}
+          >
             <Ionicons name="refresh" size={20} color="#2d5016" />
             <Text style={styles.generateAgainText}>Generate Another</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.useResultButton} onPress={handleUseResult}>
+          <TouchableOpacity
+            style={styles.useResultButton}
+            onPress={handleUseResult}
+          >
             <Text style={styles.useResultText}>Save This Design</Text>
             <Ionicons name="checkmark" size={20} color="white" />
           </TouchableOpacity>
@@ -299,7 +316,10 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       <View style={styles.generationContainer}>
         <View style={styles.originalImageContainer}>
-          <Image source={{ uri: request.imageUri }} style={styles.originalImage} />
+          <Image
+            source={{ uri: request.imageUri }}
+            style={styles.originalImage}
+          />
           <View style={styles.imageLabel}>
             <Text style={styles.imageLabelText}>Original Room</Text>
           </View>
@@ -307,7 +327,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            <View
+              style={[styles.progressFill, { width: `${progress * 100}%` }]}
+            />
           </View>
           <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
         </View>
@@ -317,10 +339,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           {apiCallStarted && (
             <View style={styles.apiStatusContainer}>
               <Animated.View
-                style={[
-                  styles.apiIndicator,
-                  { opacity: pulseAnim }
-                ]}
+                style={[styles.apiIndicator, { opacity: pulseAnim }]}
               />
               <Text style={styles.apiStatusText}>
                 Live processing with Gemini AI
@@ -349,25 +368,25 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2d5016',
+    fontWeight: "600",
+    color: "#2d5016",
   },
   placeholder: {
     width: 40,
@@ -375,69 +394,69 @@ const styles = StyleSheet.create({
   generationContainer: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   originalImageContainer: {
     height: 200,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 32,
-    position: 'relative',
+    position: "relative",
   },
   originalImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   imageLabel: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: "rgba(0,0,0,0.7)",
     padding: 12,
   },
   imageLabelText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   progressContainer: {
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   progressBar: {
-    width: '100%',
+    width: "100%",
     height: 6,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: "#e5e7eb",
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#2d5016',
+    height: "100%",
+    backgroundColor: "#2d5016",
     borderRadius: 3,
   },
   progressText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2d5016',
+    fontWeight: "600",
+    color: "#2d5016",
   },
   stepContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 32,
   },
   stepText: {
     fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
+    color: "#6b7280",
+    textAlign: "center",
     marginBottom: 8,
   },
   apiStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(45, 80, 22, 0.1)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(45, 80, 22, 0.1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -446,165 +465,165 @@ const styles = StyleSheet.create({
   apiIndicator: {
     width: 8,
     height: 8,
-    backgroundColor: '#2d5016',
+    backgroundColor: "#2d5016",
     borderRadius: 4,
     marginRight: 8,
   },
   apiStatusText: {
     fontSize: 12,
-    color: '#2d5016',
-    fontWeight: '600',
+    color: "#2d5016",
+    fontWeight: "600",
   },
   plantInfo: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 16,
     borderRadius: 12,
     marginBottom: 32,
   },
   plantInfoTitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     marginBottom: 4,
   },
   plantInfoDetail: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2d5016',
+    fontWeight: "600",
+    color: "#2d5016",
   },
   loadingAnimation: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingDot: {
     width: 8,
     height: 8,
-    backgroundColor: '#2d5016',
+    backgroundColor: "#2d5016",
     borderRadius: 4,
     marginHorizontal: 4,
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   errorTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#dc2626',
+    fontWeight: "bold",
+    color: "#dc2626",
     marginTop: 16,
     marginBottom: 8,
   },
   errorText: {
     fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
+    color: "#6b7280",
+    textAlign: "center",
     marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: '#2d5016',
+    backgroundColor: "#2d5016",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   retryButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
   },
   backToSelectionButton: {
     padding: 12,
   },
   backToSelectionText: {
-    color: '#6b7280',
+    color: "#6b7280",
     fontSize: 14,
   },
   resultContainer: {
     flex: 1,
     margin: 16,
     borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   resultImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   resultOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: "rgba(0,0,0,0.8)",
     padding: 16,
   },
   resultTitle: {
-    color: 'white',
+    color: "white",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   resultSubtitle: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
     opacity: 0.9,
   },
   resultActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     gap: 12,
   },
   generateAgainButton: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#2d5016',
+    borderColor: "#2d5016",
   },
   generateAgainText: {
-    color: '#2d5016',
+    color: "#2d5016",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
   },
   useResultButton: {
     flex: 1,
-    backgroundColor: '#2d5016',
+    backgroundColor: "#2d5016",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   useResultText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginRight: 8,
   },
   placeholderInfo: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: "#fef3c7",
     padding: 12,
     borderRadius: 8,
     marginVertical: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
+    borderLeftColor: "#f59e0b",
   },
   placeholderInfoText: {
     fontSize: 12,
-    color: '#92400e',
+    color: "#92400e",
     lineHeight: 16,
   },
 });

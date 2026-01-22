@@ -6,17 +6,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { PlantType, PlantStyle } from '../types';
+import {
+  PlantType,
+  PlantStyle,
+  PotStyle,
+  PotColor,
+  MaintenanceLevel,
+  PlacementDensity,
+  PlantOptions,
+} from '../types';
 
 interface PlantSelectionScreenProps {
   imageUri: string;
-  onPlantSelected: (plantType: PlantType, plantStyle: PlantStyle) => void;
+  onPlantSelected: (plantType: PlantType, plantStyle: PlantStyle, plantOptions?: PlantOptions) => void;
   onBack: () => void;
 }
 
+// Plant Types Data
 const PLANT_TYPES: PlantType[] = [
   {
     id: 'succulents',
@@ -31,7 +41,7 @@ const PLANT_TYPES: PlantType[] = [
   },
   {
     id: 'tropical',
-    name: 'Tropical Plants',
+    name: 'Tropical',
     description: 'Lush, green foliage plants',
     icon: '🌿',
     styles: [
@@ -42,7 +52,7 @@ const PLANT_TYPES: PlantType[] = [
   },
   {
     id: 'flowering',
-    name: 'Flowering Plants',
+    name: 'Flowering',
     description: 'Colorful blooms and flowers',
     icon: '🌸',
     styles: [
@@ -53,7 +63,7 @@ const PLANT_TYPES: PlantType[] = [
   },
   {
     id: 'hanging',
-    name: 'Hanging Plants',
+    name: 'Hanging',
     description: 'Trailing and cascading plants',
     icon: '🪴',
     styles: [
@@ -64,13 +74,57 @@ const PLANT_TYPES: PlantType[] = [
   },
 ];
 
+// Pot Styles Data
+const POT_STYLES: PotStyle[] = [
+  { id: 'ceramic', name: 'Ceramic', icon: '🏺' },
+  { id: 'terracotta', name: 'Terracotta', icon: '🧱' },
+  { id: 'modern', name: 'Modern', icon: '⬜' },
+  { id: 'woven', name: 'Woven', icon: '🧺' },
+  { id: 'concrete', name: 'Concrete', icon: '🪨' },
+];
+
+// Pot Colors Data
+const POT_COLORS: PotColor[] = [
+  { id: 'white', name: 'White', hex: '#FFFFFF' },
+  { id: 'black', name: 'Black', hex: '#2D2D2D' },
+  { id: 'terracotta', name: 'Terracotta', hex: '#C45C3E' },
+  { id: 'sage', name: 'Sage', hex: '#9CAF88' },
+  { id: 'navy', name: 'Navy', hex: '#1E3A5F' },
+  { id: 'cream', name: 'Cream', hex: '#F5F5DC' },
+];
+
+// Maintenance Levels Data
+const MAINTENANCE_LEVELS: MaintenanceLevel[] = [
+  { id: 'low', name: 'Low', description: 'Minimal care needed', icon: '😌' },
+  { id: 'medium', name: 'Medium', description: 'Regular attention', icon: '🙂' },
+  { id: 'high', name: 'High', description: 'Daily care required', icon: '🧑‍🌾' },
+];
+
+// Placement Density Data
+const PLACEMENT_DENSITIES: PlacementDensity[] = [
+  { id: 'sparse', name: 'Sparse', description: 'Few accent plants', icon: '🌱' },
+  { id: 'moderate', name: 'Moderate', description: 'Balanced arrangement', icon: '🌿' },
+  { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: '🌳' },
+];
+
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
   onPlantSelected,
   onBack,
 }) => {
+  // Plant selection state
   const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<PlantStyle | null>(null);
+
+  // Options state
+  const [selectedPotStyle, setSelectedPotStyle] = useState<PotStyle>(POT_STYLES[0]);
+  const [selectedPotColor, setSelectedPotColor] = useState<PotColor>(POT_COLORS[0]);
+  const [usePlanterBox, setUsePlanterBox] = useState(false);
+  const [maintenanceLevel, setMaintenanceLevel] = useState<MaintenanceLevel>(MAINTENANCE_LEVELS[0]);
+  const [placementDensity, setPlacementDensity] = useState<PlacementDensity>(PLACEMENT_DENSITIES[1]);
+
+  // Expanded sections state
+  const [expandedSection, setExpandedSection] = useState<string | null>('plants');
 
   const handlePlantTypeSelect = (plantType: PlantType) => {
     setSelectedPlantType(plantType);
@@ -81,109 +135,329 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
     setSelectedStyle(style);
   };
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
+
   const handleContinue = () => {
     if (selectedPlantType && selectedStyle) {
-      onPlantSelected(selectedPlantType, selectedStyle);
+      const plantOptions: PlantOptions = {
+        potStyle: selectedPotStyle,
+        potColor: selectedPotColor,
+        usePlanterBox,
+        maintenanceLevel,
+        placementDensity,
+      };
+      onPlantSelected(selectedPlantType, selectedStyle, plantOptions);
     }
   };
 
-  const renderPlantTypeCard = (plantType: PlantType) => (
-    <TouchableOpacity
-      key={plantType.id}
-      style={[
-        styles.plantCard,
-        selectedPlantType?.id === plantType.id && styles.selectedCard,
-      ]}
-      onPress={() => handlePlantTypeSelect(plantType)}
-    >
-      <Text style={styles.plantIcon}>{plantType.icon}</Text>
-      <Text style={styles.plantName}>{plantType.name}</Text>
-      <Text style={styles.plantDescription}>{plantType.description}</Text>
-    </TouchableOpacity>
-  );
+  const isComplete = selectedPlantType && selectedStyle;
 
-  const renderStyleCard = (style: PlantStyle) => (
+  // Section Header Component
+  const SectionHeader = ({
+    title,
+    subtitle,
+    section,
+    isComplete: sectionComplete,
+  }: {
+    title: string;
+    subtitle: string;
+    section: string;
+    isComplete?: boolean;
+  }) => (
     <TouchableOpacity
-      key={style.id}
-      style={[
-        styles.styleCard,
-        selectedStyle?.id === style.id && styles.selectedCard,
-      ]}
-      onPress={() => handleStyleSelect(style)}
+      style={styles.sectionHeader}
+      onPress={() => toggleSection(section)}
+      activeOpacity={0.7}
     >
-      <Text style={styles.styleIcon}>{style.icon}</Text>
-      <Text style={styles.styleName}>{style.name}</Text>
-      <Text style={styles.styleDescription}>{style.description}</Text>
+      <View style={styles.sectionHeaderLeft}>
+        <View style={[styles.sectionIndicator, sectionComplete && styles.sectionIndicatorComplete]}>
+          {sectionComplete ? (
+            <Ionicons name="checkmark" size={14} color="#fff" />
+          ) : (
+            <View style={styles.sectionIndicatorDot} />
+          )}
+        </View>
+        <View style={styles.sectionHeaderText}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
+      <Ionicons
+        name={expandedSection === section ? 'chevron-up' : 'chevron-down'}
+        size={20}
+        color="#6b7280"
+      />
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#2d5016" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Choose Your Plants</Text>
+        <Text style={styles.headerTitle}>Design Your Space</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.imagePreview}>
-        <Image source={{ uri: imageUri }} style={styles.previewImage} />
-        <View style={styles.imageOverlay}>
-          <Text style={styles.imageText}>Your Room</Text>
-        </View>
-      </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Step 1: Select Plant Type {selectedPlantType && '✓'}
-          </Text>
-          <View style={styles.plantGrid}>
-            {PLANT_TYPES.map(renderPlantTypeCard)}
+        {/* Hero Section with Explanation */}
+        <View style={styles.heroSection}>
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          </View>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Transform Your Room</Text>
+            <Text style={styles.heroDescription}>
+              Customize your plant design by selecting the type of plants, pot styles, and placement preferences. Our AI will generate a realistic preview of your space with beautiful greenery.
+            </Text>
           </View>
         </View>
 
-        {selectedPlantType && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Step 2: Choose Style {selectedStyle && '✓'}
-            </Text>
-            <View style={styles.styleGrid}>
-              {selectedPlantType.styles.map(renderStyleCard)}
-            </View>
-          </View>
-        )}
+        {/* Plant Type & Style Section */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Plant Selection"
+            subtitle={selectedPlantType ? `${selectedPlantType.name} • ${selectedStyle?.name || 'Choose style'}` : 'Choose your plants'}
+            section="plants"
+            isComplete={!!selectedPlantType && !!selectedStyle}
+          />
 
-        {selectedPlantType && selectedStyle && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Selection Summary</Text>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryText}>
-                <Text style={styles.summaryLabel}>Plant Type: </Text>
-                {selectedPlantType.name}
-              </Text>
-              <Text style={styles.summaryText}>
-                <Text style={styles.summaryLabel}>Style: </Text>
-                {selectedStyle.name}
-              </Text>
-              <Text style={styles.summaryDescription}>
-                Your room will be enhanced with {selectedPlantType.name.toLowerCase()} in a{' '}
-                {selectedStyle.name.toLowerCase()} style.
-              </Text>
+          {expandedSection === 'plants' && (
+            <View style={styles.sectionContent}>
+              {/* Plant Type Grid */}
+              <Text style={styles.subsectionLabel}>Plant Type</Text>
+              <View style={styles.plantGrid}>
+                {PLANT_TYPES.map((plantType) => (
+                  <TouchableOpacity
+                    key={plantType.id}
+                    style={[
+                      styles.plantCard,
+                      selectedPlantType?.id === plantType.id && styles.plantCardSelected,
+                    ]}
+                    onPress={() => handlePlantTypeSelect(plantType)}
+                  >
+                    <Text style={styles.plantIcon}>{plantType.icon}</Text>
+                    <Text style={[
+                      styles.plantName,
+                      selectedPlantType?.id === plantType.id && styles.plantNameSelected,
+                    ]}>
+                      {plantType.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Style Selection */}
+              {selectedPlantType && (
+                <>
+                  <Text style={styles.subsectionLabel}>Style</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.styleScroll}>
+                    {selectedPlantType.styles.map((style) => (
+                      <TouchableOpacity
+                        key={style.id}
+                        style={[
+                          styles.styleChip,
+                          selectedStyle?.id === style.id && styles.styleChipSelected,
+                        ]}
+                        onPress={() => handleStyleSelect(style)}
+                      >
+                        <Text style={styles.styleChipIcon}>{style.icon}</Text>
+                        <View style={styles.styleChipText}>
+                          <Text style={[
+                            styles.styleChipName,
+                            selectedStyle?.id === style.id && styles.styleChipNameSelected,
+                          ]}>
+                            {style.name}
+                          </Text>
+                          <Text style={styles.styleChipDesc}>{style.description}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
             </View>
-          </View>
-        )}
+          )}
+        </View>
+
+        {/* Pot & Container Section */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Pots & Containers"
+            subtitle={`${selectedPotStyle.name} • ${selectedPotColor.name}${usePlanterBox ? ' • Planter Box' : ''}`}
+            section="pots"
+          />
+
+          {expandedSection === 'pots' && (
+            <View style={styles.sectionContent}>
+              {/* Pot Style */}
+              <Text style={styles.subsectionLabel}>Pot Style</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionScroll}>
+                {POT_STYLES.map((pot) => (
+                  <TouchableOpacity
+                    key={pot.id}
+                    style={[
+                      styles.optionChip,
+                      selectedPotStyle.id === pot.id && styles.optionChipSelected,
+                    ]}
+                    onPress={() => setSelectedPotStyle(pot)}
+                  >
+                    <Text style={styles.optionChipIcon}>{pot.icon}</Text>
+                    <Text style={[
+                      styles.optionChipLabel,
+                      selectedPotStyle.id === pot.id && styles.optionChipLabelSelected,
+                    ]}>
+                      {pot.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Pot Color */}
+              <Text style={styles.subsectionLabel}>Pot Color</Text>
+              <View style={styles.colorGrid}>
+                {POT_COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color.id}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: color.hex },
+                      selectedPotColor.id === color.id && styles.colorSwatchSelected,
+                      color.id === 'white' && styles.colorSwatchBorder,
+                    ]}
+                    onPress={() => setSelectedPotColor(color)}
+                  >
+                    {selectedPotColor.id === color.id && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={color.id === 'white' || color.id === 'cream' ? '#2d5016' : '#fff'}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.colorLabel}>{selectedPotColor.name}</Text>
+
+              {/* Planter Box Toggle */}
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={styles.toggleLabel}>Use Planter Boxes</Text>
+                  <Text style={styles.toggleDesc}>Include wooden or decorative planter boxes</Text>
+                </View>
+                <Switch
+                  value={usePlanterBox}
+                  onValueChange={setUsePlanterBox}
+                  trackColor={{ false: '#e5e7eb', true: '#86efac' }}
+                  thumbColor={usePlanterBox ? '#2d5016' : '#f4f4f5'}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Maintenance Section */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Care Level"
+            subtitle={`${maintenanceLevel.name} maintenance`}
+            section="maintenance"
+          />
+
+          {expandedSection === 'maintenance' && (
+            <View style={styles.sectionContent}>
+              <Text style={styles.subsectionLabel}>How much care can you provide?</Text>
+              <View style={styles.levelGrid}>
+                {MAINTENANCE_LEVELS.map((level) => (
+                  <TouchableOpacity
+                    key={level.id}
+                    style={[
+                      styles.levelCard,
+                      maintenanceLevel.id === level.id && styles.levelCardSelected,
+                    ]}
+                    onPress={() => setMaintenanceLevel(level)}
+                  >
+                    <Text style={styles.levelIcon}>{level.icon}</Text>
+                    <Text style={[
+                      styles.levelName,
+                      maintenanceLevel.id === level.id && styles.levelNameSelected,
+                    ]}>
+                      {level.name}
+                    </Text>
+                    <Text style={styles.levelDesc}>{level.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Density Section */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Plant Density"
+            subtitle={`${placementDensity.name} placement`}
+            section="density"
+          />
+
+          {expandedSection === 'density' && (
+            <View style={styles.sectionContent}>
+              <Text style={styles.subsectionLabel}>How many plants do you want?</Text>
+              <View style={styles.densitySlider}>
+                {PLACEMENT_DENSITIES.map((density) => (
+                  <TouchableOpacity
+                    key={density.id}
+                    style={[
+                      styles.densityOption,
+                      placementDensity.id === density.id && styles.densityOptionSelected,
+                    ]}
+                    onPress={() => setPlacementDensity(density)}
+                  >
+                    <Text style={styles.densityIcon}>{density.icon}</Text>
+                    <Text style={[
+                      styles.densityName,
+                      placementDensity.id === density.id && styles.densityNameSelected,
+                    ]}>
+                      {density.name}
+                    </Text>
+                    <Text style={styles.densityDesc}>{density.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Bottom spacing for footer */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {selectedPlantType && selectedStyle && (
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-            <Text style={styles.continueButtonText}>Generate Plant Design</Text>
-            <Ionicons name="arrow-forward" size={20} color="white" />
+      {/* Fixed Footer */}
+      <View style={styles.footer}>
+        <View style={styles.footerContent}>
+          {!isComplete ? (
+            <Text style={styles.footerHint}>Select a plant type and style to continue</Text>
+          ) : (
+            <View style={styles.selectionPreview}>
+              <Text style={styles.selectionPreviewText}>
+                {selectedPlantType?.icon} {selectedPlantType?.name} • {selectedStyle?.name}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
+            onPress={handleContinue}
+            disabled={!isComplete}
+          >
+            <Text style={styles.continueButtonText}>Generate Design</Text>
+            <Ionicons name="sparkles" size={20} color="white" />
           </TouchableOpacity>
         </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -199,7 +473,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -214,11 +488,17 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  imagePreview: {
-    height: 200,
-    margin: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+  content: {
+    flex: 1,
+  },
+
+  // Hero Section
+  heroSection: {
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  imageContainer: {
+    height: 180,
     position: 'relative',
   },
   previewImage: {
@@ -226,122 +506,347 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  imageOverlay: {
+  heroContent: {
+    padding: 20,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  heroDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+
+  // Sections
+  section: {
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  sectionHeaderText: {
+    flex: 1,
+  },
+  sectionIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sectionIndicatorComplete: {
+    backgroundColor: '#2d5016',
+  },
+  sectionIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#9ca3af',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  sectionContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  subsectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+
+  // Plant Grid
+  plantGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  plantCard: {
+    width: '23%',
+    aspectRatio: 1,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    margin: '1%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  plantCardSelected: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#2d5016',
+  },
+  plantIcon: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  plantName: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  plantNameSelected: {
+    color: '#2d5016',
+    fontWeight: '600',
+  },
+
+  // Style Chips
+  styleScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  styleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 160,
+  },
+  styleChipSelected: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#2d5016',
+  },
+  styleChipIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  styleChipText: {
+    flex: 1,
+  },
+  styleChipName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  styleChipNameSelected: {
+    color: '#2d5016',
+  },
+  styleChipDesc: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+
+  // Option Chips
+  optionScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  optionChip: {
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 10,
+    minWidth: 80,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  optionChipSelected: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#2d5016',
+  },
+  optionChipIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  optionChipLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  optionChipLabelSelected: {
+    color: '#2d5016',
+    fontWeight: '600',
+  },
+
+  // Color Swatches
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorSwatchSelected: {
+    borderWidth: 3,
+    borderColor: '#2d5016',
+  },
+  colorSwatchBorder: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  colorLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 16,
+  },
+
+  // Toggle Row
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+  },
+  toggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  toggleDesc: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+
+  // Level Cards
+  levelGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  levelCard: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  levelCardSelected: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#2d5016',
+  },
+  levelIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  levelName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  levelNameSelected: {
+    color: '#2d5016',
+  },
+  levelDesc: {
+    fontSize: 11,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+
+  // Density Options
+  densitySlider: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  densityOption: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  densityOptionSelected: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#2d5016',
+  },
+  densityIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  densityName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  densityNameSelected: {
+    color: '#2d5016',
+  },
+  densityDesc: {
+    fontSize: 11,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+
+  // Footer
+  footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 8,
-  },
-  imageText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d5016',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  plantGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 8,
-  },
-  plantCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    margin: 8,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedCard: {
-    borderColor: '#2d5016',
-    backgroundColor: '#f0f7e8',
-  },
-  plantIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  plantName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d5016',
-    marginBottom: 4,
-  },
-  plantDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  styleGrid: {
-    paddingHorizontal: 8,
-  },
-  styleCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 8,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  styleIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  styleName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d5016',
-    flex: 1,
-  },
-  styleDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    flex: 2,
-  },
-  summaryCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2d5016',
-  },
-  summaryText: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontWeight: '600',
-    color: '#2d5016',
-  },
-  summaryDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+    paddingBottom: 24,
+  },
+  footerContent: {
+    padding: 16,
+  },
+  footerHint: {
+    fontSize: 13,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  selectionPreview: {
+    marginBottom: 12,
+  },
+  selectionPreviewText: {
+    fontSize: 14,
+    color: '#2d5016',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   continueButton: {
     backgroundColor: '#2d5016',
@@ -351,6 +856,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#9ca3af',
   },
   continueButtonText: {
     color: 'white',

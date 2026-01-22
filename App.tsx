@@ -1,29 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { TouchableOpacity, View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import React, { useState, useEffect } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { TouchableOpacity, View, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { TabBarProvider, useTabBar } from './src/contexts/TabBarContext';
-import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
-import { AuthScreen } from './src/screens/AuthScreen';
-import { CameraScreen } from './src/screens/CameraScreen';
-import { PlantSelectionScreen } from './src/screens/PlantSelectionScreen';
-import { GenerationScreen } from './src/screens/GenerationScreen';
-import { GalleryScreen } from './src/screens/GalleryScreen';
-import { DesignDetailScreen } from './src/screens/DesignDetailScreen';
-import { AccountScreen } from './src/screens/AccountScreen';
-import { SettingsScreen } from './src/screens/SettingsScreen';
-import { EnvValidator } from './src/components/EnvValidator';
-import { ErrorBoundary } from './src/components/ErrorBoundary';
-import { GenerationRequest, GeneratedImage, PlantType, PlantStyle, SavedDesign } from './src/types';
-import { databaseService } from './src/services/databaseService';
+import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
+import { TabBarProvider, useTabBar } from "./src/contexts/TabBarContext";
+import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
+import { AuthScreen } from "./src/screens/AuthScreen";
+import { CameraScreen } from "./src/screens/CameraScreen";
+import { PlantSelectionScreen } from "./src/screens/PlantSelectionScreen";
+import { GenerationScreen } from "./src/screens/GenerationScreen";
+import { GalleryScreen } from "./src/screens/GalleryScreen";
+import { DesignDetailScreen } from "./src/screens/DesignDetailScreen";
+import { AccountScreen } from "./src/screens/AccountScreen";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
+import { EnvValidator } from "./src/components/EnvValidator";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import {
+  GenerationRequest,
+  GeneratedImage,
+  PlantType,
+  PlantStyle,
+  PlantOptions,
+  SavedDesign,
+} from "./src/types";
+import { databaseService } from "./src/services/databaseService";
 
 type RootStackParamList = {
   Auth: undefined;
@@ -53,7 +60,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
     <Animated.View
       style={[
         {
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
@@ -71,9 +78,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           shadowOpacity: 0.1,
           shadowRadius: 8,
           elevation: 8,
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'flex-start',
+          flexDirection: "row",
+          justifyContent: "space-around",
+          alignItems: "flex-start",
           paddingHorizontal: 0,
         },
         tabBarStyle,
@@ -84,19 +91,19 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         const isFocused = state.index === index;
 
         let iconName: keyof typeof Ionicons.glyphMap;
-        if (route.name === 'Gallery') {
-          iconName = isFocused ? 'images' : 'images-outline';
-        } else if (route.name === 'Account') {
-          iconName = isFocused ? 'person' : 'person-outline';
-        } else if (route.name === 'Settings') {
-          iconName = isFocused ? 'settings' : 'settings-outline';
+        if (route.name === "Gallery") {
+          iconName = isFocused ? "images" : "images-outline";
+        } else if (route.name === "Account") {
+          iconName = isFocused ? "person" : "person-outline";
+        } else if (route.name === "Settings") {
+          iconName = isFocused ? "settings" : "settings-outline";
         } else {
-          iconName = 'help-outline';
+          iconName = "help-outline";
         }
 
         const onPress = () => {
           const event = navigation.emit({
-            type: 'tabPress',
+            type: "tabPress",
             target: route.key,
             canPreventDefault: true,
           });
@@ -112,21 +119,27 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             onPress={onPress}
             style={{
               flex: 1,
-              alignItems: 'center',
+              alignItems: "center",
               paddingVertical: 4,
             }}
           >
             <Ionicons
               name={iconName}
               size={24}
-              color={isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive}
+              color={
+                isFocused
+                  ? theme.colors.tabBarActive
+                  : theme.colors.tabBarInactive
+              }
             />
             <Text
               style={{
                 fontSize: 12,
-                fontWeight: '500',
+                fontWeight: "500",
                 marginTop: 2,
-                color: isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive,
+                color: isFocused
+                  ? theme.colors.tabBarActive
+                  : theme.colors.tabBarInactive,
               }}
             >
               {route.name}
@@ -142,7 +155,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 function MainTabNavigator() {
   return (
     <Tab.Navigator
-      tabBar={props => <CustomTabBar {...props} />}
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
       }}
@@ -165,7 +178,7 @@ function AppContent() {
         await databaseService.initialize();
         setDbInitialized(true);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
+        console.error("Failed to initialize database:", error);
       }
     };
 
@@ -179,7 +192,7 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <>
-        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+        <StatusBar style={theme.isDark ? "light" : "dark"} />
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Auth" component={AuthScreen} />
@@ -191,14 +204,20 @@ function AppContent() {
 
   return (
     <TabBarProvider>
-      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+      <StatusBar style={theme.isDark ? "light" : "dark"} />
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="MainApp" component={MainTabNavigator} />
           <Stack.Screen name="Camera" component={CameraScreenWrapper} />
-          <Stack.Screen name="PlantSelection" component={PlantSelectionScreenWrapper} />
+          <Stack.Screen
+            name="PlantSelection"
+            component={PlantSelectionScreenWrapper}
+          />
           <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
-          <Stack.Screen name="DesignDetail" component={DesignDetailScreenWrapper} />
+          <Stack.Screen
+            name="DesignDetail"
+            component={DesignDetailScreenWrapper}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </TabBarProvider>
@@ -207,11 +226,11 @@ function AppContent() {
 
 function CameraScreenWrapper({ navigation }: any) {
   const handleImageTaken = (imageUri: string) => {
-    navigation.navigate('PlantSelection', { imageUri });
+    navigation.navigate("PlantSelection", { imageUri });
   };
 
   const handleClose = () => {
-    navigation.navigate('MainApp');
+    navigation.navigate("MainApp");
   };
 
   return <CameraScreen onImageTaken={handleImageTaken} onClose={handleClose} />;
@@ -220,13 +239,18 @@ function CameraScreenWrapper({ navigation }: any) {
 function PlantSelectionScreenWrapper({ route, navigation }: any) {
   const { imageUri } = route.params;
 
-  const handlePlantSelected = (plantType: PlantType, plantStyle: PlantStyle) => {
+  const handlePlantSelected = (
+    plantType: PlantType,
+    plantStyle: PlantStyle,
+    plantOptions?: PlantOptions,
+  ) => {
     const request: GenerationRequest = {
       imageUri,
       plantType,
       plantStyle,
+      plantOptions,
     };
-    navigation.navigate('Generation', { request });
+    navigation.navigate("Generation", { request });
   };
 
   const handleBack = () => {
@@ -246,7 +270,7 @@ function GenerationScreenWrapper({ route, navigation }: any) {
   const { request } = route.params;
 
   const handleGenerationComplete = (result: GeneratedImage) => {
-    navigation.navigate('MainApp');
+    navigation.navigate("MainApp");
   };
 
   const handleBack = () => {
@@ -264,11 +288,11 @@ function GenerationScreenWrapper({ route, navigation }: any) {
 
 function GalleryScreenWrapper({ navigation }: any) {
   const handleNewDesign = () => {
-    navigation.navigate('Camera');
+    navigation.navigate("Camera");
   };
 
   const handleDesignSelect = (design: SavedDesign) => {
-    navigation.navigate('DesignDetail', { design });
+    navigation.navigate("DesignDetail", { design });
   };
 
   return (
@@ -287,7 +311,7 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
   };
 
   const handleDesignDeleted = () => {
-    navigation.navigate('MainApp');
+    navigation.navigate("MainApp");
   };
 
   return (
