@@ -23,6 +23,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/monstera-deliciosa.jpg'),
   },
   {
     id: 'fiddle-leaf-fig',
@@ -53,6 +54,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/bird-of-paradise.jpg'),
   },
   {
     id: 'rubber-plant',
@@ -83,6 +85,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: false,
+    imageUrl: require('../../assets/plants/philodendron-brasil.jpg'),
   },
   {
     id: 'calathea-medallion',
@@ -98,6 +101,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'difficult',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/calathea-medallion.jpg'),
   },
   {
     id: 'chinese-evergreen',
@@ -113,6 +117,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/chinese-evergreen.jpg'),
   },
   {
     id: 'dracaena-marginata',
@@ -128,6 +133,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/dracaena-marginata.jpg'),
   },
   {
     id: 'croton',
@@ -143,6 +149,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/croton.jpg'),
   },
   {
     id: 'dieffenbachia',
@@ -158,6 +165,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/dieffenbachia.jpg'),
   },
 
   // === SUCCULENTS & CACTI ===
@@ -175,6 +183,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/snake-plant.jpg'),
   },
   {
     id: 'zz-plant',
@@ -190,6 +199,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/zz-plant.jpg'),
   },
   {
     id: 'aloe-vera',
@@ -220,6 +230,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/jade-plant.jpg'),
   },
   {
     id: 'echeveria',
@@ -235,6 +246,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/echeveria.jpg'),
   },
   {
     id: 'haworthia',
@@ -250,6 +262,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/haworthia.jpg'),
   },
   {
     id: 'prickly-pear',
@@ -265,6 +278,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/prickly-pear.jpg'),
   },
   {
     id: 'christmas-cactus',
@@ -280,6 +294,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: true,
+    imageUrl: require('../../assets/plants/christmas-cactus.jpg'),
   },
 
   // === VINES & TRAILING ===
@@ -297,6 +312,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: false,
+    imageUrl: require('../../assets/plants/pothos-golden.jpg'),
   },
   {
     id: 'pothos-marble-queen',
@@ -312,6 +328,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/pothos-marble-queen.jpg'),
   },
   {
     id: 'string-of-pearls',
@@ -327,6 +344,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/string-of-pearls.jpg'),
   },
   {
     id: 'string-of-hearts',
@@ -342,6 +360,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: true,
+    imageUrl: require('../../assets/plants/string-of-hearts.jpg'),
   },
   {
     id: 'english-ivy',
@@ -357,6 +376,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: false,
+    imageUrl: require('../../assets/plants/english-ivy.jpg'),
   },
   {
     id: 'hoya',
@@ -372,6 +392,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/hoya.jpg'),
   },
   {
     id: 'tradescantia',
@@ -387,6 +408,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: false,
+    imageUrl: require('../../assets/plants/tradescantia.jpg'),
   },
 
   // === FERNS ===
@@ -404,6 +426,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'moderate',
     petSafe: true,
+    imageUrl: require('../../assets/plants/boston-fern.jpg'),
   },
   {
     id: 'maidenhair-fern',
@@ -419,6 +442,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'difficult',
     growthRate: 'moderate',
     petSafe: true,
+    imageUrl: require('../../assets/plants/maidenhair-fern.jpg'),
   },
   {
     id: 'birds-nest-fern',
@@ -434,6 +458,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/birds-nest-fern.jpg'),
   },
   {
     id: 'staghorn-fern',
@@ -449,6 +474,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/staghorn-fern.jpg'),
   },
   {
     id: 'asparagus-fern',
@@ -464,6 +490,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: false,
+    imageUrl: require('../../assets/plants/asparagus-fern.jpg'),
   },
 
   // === PALMS ===
@@ -481,6 +508,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/parlor-palm.jpg'),
   },
   {
     id: 'areca-palm',
@@ -496,6 +524,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'moderate',
     petSafe: true,
+    imageUrl: require('../../assets/plants/areca-palm.jpg'),
   },
   {
     id: 'majesty-palm',
@@ -511,6 +540,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'moderate',
     petSafe: true,
+    imageUrl: require('../../assets/plants/majesty-palm.jpg'),
   },
   {
     id: 'ponytail-palm',
@@ -526,6 +556,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/ponytail-palm.jpg'),
   },
   {
     id: 'kentia-palm',
@@ -541,6 +572,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/kentia-palm.jpg'),
   },
 
   // === FLOWERING ===
@@ -558,6 +590,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/peace-lily.jpg'),
   },
   {
     id: 'orchid',
@@ -573,6 +606,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/orchid.jpg'),
   },
   {
     id: 'anthurium',
@@ -588,6 +622,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/anthurium.jpg'),
   },
   {
     id: 'african-violet',
@@ -603,6 +638,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/african-violet.jpg'),
   },
   {
     id: 'bromeliad',
@@ -633,6 +669,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/kalanchoe.jpg'),
   },
 
   // === OTHER POPULAR ===
@@ -650,6 +687,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'fast',
     petSafe: true,
+    imageUrl: require('../../assets/plants/spider-plant.jpg'),
   },
   {
     id: 'air-plant',
@@ -665,6 +703,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/air-plant.jpg'),
   },
   {
     id: 'lucky-bamboo',

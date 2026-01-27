@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Image,
 } from 'react-native';
 import { Search, Check, X, Droplets, Sun, Heart } from 'lucide-react-native';
 import {
@@ -162,7 +163,15 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         <View style={styles.selectedPanel}>
           <View style={styles.selectedHeader}>
             <View style={styles.selectedPlantInfo}>
-              <Text style={styles.selectedIcon}>{selectedPlant.icon}</Text>
+              {selectedPlant.imageUrl ? (
+                <Image
+                  source={selectedPlant.imageUrl}
+                  style={styles.selectedImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.selectedIcon}>{selectedPlant.icon}</Text>
+              )}
               <View style={styles.selectedTextContainer}>
                 <Text style={styles.selectedName}>{selectedPlant.name}</Text>
                 <Text style={styles.selectedScientific}>
@@ -294,7 +303,15 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                   onPress={() => handlePlantSelect(plant)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.plantCardIcon}>{plant.icon}</Text>
+                  {plant.imageUrl ? (
+                    <Image
+                      source={plant.imageUrl}
+                      style={styles.plantCardImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.plantCardIcon}>{plant.icon}</Text>
+                  )}
                   <Text
                     style={styles.plantCardName}
                     numberOfLines={1}
@@ -303,11 +320,8 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                     {plant.name}
                   </Text>
                   <View style={styles.plantCardBadges}>
-                    <Text style={styles.plantCardBadge}>
-                      {getCareIcon(plant.careLevel)}
-                    </Text>
                     {plant.petSafe && (
-                      <Heart size={10} color="#2d5016" />
+                      <Heart size={12} color="#2d5016" fill="#2d5016" />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -368,31 +382,40 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   plantCard: {
-    width: '31%',
-    aspectRatio: 0.9,
+    width: '47%',
     backgroundColor: '#f9fafb',
     borderRadius: 12,
-    margin: '1.16%',
+    margin: '1.5%',
     padding: 10,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     borderWidth: 2,
     borderColor: 'transparent',
+    paddingBottom: 12,
   },
   plantCardSelected: {
     backgroundColor: '#ecfdf5',
     borderColor: '#2d5016',
   },
   plantCardIcon: {
-    fontSize: 28,
-    marginBottom: 6,
+    fontSize: 44,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  plantCardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginBottom: 8,
+    marginTop: 4,
   },
   plantCardName: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#374151',
     textAlign: 'center',
     marginBottom: 4,
+    width: '100%',
   },
   plantCardBadges: {
     flexDirection: 'row',
@@ -421,6 +444,12 @@ const styles = StyleSheet.create({
   },
   selectedIcon: {
     fontSize: 36,
+    marginRight: 12,
+  },
+  selectedImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     marginRight: 12,
   },
   selectedTextContainer: {

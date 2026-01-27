@@ -135,6 +135,7 @@ export interface IndividualPlant {
   careLevel: CareLevel;
   growthRate: GrowthRate;
   petSafe: boolean;
+  imageUrl?: number; // require() returns a number for local assets
 }
 
 export interface PlantSizeOption {
