@@ -120,10 +120,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         {/* Plant info overlay */}
         <View style={styles.infoOverlay}>
           <Text style={styles.plantTypeText} numberOfLines={1}>
-            {item.plantType.name}
+            {item.mode === 'individual' && item.individualPlant
+              ? item.individualPlant.name
+              : item.plantType?.name || 'Custom'}
           </Text>
           <Text style={styles.plantStyleText} numberOfLines={1}>
-            {item.plantStyle.name}
+            {item.mode === 'individual' && item.individualPlant
+              ? `${item.individualPlant.size} • ${item.individualPlant.placement}`
+              : item.plantStyle?.name || 'Design'}
           </Text>
         </View>
       </View>

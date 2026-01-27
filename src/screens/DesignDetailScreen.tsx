@@ -38,6 +38,26 @@ interface DesignDetailScreenProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Helper function to get design display text
+const getDesignDisplayText = (design: SavedDesign): { title: string; subtitle: string; shareMessage: string } => {
+  if (design.mode === 'individual' && design.individualPlant) {
+    const { name, size, placement } = design.individualPlant;
+    return {
+      title: name,
+      subtitle: `${size} • ${placement}`,
+      shareMessage: `Check out my plant design! Added a ${size} ${name} (${placement}) to my room.`,
+    };
+  }
+  // Multi-plant mode or fallback for legacy data
+  const typeName = design.plantType?.name || 'Custom';
+  const styleName = design.plantStyle?.name || 'Design';
+  return {
+    title: typeName,
+    subtitle: `${styleName} Style`,
+    shareMessage: `Check out my plant design! Created with ${typeName} in ${styleName} style.`,
+  };
+};
+
 export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   design: initialDesign,
   onBack,
@@ -145,8 +165,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             dialogTitle: 'Share Plant Design',
           });
         } else {
+          const displayText = getDesignDisplayText(design);
           await Share.share({
-            message: `Check out my plant design! Created with ${design.plantType.name} in ${design.plantStyle.name} style.`,
+            message: displayText.shareMessage,
             title: 'Plant Interior Design',
           });
         }
@@ -159,8 +180,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           });
         }
       } else {
+        const displayText = getDesignDisplayText(design);
         await Share.share({
-          message: `Check out my plant design! Created with ${design.plantType.name} in ${design.plantStyle.name} style.`,
+          message: displayText.shareMessage,
           url: imageUri,
           title: 'Plant Interior Design',
         });
@@ -335,35 +357,77 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
               {/* Modal Content */}
               <ScrollView style={styles.modalContent}>
-                <View style={styles.titleSection}>
-                  <Text style={styles.plantTypeTitle}>{design.plantType.name}</Text>
-                  <Text style={styles.plantStyleSubtitle}>
-                    {design.plantStyle.name} Style
-                  </Text>
-                </View>
+                {(() => {
+                  const displayText = getDesignDisplayText(design);
+                  return (
+                    <View style={styles.titleSection}>
+                      <Text style={styles.plantTypeTitle}>{displayText.title}</Text>
+                      <Text style={styles.plantStyleSubtitle}>
+                        {displayText.subtitle}
+                      </Text>
+                    </View>
+                  );
+                })()}
 
                 <View style={styles.infoGrid}>
-                  <View style={styles.infoItem}>
-                    <Ionicons name="leaf-outline" size={20} color="#2d5016" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Plant Type</Text>
-                      <Text style={styles.infoValue}>{design.plantType.name}</Text>
-                      <Text style={styles.infoDescription}>
-                        {design.plantType.description}
-                      </Text>
-                    </View>
-                  </View>
+                  {/* Individual plant mode info */}
+                  {design.mode === 'individual' && design.individualPlant && (
+                    <>
+                      <View style={styles.infoItem}>
+                        <Ionicons name="leaf-outline" size={20} color="#2d5016" />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Plant</Text>
+                          <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.individualPlant.scientificName}
+                          </Text>
+                        </View>
+                      </View>
 
-                  <View style={styles.infoItem}>
-                    <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Style</Text>
-                      <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                      <Text style={styles.infoDescription}>
-                        {design.plantStyle.description}
-                      </Text>
+                      <View style={styles.infoItem}>
+                        <Ionicons name="resize-outline" size={20} color="#2d5016" />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Size</Text>
+                          <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.infoItem}>
+                        <Ionicons name="location-outline" size={20} color="#2d5016" />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Placement</Text>
+                          <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
+
+                  {/* Multi-plant mode info */}
+                  {design.mode !== 'individual' && design.plantType && (
+                    <View style={styles.infoItem}>
+                      <Ionicons name="leaf-outline" size={20} color="#2d5016" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Plant Type</Text>
+                        <Text style={styles.infoValue}>{design.plantType.name}</Text>
+                        <Text style={styles.infoDescription}>
+                          {design.plantType.description}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
+                  )}
+
+                  {design.mode !== 'individual' && design.plantStyle && (
+                    <View style={styles.infoItem}>
+                      <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Style</Text>
+                        <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                        <Text style={styles.infoDescription}>
+                          {design.plantStyle.description}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
 
                   {design.customPrompt && (
                     <View style={styles.infoItem}>

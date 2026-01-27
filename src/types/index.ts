@@ -57,9 +57,14 @@ export interface PlantOptions {
 
 export interface GenerationRequest {
   imageUri: string;
-  plantType: PlantType;
-  plantStyle: PlantStyle;
+  mode: PlantSelectionMode;
+  // Multi-plant mode fields (existing)
+  plantType?: PlantType;
+  plantStyle?: PlantStyle;
   plantOptions?: PlantOptions;
+  // Individual plant mode fields (new)
+  individualPlant?: IndividualPlantSelection;
+  // Common
   prompt?: string;
 }
 
@@ -78,13 +83,22 @@ export interface SavedDesign {
   originalImageUri: string;
   generatedImageUri: string;
   localImagePath?: string | null;
-  plantType: {
+  mode: PlantSelectionMode;
+  // Multi-plant mode data
+  plantType?: {
     name: string;
     description: string;
   };
-  plantStyle: {
+  plantStyle?: {
     name: string;
     description: string;
+  };
+  // Individual plant mode data
+  individualPlant?: {
+    name: string;
+    scientificName: string;
+    size: PlantSize;
+    placement: PlacementType;
   };
   customPrompt?: string;
   createdAt: Date;
@@ -95,4 +109,51 @@ export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
+}
+
+// Individual Plant Mode Types
+export type LightRequirement = 'low' | 'low-to-bright' | 'bright-indirect' | 'bright-direct';
+export type WaterRequirement = 'low' | 'moderate' | 'high';
+export type PlantSize = 'small' | 'medium' | 'large';
+export type PlacementType = 'floor' | 'shelf' | 'hanging';
+export type PlantCategory = 'tropical' | 'succulent' | 'flowering' | 'fern' | 'palm' | 'vine';
+export type CareLevel = 'easy' | 'moderate' | 'difficult';
+export type GrowthRate = 'slow' | 'moderate' | 'fast';
+export type PlantSelectionMode = 'multi-plant' | 'individual';
+
+export interface IndividualPlant {
+  id: string;
+  name: string;
+  scientificName: string;
+  description: string;
+  icon: string;
+  category: PlantCategory;
+  lightRequirement: LightRequirement;
+  waterRequirement: WaterRequirement;
+  availableSizes: PlantSize[];
+  suitablePlacements: PlacementType[];
+  careLevel: CareLevel;
+  growthRate: GrowthRate;
+  petSafe: boolean;
+}
+
+export interface PlantSizeOption {
+  id: PlantSize;
+  name: string;
+  description: string;
+  icon: string;
+  heightRange: string;
+}
+
+export interface PlacementOption {
+  id: PlacementType;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface IndividualPlantSelection {
+  plant: IndividualPlant;
+  size: PlantSize;
+  placement: PlacementType;
 }

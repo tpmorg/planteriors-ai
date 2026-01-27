@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
-import { SavedDesign } from '../types';
+import { SavedDesign, PlantSelectionMode, PlantSize, PlacementType } from '../types';
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -25,10 +25,15 @@ export class DatabaseService {
         original_image_uri TEXT NOT NULL,
         generated_image_uri TEXT NOT NULL,
         local_image_path TEXT,
-        plant_type_name TEXT NOT NULL,
-        plant_type_description TEXT NOT NULL,
-        plant_style_name TEXT NOT NULL,
-        plant_style_description TEXT NOT NULL,
+        mode TEXT DEFAULT 'multi-plant',
+        plant_type_name TEXT,
+        plant_type_description TEXT,
+        plant_style_name TEXT,
+        plant_style_description TEXT,
+        individual_plant_name TEXT,
+        individual_plant_scientific_name TEXT,
+        individual_plant_size TEXT,
+        individual_plant_placement TEXT,
         custom_prompt TEXT,
         created_at INTEGER NOT NULL,
         is_favorite INTEGER DEFAULT 0
@@ -36,15 +41,70 @@ export class DatabaseService {
     `;
 
     await this.db.execAsync(createDesignsTable);
+
+    // Migration: Add new columns to existing tables if they don't exist
+    await this.migrateDatabase();
+  }
+
+  private async migrateDatabase(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Check if mode column exists by trying to select it
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN mode TEXT DEFAULT 'multi-plant';
+      `);
+    } catch {
+      // Column already exists, ignore error
+    }
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN individual_plant_name TEXT;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN individual_plant_scientific_name TEXT;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN individual_plant_size TEXT;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN individual_plant_placement TEXT;
+      `);
+    } catch {
+      // Column already exists
+    }
   }
 
   async saveDesign(design: {
     originalImageUri: string;
     generatedImageUri: string;
-    plantTypeName: string;
-    plantTypeDescription: string;
-    plantStyleName: string;
-    plantStyleDescription: string;
+    mode: PlantSelectionMode;
+    // Multi-plant mode fields
+    plantTypeName?: string;
+    plantTypeDescription?: string;
+    plantStyleName?: string;
+    plantStyleDescription?: string;
+    // Individual plant mode fields
+    individualPlantName?: string;
+    individualPlantScientificName?: string;
+    individualPlantSize?: PlantSize;
+    individualPlantPlacement?: PlacementType;
     customPrompt?: string;
   }): Promise<SavedDesign> {
     if (!this.db) throw new Error('Database not initialized');
@@ -56,21 +116,36 @@ export class DatabaseService {
         localImagePath = await this.saveImageToLocal(design.generatedImageUri);
       }
 
+      // For backwards compatibility with NOT NULL constraints on legacy databases,
+      // provide default values for plant_type_name and plant_style_name when in individual mode
+      const plantTypeName = design.plantTypeName || (design.mode === 'individual' ? 'Individual Plant' : '');
+      const plantTypeDescription = design.plantTypeDescription || (design.mode === 'individual' ? design.individualPlantName || '' : '');
+      const plantStyleName = design.plantStyleName || (design.mode === 'individual' ? design.individualPlantSize || '' : '');
+      const plantStyleDescription = design.plantStyleDescription || (design.mode === 'individual' ? design.individualPlantPlacement || '' : '');
+
       const result = await this.db.runAsync(
         `INSERT INTO saved_designs (
           original_image_uri, generated_image_uri, local_image_path,
+          mode,
           plant_type_name, plant_type_description,
           plant_style_name, plant_style_description,
+          individual_plant_name, individual_plant_scientific_name,
+          individual_plant_size, individual_plant_placement,
           custom_prompt, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           design.originalImageUri,
           design.generatedImageUri,
           localImagePath,
-          design.plantTypeName,
-          design.plantTypeDescription,
-          design.plantStyleName,
-          design.plantStyleDescription,
+          design.mode,
+          plantTypeName,
+          plantTypeDescription,
+          plantStyleName,
+          plantStyleDescription,
+          design.individualPlantName || null,
+          design.individualPlantScientificName || null,
+          design.individualPlantSize || null,
+          design.individualPlantPlacement || null,
           design.customPrompt || '',
           Date.now()
         ]
@@ -81,14 +156,21 @@ export class DatabaseService {
         originalImageUri: design.originalImageUri,
         generatedImageUri: design.generatedImageUri,
         localImagePath,
-        plantType: {
+        mode: design.mode,
+        plantType: design.mode === 'multi-plant' && design.plantTypeName ? {
           name: design.plantTypeName,
-          description: design.plantTypeDescription,
-        },
-        plantStyle: {
+          description: design.plantTypeDescription || '',
+        } : undefined,
+        plantStyle: design.mode === 'multi-plant' && design.plantStyleName ? {
           name: design.plantStyleName,
-          description: design.plantStyleDescription,
-        },
+          description: design.plantStyleDescription || '',
+        } : undefined,
+        individualPlant: design.mode === 'individual' && design.individualPlantName ? {
+          name: design.individualPlantName,
+          scientificName: design.individualPlantScientificName || '',
+          size: design.individualPlantSize!,
+          placement: design.individualPlantPlacement!,
+        } : undefined,
         customPrompt: design.customPrompt,
         createdAt: new Date(Date.now()),
         isFavorite: false,
@@ -198,19 +280,28 @@ export class DatabaseService {
   }
 
   private mapRowToSavedDesign(row: any): SavedDesign {
+    const mode: PlantSelectionMode = row.mode || 'multi-plant';
+
     return {
       id: row.id.toString(),
       originalImageUri: row.original_image_uri,
       generatedImageUri: row.generated_image_uri,
       localImagePath: row.local_image_path,
-      plantType: {
+      mode,
+      plantType: row.plant_type_name ? {
         name: row.plant_type_name,
-        description: row.plant_type_description,
-      },
-      plantStyle: {
+        description: row.plant_type_description || '',
+      } : undefined,
+      plantStyle: row.plant_style_name ? {
         name: row.plant_style_name,
-        description: row.plant_style_description,
-      },
+        description: row.plant_style_description || '',
+      } : undefined,
+      individualPlant: row.individual_plant_name ? {
+        name: row.individual_plant_name,
+        scientificName: row.individual_plant_scientific_name || '',
+        size: row.individual_plant_size as PlantSize,
+        placement: row.individual_plant_placement as PlacementType,
+      } : undefined,
       customPrompt: row.custom_prompt || undefined,
       createdAt: new Date(row.created_at),
       isFavorite: Boolean(row.is_favorite),

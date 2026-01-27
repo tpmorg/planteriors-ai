@@ -1,5 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
-import { GenerationRequest, PlantOptions } from "../types";
+import {
+  GenerationRequest,
+  PlantOptions,
+  IndividualPlantSelection,
+  PlantSize,
+  PlacementType,
+  LightRequirement,
+} from "../types";
 import { env } from "../utils/env";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -78,7 +85,71 @@ export class GeminiService {
   }
 
   private buildPrompt(request: GenerationRequest): string {
+    // Check mode and delegate to appropriate method
+    if (request.mode === 'individual' && request.individualPlant) {
+      return this.buildIndividualPlantPrompt(request.individualPlant, request.prompt);
+    }
+    return this.buildMultiPlantPrompt(request);
+  }
+
+  private buildIndividualPlantPrompt(
+    selection: IndividualPlantSelection,
+    customPrompt?: string
+  ): string {
+    const { plant, size, placement } = selection;
+
+    // Size descriptions
+    const sizeDescriptions: Record<PlantSize, string> = {
+      small: 'a small, compact (6-12 inch)',
+      medium: 'a medium-sized (1-3 foot)',
+      large: 'a large, statement (3-6 foot)',
+    };
+
+    // Placement descriptions
+    const placementDescriptions: Record<PlacementType, string> = {
+      floor: 'placed directly on the floor in an attractive pot or planter that matches the room decor',
+      shelf: 'positioned on a shelf, side table, or furniture surface in a decorative pot',
+      hanging: 'suspended from the ceiling or mounted on the wall in a stylish hanging planter with trailing vines visible',
+    };
+
+    // Light requirement context for realistic placement
+    const lightContexts: Record<LightRequirement, string> = {
+      'low': 'Position it in a spot with indirect or low light - away from direct window exposure, such as a corner or north-facing area',
+      'low-to-bright': 'This plant is versatile and can be placed anywhere with any light level',
+      'bright-indirect': 'Position it near a window but not in direct sunlight - filtered light through curtains is ideal',
+      'bright-direct': 'Place it in a sunny spot where it would receive direct sunlight from a window',
+    };
+
+    return `Add a single ${sizeDescriptions[size]} ${plant.name} (${plant.scientificName}) to this room image.
+
+Plant Details:
+- Common Name: ${plant.name}
+- Scientific Name: ${plant.scientificName}
+- Description: ${plant.description}
+- The plant should be ${placementDescriptions[placement]}
+- ${lightContexts[plant.lightRequirement]}
+
+Critical Requirements:
+1. Add ONLY ONE plant - a single ${plant.name}
+2. The plant must be ${sizeDescriptions[size]} specimen, appropriately scaled to the room
+3. Use an attractive pot or planter that complements the room's existing style and color palette
+4. Position the plant naturally where it would realistically thrive based on its light needs
+5. Maintain photorealistic quality with proper shadows, reflections, and lighting
+6. Keep ALL original room elements, furniture, and architecture EXACTLY as shown
+7. The plant should enhance the space as a single accent piece without overwhelming it
+8. Match the perspective, angle, and lighting of the original photo precisely
+
+${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+
+Generate this as a high-quality photorealistic image with the single ${plant.name} seamlessly integrated into the room.`;
+  }
+
+  private buildMultiPlantPrompt(request: GenerationRequest): string {
     const { plantType, plantStyle, plantOptions } = request;
+
+    if (!plantType || !plantStyle) {
+      throw new Error('Plant type and style are required for multi-plant mode');
+    }
 
     // Build container description based on plant options
     const containerDescription = this.buildContainerDescription(plantOptions);

@@ -25,9 +25,6 @@ import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import {
   GenerationRequest,
   GeneratedImage,
-  PlantType,
-  PlantStyle,
-  PlantOptions,
   SavedDesign,
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
@@ -239,16 +236,10 @@ function CameraScreenWrapper({ navigation }: any) {
 function PlantSelectionScreenWrapper({ route, navigation }: any) {
   const { imageUri } = route.params;
 
-  const handlePlantSelected = (
-    plantType: PlantType,
-    plantStyle: PlantStyle,
-    plantOptions?: PlantOptions,
-  ) => {
+  const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
     const request: GenerationRequest = {
       imageUri,
-      plantType,
-      plantStyle,
-      plantOptions,
+      ...selectionData,
     };
     navigation.navigate("Generation", { request });
   };

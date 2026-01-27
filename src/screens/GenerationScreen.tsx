@@ -184,10 +184,17 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         const savedDesign = await databaseService.saveDesign({
           originalImageUri: request.imageUri,
           generatedImageUri: generatedImageUri,
-          plantTypeName: request.plantType.name,
-          plantTypeDescription: request.plantType.description,
-          plantStyleName: request.plantStyle.name,
-          plantStyleDescription: request.plantStyle.description,
+          mode: request.mode,
+          // Multi-plant mode fields
+          plantTypeName: request.plantType?.name,
+          plantTypeDescription: request.plantType?.description,
+          plantStyleName: request.plantStyle?.name,
+          plantStyleDescription: request.plantStyle?.description,
+          // Individual plant mode fields
+          individualPlantName: request.individualPlant?.plant.name,
+          individualPlantScientificName: request.individualPlant?.plant.scientificName,
+          individualPlantSize: request.individualPlant?.size,
+          individualPlantPlacement: request.individualPlant?.placement,
           customPrompt: request.prompt,
         });
 
@@ -195,8 +202,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           id: savedDesign.id,
           originalImageUri: request.imageUri,
           generatedImageUri: generatedImageUri,
-          plantType: request.plantType,
-          plantStyle: request.plantStyle,
+          plantType: request.plantType!,
+          plantStyle: request.plantStyle!,
           prompt: request.prompt || "",
           createdAt: new Date(),
         };
@@ -278,7 +285,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           <View style={styles.resultOverlay}>
             <Text style={styles.resultTitle}>✨ Design Complete!</Text>
             <Text style={styles.resultSubtitle}>
-              {request.plantType.name} • {request.plantStyle.name} Style
+              {request.mode === 'individual' && request.individualPlant
+                ? `${request.individualPlant.plant.name} • ${request.individualPlant.size} • ${request.individualPlant.placement}`
+                : `${request.plantType?.name} • ${request.plantStyle?.name} Style`}
             </Text>
           </View>
         </Animated.View>
@@ -351,7 +360,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         <View style={styles.plantInfo}>
           <Text style={styles.plantInfoTitle}>Creating your design with:</Text>
           <Text style={styles.plantInfoDetail}>
-            🌱 {request.plantType.name} • {request.plantStyle.name} Style
+            {request.mode === 'individual' && request.individualPlant
+              ? `🌱 ${request.individualPlant.plant.name} (${request.individualPlant.size}, ${request.individualPlant.placement})`
+              : `🌱 ${request.plantType?.name} • ${request.plantStyle?.name} Style`}
           </Text>
         </View>
 

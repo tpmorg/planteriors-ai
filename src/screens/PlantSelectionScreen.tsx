@@ -9,7 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { ArrowLeft, Check, ChevronUp, ChevronDown, Sparkles } from 'lucide-react-native';
 import {
   PlantType,
   PlantStyle,
@@ -18,11 +18,16 @@ import {
   MaintenanceLevel,
   PlacementDensity,
   PlantOptions,
+  PlantSelectionMode,
+  IndividualPlantSelection,
+  GenerationRequest,
 } from '../types';
+import { PlantModeToggle } from '../components/PlantModeToggle';
+import { IndividualPlantSelector } from '../components/IndividualPlantSelector';
 
 interface PlantSelectionScreenProps {
   imageUri: string;
-  onPlantSelected: (plantType: PlantType, plantStyle: PlantStyle, plantOptions?: PlantOptions) => void;
+  onPlantSelected: (request: Omit<GenerationRequest, 'imageUri'>) => void;
   onBack: () => void;
 }
 
@@ -112,7 +117,13 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   onPlantSelected,
   onBack,
 }) => {
-  // Plant selection state
+  // Mode state
+  const [mode, setMode] = useState<PlantSelectionMode>('multi-plant');
+
+  // Individual plant selection state
+  const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
+
+  // Multi-plant selection state
   const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<PlantStyle | null>(null);
 
@@ -140,19 +151,35 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   };
 
   const handleContinue = () => {
-    if (selectedPlantType && selectedStyle) {
-      const plantOptions: PlantOptions = {
-        potStyle: selectedPotStyle,
-        potColor: selectedPotColor,
-        usePlanterBox,
-        maintenanceLevel,
-        placementDensity,
-      };
-      onPlantSelected(selectedPlantType, selectedStyle, plantOptions);
+    if (mode === 'multi-plant') {
+      if (selectedPlantType && selectedStyle) {
+        const plantOptions: PlantOptions = {
+          potStyle: selectedPotStyle,
+          potColor: selectedPotColor,
+          usePlanterBox,
+          maintenanceLevel,
+          placementDensity,
+        };
+        onPlantSelected({
+          mode: 'multi-plant',
+          plantType: selectedPlantType,
+          plantStyle: selectedStyle,
+          plantOptions,
+        });
+      }
+    } else {
+      if (individualSelection) {
+        onPlantSelected({
+          mode: 'individual',
+          individualPlant: individualSelection,
+        });
+      }
     }
   };
 
-  const isComplete = selectedPlantType && selectedStyle;
+  const isComplete = mode === 'multi-plant'
+    ? selectedPlantType && selectedStyle
+    : individualSelection !== null;
 
   // Section Header Component
   const SectionHeader = ({
@@ -174,7 +201,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       <View style={styles.sectionHeaderLeft}>
         <View style={[styles.sectionIndicator, sectionComplete && styles.sectionIndicatorComplete]}>
           {sectionComplete ? (
-            <Ionicons name="checkmark" size={14} color="#fff" />
+            <Check size={14} color="#fff" />
           ) : (
             <View style={styles.sectionIndicatorDot} />
           )}
@@ -184,11 +211,11 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
           <Text style={styles.sectionSubtitle}>{subtitle}</Text>
         </View>
       </View>
-      <Ionicons
-        name={expandedSection === section ? 'chevron-up' : 'chevron-down'}
-        size={20}
-        color="#6b7280"
-      />
+      {expandedSection === section ? (
+        <ChevronUp size={20} color="#6b7280" />
+      ) : (
+        <ChevronDown size={20} color="#6b7280" />
+      )}
     </TouchableOpacity>
   );
 
@@ -197,7 +224,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#2d5016" />
+          <ArrowLeft size={24} color="#2d5016" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Design Your Space</Text>
         <View style={styles.placeholder} />
@@ -212,12 +239,27 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>Transform Your Room</Text>
             <Text style={styles.heroDescription}>
-              Customize your plant design by selecting the type of plants, pot styles, and placement preferences. Our AI will generate a realistic preview of your space with beautiful greenery.
+              {mode === 'multi-plant'
+                ? 'Customize your plant design by selecting the type of plants, pot styles, and placement preferences.'
+                : 'Choose a specific plant to see how it would look in your space.'}
             </Text>
           </View>
         </View>
 
-        {/* Plant Type & Style Section */}
+        {/* Mode Toggle */}
+        <PlantModeToggle mode={mode} onModeChange={setMode} />
+
+        {/* Individual Plant Mode */}
+        {mode === 'individual' && (
+          <IndividualPlantSelector
+            selection={individualSelection}
+            onSelectionChange={setIndividualSelection}
+          />
+        )}
+
+        {/* Multi-Plant Mode - Plant Type & Style Section */}
+        {mode === 'multi-plant' && (
+          <>
         <View style={styles.section}>
           <SectionHeader
             title="Plant Selection"
@@ -332,8 +374,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     onPress={() => setSelectedPotColor(color)}
                   >
                     {selectedPotColor.id === color.id && (
-                      <Ionicons
-                        name="checkmark"
+                      <Check
                         size={18}
                         color={color.id === 'white' || color.id === 'cream' ? '#2d5016' : '#fff'}
                       />
@@ -431,6 +472,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             </View>
           )}
         </View>
+        </>
+        )}
 
         {/* Bottom spacing for footer */}
         <View style={{ height: 120 }} />
@@ -440,11 +483,17 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       <View style={styles.footer}>
         <View style={styles.footerContent}>
           {!isComplete ? (
-            <Text style={styles.footerHint}>Select a plant type and style to continue</Text>
+            <Text style={styles.footerHint}>
+              {mode === 'multi-plant'
+                ? 'Select a plant type and style to continue'
+                : 'Select a plant, size, and placement to continue'}
+            </Text>
           ) : (
             <View style={styles.selectionPreview}>
               <Text style={styles.selectionPreviewText}>
-                {selectedPlantType?.icon} {selectedPlantType?.name} • {selectedStyle?.name}
+                {mode === 'multi-plant'
+                  ? `${selectedPlantType?.icon} ${selectedPlantType?.name} • ${selectedStyle?.name}`
+                  : `${individualSelection?.plant.icon} ${individualSelection?.plant.name} • ${individualSelection?.size} • ${individualSelection?.placement}`}
               </Text>
             </View>
           )}
@@ -454,7 +503,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             disabled={!isComplete}
           >
             <Text style={styles.continueButtonText}>Generate Design</Text>
-            <Ionicons name="sparkles" size={20} color="white" />
+            <Sparkles size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>
