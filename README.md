@@ -96,6 +96,24 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
    npm run web     # Web Browser
    ```
 
+## Managing Claude plugins and MCPs
+
+In general, favor disabling all and enabling indidivual plugin skills for focused tasks. 
+
+# When you have plugins enabled, try:
+claude mcp list  # or similar command to see active MCP servers
+
+# When starting new Expo app or major refactor
+claude plugin enable expo-app-design
+claude plugin enable frontend-design
+
+# When deploying
+claude plugin enable expo-deployment
+
+# When upgrading Expo versions
+claude plugin enable upgrading-expo
+
+
 ## 📱 How It Works
 
 1. **🔑 Launch & Auth** - App opens with authentication screen (Google Sign-In or skip)

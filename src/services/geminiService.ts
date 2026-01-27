@@ -9,6 +9,7 @@ import {
 } from "../types";
 import { env } from "../utils/env";
 import * as FileSystem from "expo-file-system/legacy";
+import { compressImageForAI } from "../utils/imageUtils";
 
 // Image generation/editing model - takes input image + prompt to create modified version
 const MODEL_NAME = "gemini-2.5-flash-image";
@@ -35,14 +36,17 @@ export class GeminiService {
         throw new Error("Expected local file URI for image processing");
       }
 
-      console.log("Converting local file to base64...");
-      const base64 = await FileSystem.readAsStringAsync(request.imageUri, {
+      // Compress image before sending to reduce bandwidth and improve performance
+      console.log("Compressing image for AI processing...");
+      const compressedUri = await compressImageForAI(request.imageUri);
+
+      console.log("Converting compressed image to base64...");
+      const base64 = await FileSystem.readAsStringAsync(compressedUri, {
         encoding: "base64",
       });
 
-      // Get the file extension to determine MIME type
-      const extension = request.imageUri.split(".").pop()?.toLowerCase();
-      const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+      // Compressed images are always JPEG
+      const mimeType = "image/jpeg";
 
       console.log(
         "Successfully converted to base64, size:",

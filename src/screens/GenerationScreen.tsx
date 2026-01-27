@@ -351,7 +351,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
                 style={[styles.apiIndicator, { opacity: pulseAnim }]}
               />
               <Text style={styles.apiStatusText}>
-                Live processing with Gemini AI
+                Live processing with AI
               </Text>
             </View>
           )}
