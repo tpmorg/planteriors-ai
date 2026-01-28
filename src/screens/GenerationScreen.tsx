@@ -13,11 +13,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
 import { databaseService } from "../services/databaseService";
+import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../contexts/SubscriptionContext";
+import { usageTrackingService } from "../services/usageTrackingService";
+import { subscriptionService } from "../services/subscriptionService";
+import { PaywallModal } from "../components/PaywallModal";
 
 interface GenerationScreenProps {
   request: GenerationRequest;
   onGenerationComplete: (result: GeneratedImage) => void;
   onBack: () => void;
+  onUpgradePress?: () => void;
 }
 
 // API key is now managed through environment configuration
@@ -26,8 +32,13 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   request,
   onGenerationComplete,
   onBack,
+  onUpgradePress,
 }) => {
-  const [isGenerating, setIsGenerating] = useState(true);
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
+
+  const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
+  const [isCheckingUsage, setIsCheckingUsage] = useState(true); // New state for usage check
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [currentStatus, setCurrentStatus] = useState("");
@@ -37,6 +48,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.8);
@@ -57,8 +69,40 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   ];
 
   useEffect(() => {
-    startGeneration();
+    checkUsageAndStart();
   }, []);
+
+  const checkUsageAndStart = async () => {
+    if (!user) {
+      setError("User not authenticated");
+      setIsCheckingUsage(false);
+      return;
+    }
+
+    try {
+      setIsCheckingUsage(true);
+
+      // Check if user can generate
+      const { canGenerate, reason } = await usageTrackingService.canGenerateImage(user.id);
+
+      if (!canGenerate) {
+        setIsCheckingUsage(false);
+        setShowPaywall(true);
+        return;
+      }
+
+      // User can generate, start the process
+      setIsCheckingUsage(false);
+      setIsGenerating(true);
+      startGeneration();
+    } catch (error) {
+      console.error('Error checking usage:', error);
+      // On error, allow generation to proceed
+      setIsCheckingUsage(false);
+      setIsGenerating(true);
+      startGeneration();
+    }
+  };
 
   useEffect(() => {
     if (apiCallStarted) {
@@ -177,13 +221,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   };
 
   const handleUseResult = async () => {
-    if (generatedImageUri && isImageGenerated) {
+    if (generatedImageUri && isImageGenerated && user) {
       try {
         console.log("Saving design to database...");
 
         const savedDesign = await databaseService.saveDesign({
           originalImageUri: request.imageUri,
           generatedImageUri: generatedImageUri,
+          userId: user.id, // NEW: Add user ID
           mode: request.mode,
           // Multi-plant mode fields
           plantTypeName: request.plantType?.name,
@@ -197,6 +242,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           individualPlantPlacement: request.individualPlant?.placement,
           customPrompt: request.prompt,
         });
+
+        // NEW: Track usage after successful save
+        const subscription = await subscriptionService.getSubscriptionStatus(user.id);
+        const generationType = subscription.isActive ? 'paid' : 'free';
+        await usageTrackingService.trackGeneration(user.id, generationType);
+
+        // Refresh subscription context to update UI
+        await refreshStatus();
 
         const result: GeneratedImage = {
           id: savedDesign.id,
@@ -260,15 +313,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   if (generatedImageUri && !isGenerating && isImageGenerated) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#2d5016" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Plant Design</Text>
-          <View style={styles.placeholder} />
-        </View>
-
+      <SafeAreaView style={styles.fullScreenContainer} edges={['top']}>
         <Animated.View
           style={[
             styles.resultContainer,
@@ -282,33 +327,42 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             source={{ uri: generatedImageUri }}
             style={styles.resultImage}
           />
+
+          {/* Overlay header with back button */}
+          <View style={styles.resultHeader}>
+            <TouchableOpacity onPress={onBack} style={styles.overlayBackButton}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Compact info overlay at bottom */}
           <View style={styles.resultOverlay}>
-            <Text style={styles.resultTitle}>✨ Design Complete!</Text>
             <Text style={styles.resultSubtitle}>
               {request.mode === 'individual' && request.individualPlant
                 ? `${request.individualPlant.plant.name} • ${request.individualPlant.size} • ${request.individualPlant.placement}`
                 : `${request.plantType?.name} • ${request.plantStyle?.name} Style`}
             </Text>
           </View>
+
+          {/* Action buttons overlaid at bottom */}
+          <View style={styles.resultActionsOverlay}>
+            <TouchableOpacity
+              style={styles.generateAgainButton}
+              onPress={handleRetry}
+            >
+              <Ionicons name="refresh" size={20} color="white" />
+              <Text style={styles.generateAgainText}>Generate Another</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.useResultButton}
+              onPress={handleUseResult}
+            >
+              <Text style={styles.useResultText}>Save Design</Text>
+              <Ionicons name="checkmark" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
-
-        <View style={styles.resultActions}>
-          <TouchableOpacity
-            style={styles.generateAgainButton}
-            onPress={handleRetry}
-          >
-            <Ionicons name="refresh" size={20} color="#2d5016" />
-            <Text style={styles.generateAgainText}>Generate Another</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.useResultButton}
-            onPress={handleUseResult}
-          >
-            <Text style={styles.useResultText}>Save This Design</Text>
-            <Ionicons name="checkmark" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
     );
   }
@@ -372,6 +426,23 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           <Animated.View style={[styles.loadingDot, { opacity: 0.4 }]} />
         </View>
       </View>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        visible={showPaywall}
+        onUpgrade={() => {
+          setShowPaywall(false);
+          if (onUpgradePress) {
+            onUpgradePress();
+          } else {
+            onBack();
+          }
+        }}
+        onDismiss={() => {
+          setShowPaywall(false);
+          onBack();
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -380,6 +451,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: "#000000",
   },
   header: {
     flexDirection: "row",
@@ -556,23 +631,37 @@ const styles = StyleSheet.create({
   },
   resultContainer: {
     flex: 1,
-    margin: 16,
-    borderRadius: 16,
-    overflow: "hidden",
     position: "relative",
   },
   resultImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
+    resizeMode: "contain",
+  },
+  resultHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  overlayBackButton: {
+    padding: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
   },
   resultOverlay: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 16,
+    bottom: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    padding: 12,
+    borderRadius: 8,
   },
   resultTitle: {
     color: "white",
@@ -583,28 +672,34 @@ const styles = StyleSheet.create({
   resultSubtitle: {
     color: "white",
     fontSize: 14,
-    opacity: 0.9,
+    opacity: 0.95,
   },
   resultActions: {
     flexDirection: "row",
     padding: 16,
     gap: 12,
   },
+  resultActionsOverlay: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    gap: 12,
+  },
   generateAgainButton: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: "rgba(255,255,255,0.9)",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#2d5016",
   },
   generateAgainText: {
     color: "#2d5016",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     marginLeft: 8,
   },
@@ -620,7 +715,7 @@ const styles = StyleSheet.create({
   },
   useResultText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     marginRight: 8,
   },

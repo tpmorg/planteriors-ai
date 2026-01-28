@@ -16,10 +16,13 @@ import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import { UsageIndicator } from '../components/UsageIndicator';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
   onDesignSelect: (design: SavedDesign) => void;
+  onUpgradePress?: () => void;
 }
 
 const { width } = Dimensions.get('window');
@@ -29,12 +32,14 @@ const itemSize = (width - 60) / numColumns; // Account for padding and gap
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onNewDesign,
   onDesignSelect,
+  onUpgradePress,
 }) => {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
+  const { subscription, freeGenerationsRemaining, refreshStatus } = useSubscription();
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -50,9 +55,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadDesigns();
+    await Promise.all([loadDesigns(), refreshStatus()]);
     setRefreshing(false);
-  }, [loadDesigns]);
+  }, [loadDesigns, refreshStatus]);
 
   useEffect(() => {
     loadDesigns();
@@ -174,6 +179,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>
       </View>
+
+      {/* Usage Indicator */}
+      <UsageIndicator
+        freeRemaining={freeGenerationsRemaining}
+        isSubscribed={subscription?.isActive || false}
+        variant="full"
+        onUpgradePress={onUpgradePress}
+      />
 
       <FlatList
         data={designs}

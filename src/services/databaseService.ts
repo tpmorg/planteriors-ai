@@ -1,6 +1,15 @@
 import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
-import { SavedDesign, PlantSelectionMode, PlantSize, PlacementType } from '../types';
+import {
+  SavedDesign,
+  PlantSelectionMode,
+  PlantSize,
+  PlacementType,
+  SubscriptionData,
+  FreeTrialUsage
+} from '../types';
+
+const DB_VERSION = 2; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -9,6 +18,7 @@ export class DatabaseService {
     try {
       this.db = await SQLite.openDatabaseAsync('plantai.db');
       await this.createTables();
+      await this.runMigrations();
       console.log('Database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize database:', error);
@@ -19,12 +29,21 @@ export class DatabaseService {
   private async createTables(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
+    // Create db_version table for tracking migrations
+    const createVersionTable = `
+      CREATE TABLE IF NOT EXISTS db_version (
+        version INTEGER PRIMARY KEY
+      );
+    `;
+    await this.db.execAsync(createVersionTable);
+
     const createDesignsTable = `
       CREATE TABLE IF NOT EXISTS saved_designs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         original_image_uri TEXT NOT NULL,
         generated_image_uri TEXT NOT NULL,
         local_image_path TEXT,
+        user_id TEXT,
         mode TEXT DEFAULT 'multi-plant',
         plant_type_name TEXT,
         plant_type_description TEXT,
@@ -39,23 +58,132 @@ export class DatabaseService {
         is_favorite INTEGER DEFAULT 0
       );
     `;
-
     await this.db.execAsync(createDesignsTable);
 
-    // Migration: Add new columns to existing tables if they don't exist
-    await this.migrateDatabase();
+    // Create usage_tracking table
+    const createUsageTrackingTable = `
+      CREATE TABLE IF NOT EXISTS usage_tracking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        generation_type TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        generation_request TEXT
+      );
+    `;
+    await this.db.execAsync(createUsageTrackingTable);
+
+    // Create subscriptions table
+    const createSubscriptionsTable = `
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL UNIQUE,
+        subscription_status TEXT NOT NULL,
+        subscription_type TEXT,
+        purchase_token TEXT,
+        original_transaction_id TEXT,
+        platform TEXT,
+        purchase_date INTEGER,
+        expiry_date INTEGER,
+        is_mock INTEGER DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `;
+    await this.db.execAsync(createSubscriptionsTable);
+
+    // Create free_trial_usage table
+    const createFreeTrialUsageTable = `
+      CREATE TABLE IF NOT EXISTS free_trial_usage (
+        user_id TEXT PRIMARY KEY,
+        generations_used INTEGER DEFAULT 0,
+        first_generation_at INTEGER,
+        last_generation_at INTEGER,
+        created_at INTEGER NOT NULL
+      );
+    `;
+    await this.db.execAsync(createFreeTrialUsageTable);
+
+    // Create indexes
+    await this.createIndexes();
   }
 
-  private async migrateDatabase(): Promise<void> {
+  private async createIndexes(): Promise<void> {
     if (!this.db) return;
 
     try {
-      // Check if mode column exists by trying to select it
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_saved_designs_user_id ON saved_designs(user_id);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking(user_id);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_usage_tracking_created_at ON usage_tracking(created_at);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+      `);
+    } catch (error) {
+      console.warn('Failed to create some indexes (may already exist):', error);
+    }
+  }
+
+  async runMigrations(): Promise<void> {
+    if (!this.db) return;
+
+    const currentVersion = await this.getCurrentDbVersion();
+    console.log('Current database version:', currentVersion);
+
+    // Migration from v0 to v1: Add individual plant columns
+    if (currentVersion < 1) {
+      console.log('Running migration to v1: Adding individual plant columns');
+      await this.migrateToV1();
+      await this.setDbVersion(1);
+    }
+
+    // Migration from v1 to v2: Add user_id column and subscription tables
+    if (currentVersion < 2) {
+      console.log('Running migration to v2: Adding user_id and subscription support');
+      await this.migrateToV2();
+      await this.setDbVersion(2);
+    }
+
+    console.log('Migrations complete. Database at version:', DB_VERSION);
+  }
+
+  private async getCurrentDbVersion(): Promise<number> {
+    if (!this.db) return 0;
+
+    try {
+      const result = await this.db.getFirstAsync<{ version: number }>(
+        'SELECT version FROM db_version LIMIT 1'
+      );
+      return result?.version || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async setDbVersion(version: number): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      await this.db.execAsync('DELETE FROM db_version');
+      await this.db.runAsync('INSERT INTO db_version (version) VALUES (?)', [version]);
+    } catch (error) {
+      console.error('Failed to set database version:', error);
+    }
+  }
+
+  private async migrateToV1(): Promise<void> {
+    if (!this.db) return;
+
+    try {
       await this.db.execAsync(`
         ALTER TABLE saved_designs ADD COLUMN mode TEXT DEFAULT 'multi-plant';
       `);
     } catch {
-      // Column already exists, ignore error
+      // Column already exists
     }
 
     try {
@@ -91,9 +219,28 @@ export class DatabaseService {
     }
   }
 
+  private async migrateToV2(): Promise<void> {
+    if (!this.db) return;
+
+    // Add user_id column to saved_designs
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN user_id TEXT;
+      `);
+      console.log('Added user_id column to saved_designs');
+    } catch {
+      // Column already exists
+    }
+
+    // Note: New tables (usage_tracking, subscriptions, free_trial_usage)
+    // are created in createTables() with CREATE TABLE IF NOT EXISTS,
+    // so they will be created automatically if they don't exist yet.
+  }
+
   async saveDesign(design: {
     originalImageUri: string;
     generatedImageUri: string;
+    userId?: string;
     mode: PlantSelectionMode;
     // Multi-plant mode fields
     plantTypeName?: string;
@@ -126,17 +273,18 @@ export class DatabaseService {
       const result = await this.db.runAsync(
         `INSERT INTO saved_designs (
           original_image_uri, generated_image_uri, local_image_path,
-          mode,
+          user_id, mode,
           plant_type_name, plant_type_description,
           plant_style_name, plant_style_description,
           individual_plant_name, individual_plant_scientific_name,
           individual_plant_size, individual_plant_placement,
           custom_prompt, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           design.originalImageUri,
           design.generatedImageUri,
           localImagePath,
+          design.userId || null,
           design.mode,
           plantTypeName,
           plantTypeDescription,
@@ -306,6 +454,240 @@ export class DatabaseService {
       createdAt: new Date(row.created_at),
       isFavorite: Boolean(row.is_favorite),
     };
+  }
+
+  // ============================================
+  // Subscription Management Methods
+  // ============================================
+
+  async saveSubscription(subscription: SubscriptionData): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const now = Date.now();
+      await this.db.runAsync(
+        `INSERT OR REPLACE INTO subscriptions (
+          user_id, subscription_status, subscription_type,
+          purchase_token, original_transaction_id, platform,
+          purchase_date, expiry_date, is_mock,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          subscription.userId,
+          subscription.subscriptionStatus,
+          subscription.subscriptionType || null,
+          subscription.purchaseToken || null,
+          subscription.originalTransactionId || null,
+          subscription.platform || null,
+          subscription.purchaseDate || null,
+          subscription.expiryDate || null,
+          subscription.isMock ? 1 : 0,
+          subscription.createdAt || now,
+          now
+        ]
+      );
+      console.log('Subscription saved for user:', subscription.userId);
+    } catch (error) {
+      console.error('Failed to save subscription:', error);
+      throw error;
+    }
+  }
+
+  async getSubscription(userId: string): Promise<SubscriptionData | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getFirstAsync<any>(
+        'SELECT * FROM subscriptions WHERE user_id = ?',
+        [userId]
+      );
+
+      if (!result) return null;
+
+      return {
+        id: result.id,
+        userId: result.user_id,
+        subscriptionStatus: result.subscription_status,
+        subscriptionType: result.subscription_type,
+        purchaseToken: result.purchase_token,
+        originalTransactionId: result.original_transaction_id,
+        platform: result.platform,
+        purchaseDate: result.purchase_date,
+        expiryDate: result.expiry_date,
+        isMock: Boolean(result.is_mock),
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      console.error('Failed to get subscription:', error);
+      throw error;
+    }
+  }
+
+  async updateSubscriptionStatus(
+    userId: string,
+    status: string,
+    expiryDate: number
+  ): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        `UPDATE subscriptions
+         SET subscription_status = ?, expiry_date = ?, updated_at = ?
+         WHERE user_id = ?`,
+        [status, expiryDate, Date.now(), userId]
+      );
+      console.log('Updated subscription status for user:', userId);
+    } catch (error) {
+      console.error('Failed to update subscription status:', error);
+      throw error;
+    }
+  }
+
+  async deleteSubscription(userId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync('DELETE FROM subscriptions WHERE user_id = ?', [userId]);
+      console.log('Subscription deleted for user:', userId);
+    } catch (error) {
+      console.error('Failed to delete subscription:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // Usage Tracking Methods
+  // ============================================
+
+  async trackUsage(
+    userId: string,
+    generationType: 'free' | 'paid',
+    requestData?: string
+  ): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        `INSERT INTO usage_tracking (user_id, generation_type, created_at, generation_request)
+         VALUES (?, ?, ?, ?)`,
+        [userId, generationType, Date.now(), requestData || null]
+      );
+      console.log(`Tracked ${generationType} generation for user:`, userId);
+    } catch (error) {
+      console.error('Failed to track usage:', error);
+      throw error;
+    }
+  }
+
+  async getFreeTrialUsage(userId: string): Promise<FreeTrialUsage> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getFirstAsync<any>(
+        'SELECT * FROM free_trial_usage WHERE user_id = ?',
+        [userId]
+      );
+
+      if (!result) {
+        // Return default values if no record exists
+        return {
+          userId,
+          generationsUsed: 0,
+          firstGenerationAt: null,
+          lastGenerationAt: null,
+        };
+      }
+
+      return {
+        userId: result.user_id,
+        generationsUsed: result.generations_used,
+        firstGenerationAt: result.first_generation_at,
+        lastGenerationAt: result.last_generation_at,
+      };
+    } catch (error) {
+      console.error('Failed to get free trial usage:', error);
+      throw error;
+    }
+  }
+
+  async updateFreeTrialUsage(userId: string, incrementBy: number = 1): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const current = await this.getFreeTrialUsage(userId);
+      const now = Date.now();
+
+      if (current.generationsUsed === 0) {
+        // First generation - create new record
+        await this.db.runAsync(
+          `INSERT INTO free_trial_usage (user_id, generations_used, first_generation_at, last_generation_at, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [userId, incrementBy, now, now, now]
+        );
+      } else {
+        // Update existing record
+        await this.db.runAsync(
+          `UPDATE free_trial_usage
+           SET generations_used = generations_used + ?,
+               last_generation_at = ?
+           WHERE user_id = ?`,
+          [incrementBy, now, userId]
+        );
+      }
+      console.log(`Updated free trial usage for user ${userId}: +${incrementBy}`);
+    } catch (error) {
+      console.error('Failed to update free trial usage:', error);
+      throw error;
+    }
+  }
+
+  async getTotalGenerations(userId: string): Promise<number> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getFirstAsync<{ total: number }>(
+        'SELECT COUNT(*) as total FROM usage_tracking WHERE user_id = ?',
+        [userId]
+      );
+      return result?.total || 0;
+    } catch (error) {
+      console.error('Failed to get total generations:', error);
+      throw error;
+    }
+  }
+
+  async assignUserIdToExistingDesigns(userId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        'UPDATE saved_designs SET user_id = ? WHERE user_id IS NULL',
+        [userId]
+      );
+      console.log('Assigned user_id to existing designs:', userId);
+    } catch (error) {
+      console.error('Failed to assign user_id to existing designs:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // Testing Helper Methods
+  // ============================================
+
+  async resetUserUsage(userId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync('DELETE FROM usage_tracking WHERE user_id = ?', [userId]);
+      await this.db.runAsync('DELETE FROM free_trial_usage WHERE user_id = ?', [userId]);
+      console.log('Reset usage for user:', userId);
+    } catch (error) {
+      console.error('Failed to reset user usage:', error);
+      throw error;
+    }
   }
 }
 

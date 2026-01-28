@@ -12,6 +12,7 @@ import Animated from "react-native-reanimated";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { TabBarProvider, useTabBar } from "./src/contexts/TabBarContext";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
+import { SubscriptionProvider } from "./src/contexts/SubscriptionContext";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { CameraScreen } from "./src/screens/CameraScreen";
 import { PlantSelectionScreen } from "./src/screens/PlantSelectionScreen";
@@ -20,6 +21,7 @@ import { GalleryScreen } from "./src/screens/GalleryScreen";
 import { DesignDetailScreen } from "./src/screens/DesignDetailScreen";
 import { AccountScreen } from "./src/screens/AccountScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
+import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
 import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import {
@@ -36,6 +38,7 @@ type RootStackParamList = {
   PlantSelection: { imageUri: string };
   Generation: { request: GenerationRequest };
   DesignDetail: { design: SavedDesign };
+  Subscription: undefined;
 };
 
 type TabParamList = {
@@ -158,10 +161,18 @@ function MainTabNavigator() {
       }}
     >
       <Tab.Screen name="Gallery" component={GalleryScreenWrapper} />
-      <Tab.Screen name="Account" component={AccountScreen} />
+      <Tab.Screen name="Account" component={AccountScreenWrapper} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
+}
+
+function AccountScreenWrapper({ navigation }: any) {
+  const handleUpgradePress = () => {
+    navigation.navigate("Subscription");
+  };
+
+  return <AccountScreen onUpgradePress={handleUpgradePress} />;
 }
 
 function AppContent() {
@@ -214,6 +225,11 @@ function AppContent() {
           <Stack.Screen
             name="DesignDetail"
             component={DesignDetailScreenWrapper}
+          />
+          <Stack.Screen
+            name="Subscription"
+            component={SubscriptionScreen}
+            options={{ presentation: "modal" }}
           />
         </Stack.Navigator>
       </NavigationContainer>
@@ -268,11 +284,16 @@ function GenerationScreenWrapper({ route, navigation }: any) {
     navigation.goBack();
   };
 
+  const handleUpgradePress = () => {
+    navigation.navigate("Subscription");
+  };
+
   return (
     <GenerationScreen
       request={request}
       onGenerationComplete={handleGenerationComplete}
       onBack={handleBack}
+      onUpgradePress={handleUpgradePress}
     />
   );
 }
@@ -286,10 +307,15 @@ function GalleryScreenWrapper({ navigation }: any) {
     navigation.navigate("DesignDetail", { design });
   };
 
+  const handleUpgradePress = () => {
+    navigation.navigate("Subscription");
+  };
+
   return (
     <GalleryScreen
       onNewDesign={handleNewDesign}
       onDesignSelect={handleDesignSelect}
+      onUpgradePress={handleUpgradePress}
     />
   );
 }
@@ -321,7 +347,9 @@ export default function App() {
         <EnvValidator>
           <ThemeProvider>
             <AuthProvider>
-              <AppContent />
+              <SubscriptionProvider>
+                <AppContent />
+              </SubscriptionProvider>
             </AuthProvider>
           </ThemeProvider>
         </EnvValidator>

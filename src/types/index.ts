@@ -158,3 +158,54 @@ export interface IndividualPlantSelection {
   size: PlantSize;
   placement: PlacementType;
 }
+
+// Subscription & Payment Types
+export interface SubscriptionProduct {
+  id: string;
+  name: string;
+  price: string;
+  priceValue: number;
+  currency: string;
+  period: 'month' | 'year';
+  features: string[];
+  savings?: string;
+}
+
+export interface SubscriptionStatus {
+  isActive: boolean;
+  type: 'monthly' | 'annual' | null;
+  expiryDate: number | null;
+  isMock: boolean;
+  platform?: 'ios' | 'android';
+  purchaseDate?: number;
+}
+
+export interface UsageStats {
+  totalGenerations: number;
+  freeUsed: number;
+  paidUsed: number;
+  firstGeneration: Date | null;
+  lastGeneration: Date | null;
+}
+
+export interface FreeTrialUsage {
+  userId: string;
+  generationsUsed: number;
+  firstGenerationAt: number | null;
+  lastGenerationAt: number | null;
+}
+
+export interface SubscriptionData {
+  id?: number;
+  userId: string;
+  subscriptionStatus: 'none' | 'trial' | 'active' | 'expired' | 'cancelled';
+  subscriptionType: 'monthly' | 'annual' | null;
+  purchaseToken?: string;
+  originalTransactionId?: string;
+  platform?: 'ios' | 'android';
+  purchaseDate?: number;
+  expiryDate?: number;
+  isMock: boolean;
+  createdAt: number;
+  updatedAt: number;
+}

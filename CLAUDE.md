@@ -1,5 +1,7 @@
 # PlantAI Interior - React Native Expo App
 
+> **For AI Agents**: Read [AGENTS.MD](AGENTS.MD) first for quick architecture overview.
+
 A React Native Expo application that uses AI to generate plant-enhanced interior designs. Users authenticate, take photos of rooms, select plant types and styles, and receive AI-generated images showing how plants would look in their space. Features include a modern tab-based interface, gesture-controlled image viewing, and a comprehensive gallery system.
 
 ## 🚀 Quick Start
