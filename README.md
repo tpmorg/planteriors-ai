@@ -62,6 +62,8 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 
 3. **Configure your API keys**
 
+   **IMPORTANT**: Never store API keys in `app.json` - it's tracked by git!
+
    Copy the environment template and add your credentials:
    ```bash
    cp .env.example .env.local
@@ -71,19 +73,10 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
    ```env
    GOOGLE_CLIENT_ID=your_actual_google_client_id
    GEMINI_API_KEY=your_actual_gemini_api_key
+   TRUFLE_API_KEY=your_actual_trufle_api_key
    ```
 
-   **Alternative:** Update the `app.json` file directly:
-   ```json
-   {
-     "expo": {
-       "extra": {
-         "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
-         "geminiApiKey": "YOUR_GEMINI_API_KEY"
-       }
-     }
-   }
-   ```
+   The app automatically loads these via [app.config.js](app.config.js) at build time.
 
 4. **Start the development server**
    ```bash
@@ -167,14 +160,14 @@ plant-interior-ai/
 3. Enable **Google+ API**
 4. Create **OAuth 2.0 credentials**
 5. Add your bundle ID (iOS) and package name (Android)
-6. Copy the Client ID to `app.json`
+6. Copy the Client ID to `.env.local` (see configuration steps above)
 
 ### Gemini API Setup
 
 1. Visit [Google AI Studio](https://aistudio.google.com/) and create an account
 2. Generate an API key for Gemini
 3. Ensure Gemini 2.5 Flash Image Preview is available in your region
-4. Add the API key to `app.json`
+4. Add the API key to `.env.local` (see configuration steps above)
 
 ## 🛠️ Development
 
@@ -318,6 +311,15 @@ eas update:rollback --channel production
 eas build:list
 eas build:view BUILD_ID
 
+# View detailed logs via CLI (most reliable method)
+eas build:view BUILD_ID                    # View build details and status
+eas build:list --platform android --limit 5 # List recent Android builds
+eas build:list --platform ios --limit 5     # List recent iOS builds
+
+# Download and view raw log files
+eas build:view BUILD_ID --json | grep -o 'https://job-logs.eascdn.net[^"]*' | head -1 | xargs curl -o build-log.txt
+cat build-log.txt
+
 # Test on physical devices
 npx expo start --tunnel        # Share via QR code
 npx expo start --lan          # Share on local network
@@ -414,6 +416,21 @@ We welcome contributions! Please see our [contributing guidelines](CLAUDE.md#con
 - [ ] Plant marketplace integration
 - [ ] Seasonal design recommendations
 
+## The Google Authentication Flow
+- Native Google Sign-In → User signs in via Android's native Google account picker
+- Get ID Token → Google returns an ID token (JWT) proving the user authenticated
+- Firebase Validates Token → We pass the ID token to Firebase Auth (line 141 in AuthContext)
+- Firebase Creates/Signs In User → Firebase validates the token and authenticates the user
+
+## Useful Links
+
+- https://console.firebase.google.com/project/house-plant-ai/settings/general/android:com.plantai.interior
+- https://console.cloud.google.com/auth/clients?project=house-plant-ai
+- https://expo.dev/accounts/morgish/projects/plant-interior-ai/
+- https://docs.trefle.io/reference/
+- https://aistudio.google.com/usage?timeRange=last-hour
+
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -429,6 +446,37 @@ We welcome contributions! Please see our [contributing guidelines](CLAUDE.md#con
 **AI generation taking too long?**
 - Check your internet connection
 - Verify Gemini API key and quota limits
+
+**Build logs not showing on expo.dev?**
+
+If you see "Errored" but can't view logs in the web UI, try these alternatives:
+
+1. **CLI Method (Most Reliable)**:
+   ```bash
+   # List recent builds
+   eas build:list --platform android --limit 5
+
+   # View specific build details
+   eas build:view <BUILD_ID>
+   ```
+
+2. **Web UI Tips**:
+   - Hard refresh the page (Cmd+Shift+R or Ctrl+Shift+R)
+   - Wait 1-2 minutes after build completes (logs may still be uploading)
+   - Look for "Build Phases" section and expand each phase
+   - Check for a "Logs" tab at the top of the build page
+
+3. **Direct Log File Access**:
+   ```bash
+   # Download raw log files
+   eas build:view <BUILD_ID> --json | grep -o 'https://job-logs.eascdn.net[^"]*' | head -1 | xargs curl -o build-log.txt
+   cat build-log.txt
+   ```
+
+4. **Common Build Errors**:
+   - **"Path to google-services.json is not defined"**: Add `"googleServicesFile": "./google-services.json"` to `expo.android` in app.json
+   - **Invalid UUID appId**: Remove or update `extra.eas.projectId` in app.json, then run `eas init`
+   - **Prebuild failed**: Check that all native dependencies are compatible with your Expo SDK version
 
 For more detailed troubleshooting, see [CLAUDE.md](CLAUDE.md#troubleshooting).
 

@@ -227,12 +227,52 @@ Generate this as a high-quality photorealistic image.`;
     imageUri: string;
     isGenerated: boolean;
   } {
-    console.log("Gemini response structure analysis:");
-    console.log("- Candidates:", response.candidates?.length || 0);
-    console.log(
-      "- Parts in first candidate:",
-      response.candidates?.[0]?.content?.parts?.length || 0,
-    );
+    console.log("=== GEMINI API RESPONSE METADATA ===");
+
+    // Token usage and cost tracking
+    if (response.usageMetadata) {
+      const usage = response.usageMetadata;
+      console.log("Token Usage:");
+      console.log("  - Prompt tokens:", usage.promptTokenCount || 0);
+      console.log("  - Response tokens:", usage.candidatesTokenCount || 0);
+      console.log("  - Total tokens:", usage.totalTokenCount || 0);
+
+      // Cost estimation (Gemini 2.5 Flash pricing as of Jan 2025)
+      // Input: $0.00001875 per 1K tokens ($0.075 per 1M)
+      // Output: $0.000075 per 1K tokens ($0.30 per 1M)
+      // Image input: $0.0025 per image
+      const inputCost = (usage.promptTokenCount || 0) * 0.00001875 / 1000;
+      const outputCost = (usage.candidatesTokenCount || 0) * 0.000075 / 1000;
+      const imageCost = 0.0025; // Fixed cost per input image
+      const totalCost = inputCost + outputCost + imageCost;
+
+      console.log("Cost Estimate:");
+      console.log(`  - Input cost: $${inputCost.toFixed(6)}`);
+      console.log(`  - Output cost: $${outputCost.toFixed(6)}`);
+      console.log(`  - Image cost: $${imageCost.toFixed(6)}`);
+      console.log(`  - Total cost: $${totalCost.toFixed(6)}`);
+    }
+
+    // Model and response metadata
+    console.log("Response Metadata:");
+    console.log("  - Model:", MODEL_NAME);
+    console.log("  - Candidates:", response.candidates?.length || 0);
+    console.log("  - Parts in first candidate:", response.candidates?.[0]?.content?.parts?.length || 0);
+
+    if (response.candidates?.[0]) {
+      const candidate = response.candidates[0];
+      console.log("  - Finish reason:", candidate.finishReason || "unknown");
+      console.log("  - Safety ratings:", candidate.safetyRatings?.length || 0);
+
+      // Log safety ratings if present
+      if (candidate.safetyRatings) {
+        candidate.safetyRatings.forEach((rating: any) => {
+          console.log(`    - ${rating.category}: ${rating.probability}`);
+        });
+      }
+    }
+
+    console.log("====================================");
 
     const parts = response.candidates[0].content.parts;
 

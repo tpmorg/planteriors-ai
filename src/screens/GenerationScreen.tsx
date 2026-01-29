@@ -313,7 +313,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   if (generatedImageUri && !isGenerating && isImageGenerated) {
     return (
-      <SafeAreaView style={styles.fullScreenContainer} edges={['top']}>
+      <SafeAreaView style={styles.fullScreenContainer}>
         <Animated.View
           style={[
             styles.resultContainer,
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 4,
     backgroundColor: "rgba(0,0,0,0.3)",
   },
   overlayBackButton: {

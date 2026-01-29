@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
-import { env } from '../utils/env';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
 
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: '571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com',
+  offlineAccess: true,
+});
 
 interface AuthContextType extends AuthState {
   signInWithGoogle: () => Promise<void>;
@@ -36,66 +38,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
   });
 
-  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
-
-  // Handle OAuth configuration with fallback for missing env vars
-  const getOAuthConfig = () => {
-    try {
-      // Use the Web Client ID from Firebase Console
-      const webClientId = '571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com';
-
-      console.log('Using OAuth Web Client ID:', webClientId);
-
-      // Use custom scheme for Dev Client
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'plant-interior-ai',
-        path: 'auth',
-      });
-
-      console.log('OAuth Redirect URI:', redirectUri);
-      console.log('App Scheme:', env.getAppScheme());
-
-      return {
-        clientId: webClientId,
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri: redirectUri,
-        responseType: AuthSession.ResponseType.Code,
-        additionalParameters: {},
-        customParameters: {
-          prompt: 'select_account',
-        },
-      };
-    } catch (error) {
-      console.warn('OAuth configuration incomplete:', error);
-      return {
-        clientId: 'placeholder-client-id',
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri: AuthSession.makeRedirectUri({
-          scheme: 'plant-interior-ai',
-          path: 'auth',
-        }),
-        additionalParameters: {},
-        customParameters: {
-          prompt: 'select_account',
-        },
-      };
-    }
-  };
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    getOAuthConfig(),
-    discovery
-  );
-
   useEffect(() => {
     loadStoredAuth();
   }, []);
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      handleGoogleAuthResponse(response.authentication);
-    }
-  }, [response]);
 
   const loadStoredAuth = async () => {
     try {
@@ -119,30 +64,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const handleGoogleAuthResponse = async (authentication: any) => {
+  const signInWithGoogle = async () => {
     try {
-      console.log('Received Google auth response:', authentication);
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+      console.log('Starting native Google Sign-In...');
 
-      if (!authentication?.accessToken) {
-        console.error('No access token received from Google OAuth');
-        setAuthState(prev => ({ ...prev, isLoading: false }));
-        return;
+      // Check if Google Play Services are available
+      await GoogleSignin.hasPlayServices();
+
+      // Sign in with Google
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign-In successful:', userInfo);
+
+      // Get the ID token for Firebase
+      const { idToken } = userInfo.data;
+      if (!idToken) {
+        throw new Error('No ID token received from Google Sign-In');
       }
 
-      // Get user info from Google using access token
-      console.log('Fetching user info from Google...');
-      const userInfoResponse = await fetch(
-        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${authentication.accessToken}`
-      );
-      const userInfo = await userInfoResponse.json();
-      console.log('Google user info:', userInfo);
+      console.log('Signing in to Firebase with Google ID token...');
+      const firebaseUser = await FirebaseAuthService.signInWithGoogleIdToken(idToken);
 
-      // Create user object
-      const user = {
-        id: userInfo.id,
-        email: userInfo.email,
-        name: userInfo.name,
-        avatar: userInfo.picture,
+      if (!firebaseUser) {
+        throw new Error('Failed to sign in to Firebase');
+      }
+
+      // Create user object from Google user info
+      const user: User = {
+        id: firebaseUser.id,
+        email: firebaseUser.email,
+        name: firebaseUser.name || userInfo.data.user.name || '',
+        avatar: firebaseUser.avatar || userInfo.data.user.photo || undefined,
+        provider: 'google',
       };
 
       console.log('Storing user and updating auth state...');
@@ -152,19 +105,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         isLoading: false,
       });
-    } catch (error) {
-      console.error('Error handling Google auth response:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    try {
-      setAuthState(prev => ({ ...prev, isLoading: true }));
-      console.log('Starting Google OAuth with expo-auth-session...');
-      await promptAsync();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in with Google:', error);
+
+      // Handle specific error cases
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        console.log('User cancelled the sign-in');
+      } else if (error.code === 'IN_PROGRESS') {
+        console.log('Sign-in already in progress');
+      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+        console.error('Google Play Services not available');
+      }
+
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   };
@@ -211,6 +163,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Starting complete sign out...');
 
+      // Sign out from Google
+      await GoogleSignin.signOut();
+
       // Clear Firebase auth
       await FirebaseAuthService.signOut();
 
@@ -228,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error signing out:', error);
 
-      // Force clear state even if Firebase signout fails
+      // Force clear state even if signout fails
       setAuthState({
         isAuthenticated: false,
         user: null,
