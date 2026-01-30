@@ -8,9 +8,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/h-plant-ai-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2d5016"
+      "backgroundColor": "#f9fafb"
     },
     "scheme": "plant-interior-ai",
     "plugins": [

@@ -428,7 +428,8 @@ We welcome contributions! Please see our [contributing guidelines](CLAUDE.md#con
 - https://console.cloud.google.com/auth/clients?project=house-plant-ai
 - https://expo.dev/accounts/morgish/projects/plant-interior-ai/
 - https://docs.trefle.io/reference/
-- https://aistudio.google.com/usage?timeRange=last-hour
+- https://console.cloud.google.com/billing/01855B-D7E298-5E2882?project=house-plant-ai
+
 
 
 ## 🐛 Troubleshooting

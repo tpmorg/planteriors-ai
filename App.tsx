@@ -24,6 +24,7 @@ import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
 import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import SplashScreen from "./src/components/SplashScreen";
 import {
   GenerationRequest,
   GeneratedImage,
@@ -194,7 +195,7 @@ function AppContent() {
   }, []);
 
   if (isLoading || !dbInitialized) {
-    return null; // or a loading screen
+    return <SplashScreen />;
   }
 
   if (!isAuthenticated) {
@@ -210,30 +211,34 @@ function AppContent() {
     );
   }
 
+  // SubscriptionProvider now wraps the authenticated app content
+  // This ensures the database is initialized before subscription queries run
   return (
-    <TabBarProvider>
-      <StatusBar style={theme.isDark ? "light" : "dark"} />
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="MainApp" component={MainTabNavigator} />
-          <Stack.Screen name="Camera" component={CameraScreenWrapper} />
-          <Stack.Screen
-            name="PlantSelection"
-            component={PlantSelectionScreenWrapper}
-          />
-          <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
-          <Stack.Screen
-            name="DesignDetail"
-            component={DesignDetailScreenWrapper}
-          />
-          <Stack.Screen
-            name="Subscription"
-            component={SubscriptionScreen}
-            options={{ presentation: "modal" }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </TabBarProvider>
+    <SubscriptionProvider>
+      <TabBarProvider>
+        <StatusBar style={theme.isDark ? "light" : "dark"} />
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="MainApp" component={MainTabNavigator} />
+            <Stack.Screen name="Camera" component={CameraScreenWrapper} />
+            <Stack.Screen
+              name="PlantSelection"
+              component={PlantSelectionScreenWrapper}
+            />
+            <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
+            <Stack.Screen
+              name="DesignDetail"
+              component={DesignDetailScreenWrapper}
+            />
+            <Stack.Screen
+              name="Subscription"
+              component={SubscriptionScreen}
+              options={{ presentation: "modal" }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </TabBarProvider>
+    </SubscriptionProvider>
   );
 }
 
@@ -347,9 +352,7 @@ export default function App() {
         <EnvValidator>
           <ThemeProvider>
             <AuthProvider>
-              <SubscriptionProvider>
-                <AppContent />
-              </SubscriptionProvider>
+              <AppContent />
             </AuthProvider>
           </ThemeProvider>
         </EnvValidator>
