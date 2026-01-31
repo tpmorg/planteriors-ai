@@ -430,7 +430,21 @@ We welcome contributions! Please see our [contributing guidelines](CLAUDE.md#con
 - https://docs.trefle.io/reference/
 - https://console.cloud.google.com/billing/01855B-D7E298-5E2882?project=house-plant-ai
 
+## When to rebuild
 
+What Requires a Rebuild (Native Changes)
+
+✅ App icon (icon in app.json)
+✅ Splash screen (splash in app.json)
+✅ App name, bundle identifier, version
+✅ Native plugins/modules
+✅ Permissions (camera, location, etc.)
+
+What Doesn't Require a Rebuild (JS Changes)
+❌ React/TypeScript code
+❌ Components, screens, services
+❌ Images loaded at runtime
+❌ Navigation, styling, logic
 
 ## 🐛 Troubleshooting
 

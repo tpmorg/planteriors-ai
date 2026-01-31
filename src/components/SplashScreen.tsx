@@ -58,7 +58,7 @@ export default function SplashScreen() {
 
       <Animated.View style={[styles.logoContainer, animatedStyle]}>
         <Image
-          source={require('../../assets/h-plant-ai-logo.png')}
+          source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: width * 0.6,
     maxWidth: 400,
-    aspectRatio: 636 / 536, // Original logo dimensions
+    aspectRatio: 1, // Square logo (1024x1024)
   },
   logo: {
     width: '100%',

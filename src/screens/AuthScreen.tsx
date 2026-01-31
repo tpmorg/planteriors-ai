@@ -21,7 +21,12 @@ export const AuthScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>PlantAI Interior</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Planterior AI</Text>
           <Text style={styles.subtitle}>
             Transform your rooms with AI-generated plant designs
           </Text>
@@ -80,6 +85,11 @@ const createStyles = (theme: any) => StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 60,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
