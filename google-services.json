@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "571611112597",
-    "project_id": "house-plant-ai",
-    "storage_bucket": "house-plant-ai.firebasestorage.app"
+    "project_number": "161202796930",
+    "project_id": "planterior-7c289",
+    "storage_bucket": "planterior-7c289.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:571611112597:android:0308a81fb13e569996279c",
+        "mobilesdk_app_id": "1:161202796930:android:186fa5290e78134b60f79b",
         "android_client_info": {
-          "package_name": "com.plantai.interior"
+          "package_name": "com.bcs.planterior"
         }
       },
       "oauth_client": [
         {
-          "client_id": "571611112597-ff7ra8nu2blpf9qv4767b155ibo1skai.apps.googleusercontent.com",
+          "client_id": "161202796930-csdveqnl39i6b7uscm5b9l4m6f8bspl1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.plantai.interior",
-            "certificate_hash": "24e931fc3eb81d58cfcd9fba4dd2bf8fd971be50"
+            "package_name": "com.bcs.planterior",
+            "certificate_hash": "0eae699e47157b304f400cebaa911fcddc5b5b0d"
           }
         },
         {
-          "client_id": "571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com",
+          "client_id": "161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyD_n8fvKog_4uTojuYoh2aSszHpHdMoaoQ"
+          "current_key": "AIzaSyAWC7EGnSgpV0uWut0kslpaFMFuY_hk9_E"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com",
+              "client_id": "161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

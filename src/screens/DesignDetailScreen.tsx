@@ -168,7 +168,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           const displayText = getDesignDisplayText(design);
           await Share.share({
             message: displayText.shareMessage,
-            title: 'Plant Interior Design',
+            title: 'Planterior Design',
           });
         }
       } else if (imageUri.startsWith('file://') || design.localImagePath) {
@@ -184,7 +184,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         await Share.share({
           message: displayText.shareMessage,
           url: imageUri,
-          title: 'Plant Interior Design',
+          title: 'Planterior Design',
         });
       }
     } catch (error) {

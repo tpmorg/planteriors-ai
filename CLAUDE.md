@@ -1,4 +1,4 @@
-# PlantAI Interior - React Native Expo App
+# Planterior AI - React Native Expo App
 
 > **For AI Agents**: Read [AGENTS.MD](AGENTS.MD) first for quick architecture overview.
 
@@ -18,7 +18,7 @@ A React Native Expo application that uses AI to generate plant-enhanced interior
 
 1. **Clone and Install Dependencies**
 ```bash
-cd plant-interior-ai
+cd planterior-ai
 npm install
 ```
 
@@ -62,7 +62,7 @@ npm run web
 ## 🏗️ Project Structure
 
 ```
-plant-interior-ai/
+planterior-ai/
 ├── src/
 │   ├── components/          # Reusable UI components
 │   ├── config/             # Configuration files
@@ -169,7 +169,7 @@ plant-interior-ai/
 **Current Status**: ✅ Configured and integrated
 
 1. **Create Firebase Project**: [Firebase Console](https://console.firebase.google.com/)
-2. **Add Android App**: Package name `com.plantai.interior`
+2. **Add Android App**: Package name `com.planterior.ai`
 3. **Download Configuration**: Place `google-services.json` in project root
 4. **Enable Authentication**: Go to Authentication → Sign-in method → Enable Google
 5. **Configure OAuth**: Copy Web Client ID from Firebase Console to `app.json`
@@ -321,7 +321,7 @@ eas submit --platform ios
 1. **API Keys**: Never commit real API keys to version control
 2. **Firebase**: `google-services.json` contains public keys (safe to commit)
 3. **OAuth**: Configure authorized domains in Firebase Console
-4. **Redirect URIs**: Use custom scheme `plant-interior-ai://` for production
+4. **Redirect URIs**: Use custom scheme `planterior-ai://` for production
 5. **Permissions**: Request minimal required permissions
 6. **Image Handling**: Validate image uploads and user input
 7. **Error Handling**: Don't expose sensitive error details in production

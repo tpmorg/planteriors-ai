@@ -6,7 +6,7 @@ import { FirebaseAuthService } from '../services/firebaseAuthService';
 
 // Configure Google Sign-In
 GoogleSignin.configure({
-  webClientId: '571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1.apps.googleusercontent.com',
+  webClientId: '161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com',
   offlineAccess: true,
 });
 

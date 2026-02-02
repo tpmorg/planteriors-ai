@@ -1,10 +1,10 @@
-# 🌱 PlantAI Interior
+# 🌱 Planterior AI
 
 Transform your interior spaces with AI-powered plant design recommendations. Take photos of rooms, select plant types and styles, and receive AI-generated images showing how plants would look in your space. Features a modern tab-based interface, gesture-controlled image viewing, and comprehensive gallery management.
 
 <div align="center">
 
-![PlantAI Interior](https://via.placeholder.com/800x400/2d5016/ffffff?text=PlantAI+Interior)
+![Planterior AI](https://via.placeholder.com/800x400/2d5016/ffffff?text=Planterior+AI)
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.81.4-blue.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-52.0.0-black.svg)](https://expo.dev/)
@@ -52,7 +52,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 1. **Clone the repository**
    ```bash
    git clone https://github.com/tpmorg/plant-interiors-ai.git
-   cd plant-interior-ai
+   cd planterior-ai
    ```
 
 2. **Install dependencies**
@@ -126,7 +126,7 @@ claude plugin enable upgrading-expo
 ## 🏗️ Architecture
 
 ```
-plant-interior-ai/
+planterior-ai/
 ├── src/
 │   ├── contexts/           # React Context
 │   │   ├── AuthContext.tsx         # OAuth authentication
@@ -509,7 +509,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 **Email**: support@plantai-interior.com
+- 📧 **Email**: support@planterior.ai
 - 🐛 **Issues**: [GitHub Issues](https://github.com/tpmorg/plant-interiors-ai/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/tpmorg/plant-interiors-ai/discussions)
 
@@ -519,6 +519,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ and 🤖 AI**
 
-[Website](https://plantai-interior.com) • [Download iOS](https://apps.apple.com) • [Download Android](https://play.google.com)
+[Website](https://planterior.ai) • [Download iOS](https://apps.apple.com) • [Download Android](https://play.google.com)
 
 </div>

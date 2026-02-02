@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PlantAI Interior",
+    "name": "Planterior AI",
     "slug": "plant-interior-ai",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,26 +17,26 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow PlantAI Interior to access your camera to take photos of rooms."
+          "cameraPermission": "Allow Planterior AI to access your camera to take photos of rooms."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow PlantAI Interior to access your photos to select room images."
+          "photosPermission": "Allow Planterior AI to access your photos to select room images."
         }
       ],
       "@react-native-firebase/app",
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1"
+          "iosUrlScheme": "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
         }
       ]
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.plantai.interior",
+      "bundleIdentifier": "com.bcs.planterior",
       "infoPlist": {
         "CFBundleURLTypes": [
           {
@@ -48,14 +48,14 @@
           {
             "CFBundleURLName": "google-oauth",
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.571611112597-ccbrf6m9i79po3okme1gtpjpl17qjcc1"
+              "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
             ]
           }
         ]
       }
     },
     "android": {
-      "package": "com.plantai.interior",
+      "package": "com.bcs.planterior",
       "icon": "./assets/logo.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",

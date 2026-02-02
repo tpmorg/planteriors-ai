@@ -1,6 +1,6 @@
 # AGENTS.MD - AI Agent Quick Reference
 
-> **Purpose**: This file helps AI agents quickly understand the PlantAI Interior project architecture without scanning all files. Optimized for agent consumption.
+> **Purpose**: This file helps AI agents quickly understand the Planterior AI project architecture without scanning all files. Optimized for agent consumption.
 
 ## Project Identity
 
