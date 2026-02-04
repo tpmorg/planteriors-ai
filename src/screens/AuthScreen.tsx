@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { env } from '../utils/env';
+import { Ionicons } from '@expo/vector-icons';
 
 export const AuthScreen: React.FC = () => {
   const { signInWithGoogle, signInWithApple, signInBypass, isLoading } = useAuth();
@@ -38,6 +39,7 @@ export const AuthScreen: React.FC = () => {
             onPress={signInWithGoogle}
             disabled={isLoading}
           >
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
             <Text style={styles.buttonText}>Continue with Google</Text>
           </TouchableOpacity>
 
@@ -46,6 +48,7 @@ export const AuthScreen: React.FC = () => {
             onPress={signInWithApple}
             disabled={isLoading}
           >
+            <Ionicons name="logo-apple" size={20} color={theme.isDark ? '#000000' : '#ffffff'} />
             <Text style={[styles.buttonText, styles.appleButtonText]}>
               Continue with Apple
             </Text>
@@ -57,8 +60,9 @@ export const AuthScreen: React.FC = () => {
               onPress={signInBypass}
               disabled={isLoading}
             >
+              <Ionicons name="rocket" size={18} color="#ffffff" />
               <Text style={[styles.buttonText, styles.bypassButtonText]}>
-                🚀 Skip Login (Development)
+                Skip Login (Development)
               </Text>
             </TouchableOpacity>
           )}
@@ -108,11 +112,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 32,
   },
   button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   googleButton: {
     backgroundColor: theme.colors.surface,

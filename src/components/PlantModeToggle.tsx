@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Layers, Flower2 } from 'lucide-react-native';
 import { PlantSelectionMode } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface PlantModeToggleProps {
   mode: PlantSelectionMode;
@@ -12,6 +13,9 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
   mode,
   onModeChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   return (
     <View style={styles.container}>
       <View style={styles.toggleContainer}>
@@ -25,7 +29,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
         >
           <Layers
             size={18}
-            color={mode === 'multi-plant' ? '#2d5016' : '#6b7280'}
+            color={mode === 'multi-plant' ? theme.colors.primary : theme.colors.textSecondary}
           />
           <Text
             style={[
@@ -47,7 +51,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
         >
           <Flower2
             size={18}
-            color={mode === 'individual' ? '#2d5016' : '#6b7280'}
+            color={mode === 'individual' ? theme.colors.primary : theme.colors.textSecondary}
           />
           <Text
             style={[
@@ -69,9 +73,9 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
@@ -79,7 +83,7 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.borderLight,
     borderRadius: 12,
     padding: 4,
   },
@@ -94,8 +98,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleButtonActive: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
+    backgroundColor: theme.colors.surface,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -104,15 +108,15 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
   },
   toggleTextActive: {
-    color: '#2d5016',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   hint: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: 10,
   },

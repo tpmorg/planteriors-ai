@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
@@ -26,6 +27,9 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
   const cameraRef = useRef<CameraView>(null);
+
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   const hasPermission = permission?.granted;
 
@@ -123,13 +127,13 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
             <Text style={styles.optionsTitle}>How would you like to add a room photo?</Text>
 
             <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
-              <Ionicons name="camera" size={32} color="#2d5016" />
+              <Ionicons name="camera" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Take Photo</Text>
               <Text style={styles.optionSubtitle}>Use your camera to capture a room</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
-              <Ionicons name="images" size={32} color="#2d5016" />
+              <Ionicons name="images" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Import from Gallery</Text>
               <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
             </TouchableOpacity>
@@ -218,7 +222,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
@@ -228,11 +232,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: theme.colors.background,
   },
   permissionText: {
     fontSize: 18,
     marginBottom: 20,
     textAlign: 'center',
+    color: theme.colors.text,
   },
   header: {
     flexDirection: 'row',
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     backgroundColor: 'white',
     borderWidth: 2,
-    borderColor: '#2d5016',
+    borderColor: theme.colors.primary,
   },
   placeholder: {
     width: 50,
@@ -353,7 +359,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   button: {
-    backgroundColor: '#2d5016',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -369,7 +375,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.background,
   },
   optionsContent: {
     width: '100%',
@@ -379,19 +385,19 @@ const styles = StyleSheet.create({
   optionsTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2d5016',
+    color: theme.colors.primary,
     textAlign: 'center',
     marginBottom: 40,
     lineHeight: 28,
   },
   optionButton: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     padding: 24,
     borderRadius: 16,
     marginBottom: 16,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -400,18 +406,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
   },
   optionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2d5016',
+    color: theme.colors.primary,
     marginTop: 12,
     marginBottom: 4,
   },
   optionSubtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

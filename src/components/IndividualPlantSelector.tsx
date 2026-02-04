@@ -20,6 +20,7 @@ import {
   PLANT_SIZE_OPTIONS,
   PLACEMENT_OPTIONS,
 } from '../data/plantDatabase';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface IndividualPlantSelectorProps {
   onSelectionChange: (selection: IndividualPlantSelection | null) => void;
@@ -43,6 +44,9 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
 
   // Filter plants based on search
   const [filteredPlants, setFilteredPlants] = useState<IndividualPlant[]>(INDIVIDUAL_PLANTS);
+
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   useEffect(() => {
     const lowerQuery = searchQuery.toLowerCase().trim();
@@ -142,17 +146,17 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
-          <Search size={18} color="#9ca3af" style={styles.searchIcon} />
+          <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search plants..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={18} color="#9ca3af" />
+              <X size={18} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -180,7 +184,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
               </View>
             </View>
             <TouchableOpacity onPress={clearSelection} style={styles.clearButton}>
-              <X size={20} color="#6b7280" />
+              <X size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -208,7 +212,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
             </View>
             {selectedPlant.petSafe && (
               <View style={[styles.careBadge, styles.petSafeBadge]}>
-                <Heart size={12} color="#2d5016" />
+                <Heart size={12} color={theme.colors.primary} />
                 <Text style={[styles.careBadgeText, styles.petSafeText]}>
                   Pet safe
                 </Text>
@@ -321,7 +325,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                   </Text>
                   <View style={styles.plantCardBadges}>
                     {plant.petSafe && (
-                      <Heart size={12} color="#2d5016" fill="#2d5016" />
+                      <Heart size={12} color={theme.colors.primary} fill={theme.colors.primary} />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -335,215 +339,219 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: '#fff',
-  },
-  searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1f2937',
-  },
-  gridLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#fff',
-  },
-  plantGrid: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  plantGridContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 120,
-  },
-  plantGridInner: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  plantCard: {
-    width: '47%',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    margin: '1.5%',
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    paddingBottom: 12,
-  },
-  plantCardSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  plantCardIcon: {
-    fontSize: 44,
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  plantCardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  plantCardName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    textAlign: 'center',
-    marginBottom: 4,
-    width: '100%',
-  },
-  plantCardBadges: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  plantCardBadge: {
-    fontSize: 10,
-  },
-  // Selected Panel
-  selectedPanel: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  selectedHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  selectedPlantInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  selectedIcon: {
-    fontSize: 36,
-    marginRight: 12,
-  },
-  selectedImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  selectedTextContainer: {
-    flex: 1,
-  },
-  selectedName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1f2937',
-  },
-  selectedScientific: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontStyle: 'italic',
-  },
-  clearButton: {
-    padding: 4,
-  },
-  selectedDescription: {
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  careInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  careBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  careBadgeIcon: {
-    fontSize: 12,
-  },
-  careBadgeText: {
-    fontSize: 12,
-    color: '#4b5563',
-    textTransform: 'capitalize',
-  },
-  petSafeBadge: {
-    backgroundColor: '#ecfdf5',
-  },
-  petSafeText: {
-    color: '#2d5016',
-  },
-  optionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  optionCard: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  optionCardSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  optionCardIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  optionCardName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 2,
-  },
-  optionCardNameSelected: {
-    color: '#2d5016',
-  },
-  optionCardDesc: {
-    fontSize: 10,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-});
+const createStyles = (theme: any) => {
+  const selectedBg = theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5';
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    searchContainer: {
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: theme.colors.surface,
+    },
+    searchInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 44,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.colors.text,
+    },
+    gridLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 8,
+      backgroundColor: theme.colors.surface,
+    },
+    plantGrid: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+    },
+    plantGridContent: {
+      paddingHorizontal: 12,
+      paddingBottom: 120,
+    },
+    plantGridInner: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    plantCard: {
+      width: '47%',
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      margin: '1.5%',
+      padding: 10,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      borderWidth: 2,
+      borderColor: 'transparent',
+      paddingBottom: 12,
+    },
+    plantCardSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    plantCardIcon: {
+      fontSize: 44,
+      marginBottom: 8,
+      marginTop: 8,
+    },
+    plantCardImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 10,
+      marginBottom: 8,
+      marginTop: 4,
+    },
+    plantCardName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+      marginBottom: 4,
+      width: '100%',
+    },
+    plantCardBadges: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    plantCardBadge: {
+      fontSize: 10,
+    },
+    // Selected Panel
+    selectedPanel: {
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+    },
+    selectedHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    selectedPlantInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    selectedIcon: {
+      fontSize: 36,
+      marginRight: 12,
+    },
+    selectedImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 12,
+      marginRight: 12,
+    },
+    selectedTextContainer: {
+      flex: 1,
+    },
+    selectedName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    selectedScientific: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      fontStyle: 'italic',
+    },
+    clearButton: {
+      padding: 4,
+    },
+    selectedDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    careInfo: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    careBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.borderLight,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+      gap: 4,
+    },
+    careBadgeIcon: {
+      fontSize: 12,
+    },
+    careBadgeText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      textTransform: 'capitalize',
+    },
+    petSafeBadge: {
+      backgroundColor: selectedBg,
+    },
+    petSafeText: {
+      color: theme.colors.primary,
+    },
+    optionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 10,
+      marginTop: 4,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 12,
+    },
+    optionCard: {
+      flex: 1,
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    optionCardSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    optionCardIcon: {
+      fontSize: 22,
+      marginBottom: 4,
+    },
+    optionCardName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    optionCardNameSelected: {
+      color: theme.colors.primary,
+    },
+    optionCardDesc: {
+      fontSize: 10,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+};

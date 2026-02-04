@@ -18,6 +18,7 @@ import { useSubscription } from "../contexts/SubscriptionContext";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { subscriptionService } from "../services/subscriptionService";
 import { PaywallModal } from "../components/PaywallModal";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface GenerationScreenProps {
   request: GenerationRequest;
@@ -36,6 +37,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 }) => {
   const { user } = useAuth();
   const { refreshStatus } = useSubscription();
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
   const [isCheckingUsage, setIsCheckingUsage] = useState(true); // New state for usage check
@@ -275,7 +278,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#2d5016" />
+            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Generation Failed</Text>
           <View style={styles.placeholder} />
@@ -371,7 +374,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#2d5016" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Generating Design</Text>
         <View style={styles.placeholder} />
@@ -447,10 +450,10 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: theme.colors.background,
   },
   fullScreenContainer: {
     flex: 1,
@@ -462,9 +465,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "white",
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: 8,
@@ -472,7 +475,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#2d5016",
+    color: theme.colors.primary,
   },
   placeholder: {
     width: 40,
@@ -514,20 +517,20 @@ const styles = StyleSheet.create({
   progressBar: {
     width: "100%",
     height: 6,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: theme.colors.border,
     borderRadius: 3,
     overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#2d5016",
+    backgroundColor: theme.colors.primary,
     borderRadius: 3,
   },
   progressText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2d5016",
+    color: theme.colors.primary,
   },
   stepContainer: {
     alignItems: "center",
@@ -535,14 +538,14 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: "#6b7280",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     marginBottom: 8,
   },
   apiStatusContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(45, 80, 22, 0.1)",
+    backgroundColor: theme.isDark ? "rgba(134, 239, 172, 0.1)" : "rgba(45, 80, 22, 0.1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -551,30 +554,32 @@ const styles = StyleSheet.create({
   apiIndicator: {
     width: 8,
     height: 8,
-    backgroundColor: "#2d5016",
+    backgroundColor: theme.colors.primary,
     borderRadius: 4,
     marginRight: 8,
   },
   apiStatusText: {
     fontSize: 12,
-    color: "#2d5016",
+    color: theme.colors.primary,
     fontWeight: "600",
   },
   plantInfo: {
-    backgroundColor: "white",
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 32,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   plantInfoTitle: {
     fontSize: 14,
-    color: "#6b7280",
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   plantInfoDetail: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2d5016",
+    color: theme.colors.primary,
   },
   loadingAnimation: {
     flexDirection: "row",
@@ -584,7 +589,7 @@ const styles = StyleSheet.create({
   loadingDot: {
     width: 8,
     height: 8,
-    backgroundColor: "#2d5016",
+    backgroundColor: theme.colors.primary,
     borderRadius: 4,
     marginHorizontal: 4,
   },
@@ -603,12 +608,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: "#6b7280",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: "#2d5016",
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -626,7 +631,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   backToSelectionText: {
-    color: "#6b7280",
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
   resultContainer: {

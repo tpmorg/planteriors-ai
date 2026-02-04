@@ -29,6 +29,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -79,6 +80,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   // Modal animation
   const modalTranslateY = useSharedValue(screenHeight);
   const backdropOpacity = useSharedValue(0);
+
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -374,7 +378,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   {design.mode === 'individual' && design.individualPlant && (
                     <>
                       <View style={styles.infoItem}>
-                        <Ionicons name="leaf-outline" size={20} color="#2d5016" />
+                        <Ionicons name="leaf-outline" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Plant</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
@@ -385,7 +389,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
 
                       <View style={styles.infoItem}>
-                        <Ionicons name="resize-outline" size={20} color="#2d5016" />
+                        <Ionicons name="resize-outline" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Size</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
@@ -393,7 +397,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
 
                       <View style={styles.infoItem}>
-                        <Ionicons name="location-outline" size={20} color="#2d5016" />
+                        <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Placement</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
@@ -405,7 +409,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   {/* Multi-plant mode info */}
                   {design.mode !== 'individual' && design.plantType && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="leaf-outline" size={20} color="#2d5016" />
+                      <Ionicons name="leaf-outline" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Plant Type</Text>
                         <Text style={styles.infoValue}>{design.plantType.name}</Text>
@@ -418,7 +422,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
                   {design.mode !== 'individual' && design.plantStyle && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="color-palette-outline" size={20} color="#2d5016" />
+                      <Ionicons name="color-palette-outline" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Style</Text>
                         <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
@@ -431,7 +435,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
                   {design.customPrompt && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="chatbox-outline" size={20} color="#2d5016" />
+                      <Ionicons name="chatbox-outline" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Custom Requirements</Text>
                         <Text style={styles.infoDescription}>
@@ -442,7 +446,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   )}
 
                   <View style={styles.infoItem}>
-                    <Ionicons name="time-outline" size={20} color="#2d5016" />
+                    <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
                     <View style={styles.infoContent}>
                       <Text style={styles.infoLabel}>Created</Text>
                       <Text style={styles.infoValue}>
@@ -460,7 +464,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
@@ -518,7 +522,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: screenHeight * 0.5,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     zIndex: 1001,
@@ -538,7 +542,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.colors.border,
   },
   modalHeaderTouchable: {
     flex: 1,
@@ -549,14 +553,14 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#d1d5db',
+    backgroundColor: theme.colors.border,
     borderRadius: 2,
     marginRight: 12,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
     textAlign: 'center',
   },
   modalContent: {
@@ -571,12 +575,12 @@ const styles = StyleSheet.create({
   plantTypeTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2d5016',
+    color: theme.colors.primary,
     textAlign: 'center',
   },
   plantStyleSubtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   infoGrid: {
@@ -593,18 +597,18 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.colors.text,
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2d5016',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   infoDescription: {
     fontSize: 12,
-    color: '#6b7280',
+    color: theme.colors.textSecondary,
     lineHeight: 16,
   },
 });

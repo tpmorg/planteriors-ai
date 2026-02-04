@@ -132,19 +132,13 @@ export const SettingsScreen: React.FC = () => {
           <TouchableOpacity style={styles.menuItem}>
             <Ionicons name="trash-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Clear Cache</Text>
-            <View style={styles.menuValue}>
-              <Text style={styles.menuValueText}>127 MB</Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
             <Ionicons name="download-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Manage Downloads</Text>
-            <View style={styles.menuValue}>
-              <Text style={styles.menuValueText}>24 items</Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 

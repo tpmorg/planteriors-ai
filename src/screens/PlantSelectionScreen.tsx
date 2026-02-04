@@ -24,6 +24,7 @@ import {
 } from '../types';
 import { PlantModeToggle } from '../components/PlantModeToggle';
 import { IndividualPlantSelector } from '../components/IndividualPlantSelector';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface PlantSelectionScreenProps {
   imageUri: string;
@@ -137,6 +138,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   // Expanded sections state
   const [expandedSection, setExpandedSection] = useState<string | null>('plants');
 
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const handlePlantTypeSelect = (plantType: PlantType) => {
     setSelectedPlantType(plantType);
     setSelectedStyle(null);
@@ -212,9 +216,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         </View>
       </View>
       {expandedSection === section ? (
-        <ChevronUp size={20} color="#6b7280" />
+        <ChevronUp size={20} color={theme.colors.textSecondary} />
       ) : (
-        <ChevronDown size={20} color="#6b7280" />
+        <ChevronDown size={20} color={theme.colors.textSecondary} />
       )}
     </TouchableOpacity>
   );
@@ -224,7 +228,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={24} color="#2d5016" />
+          <ArrowLeft size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Design Your Space</Text>
         <View style={styles.placeholder} />
@@ -376,7 +380,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     {selectedPotColor.id === color.id && (
                       <Check
                         size={18}
-                        color={color.id === 'white' || color.id === 'cream' ? '#2d5016' : '#fff'}
+                        color={color.id === 'white' || color.id === 'cream' ? theme.colors.primary : '#fff'}
                       />
                     )}
                   </TouchableOpacity>
@@ -393,8 +397,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                 <Switch
                   value={usePlanterBox}
                   onValueChange={setUsePlanterBox}
-                  trackColor={{ false: '#e5e7eb', true: '#86efac' }}
-                  thumbColor={usePlanterBox ? '#2d5016' : '#f4f4f5'}
+                  trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+                  thumbColor={theme.colors.switchThumb}
                 />
               </View>
             </View>
@@ -511,408 +515,412 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d5016',
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
+const createStyles = (theme: any) => {
+  const selectedBg = theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5';
 
-  // Hero Section
-  heroSection: {
-    backgroundColor: '#fff',
-    marginBottom: 8,
-  },
-  imageContainer: {
-    height: 180,
-    position: 'relative',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  heroContent: {
-    padding: 20,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  heroDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: 8,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    placeholder: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+    },
 
-  // Sections
-  section: {
-    backgroundColor: '#fff',
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  sectionHeaderText: {
-    flex: 1,
-  },
-  sectionIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  sectionIndicatorComplete: {
-    backgroundColor: '#2d5016',
-  },
-  sectionIndicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#9ca3af',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  sectionContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  subsectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-    marginTop: 8,
-  },
+    // Hero Section
+    heroSection: {
+      backgroundColor: theme.colors.surface,
+      marginBottom: 8,
+    },
+    imageContainer: {
+      height: 180,
+      position: 'relative',
+    },
+    previewImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    heroContent: {
+      padding: 20,
+    },
+    heroTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    heroDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+    },
 
-  // Plant Grid
-  plantGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  plantCard: {
-    width: '23%',
-    aspectRatio: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    margin: '1%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  plantCardSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  plantIcon: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  plantName: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#4b5563',
-    textAlign: 'center',
-  },
-  plantNameSelected: {
-    color: '#2d5016',
-    fontWeight: '600',
-  },
+    // Sections
+    section: {
+      backgroundColor: theme.colors.surface,
+      marginBottom: 8,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+    },
+    sectionHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    sectionHeaderText: {
+      flex: 1,
+    },
+    sectionIndicator: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    sectionIndicatorComplete: {
+      backgroundColor: theme.colors.primary,
+    },
+    sectionIndicatorDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.textSecondary,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    sectionContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 20,
+    },
+    subsectionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 12,
+      marginTop: 8,
+    },
 
-  // Style Chips
-  styleScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-  },
-  styleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 160,
-  },
-  styleChipSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  styleChipIcon: {
-    fontSize: 24,
-    marginRight: 10,
-  },
-  styleChipText: {
-    flex: 1,
-  },
-  styleChipName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  styleChipNameSelected: {
-    color: '#2d5016',
-  },
-  styleChipDesc: {
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
-  },
+    // Plant Grid
+    plantGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginHorizontal: -4,
+    },
+    plantCard: {
+      width: '23%',
+      aspectRatio: 1,
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      margin: '1%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    plantCardSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    plantIcon: {
+      fontSize: 28,
+      marginBottom: 4,
+    },
+    plantName: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    plantNameSelected: {
+      color: theme.colors.primary,
+      fontWeight: '600',
+    },
 
-  // Option Chips
-  optionScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-  },
-  optionChip: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
-    minWidth: 80,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  optionChipSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  optionChipIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  optionChipLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4b5563',
-  },
-  optionChipLabelSelected: {
-    color: '#2d5016',
-    fontWeight: '600',
-  },
+    // Style Chips
+    styleScroll: {
+      marginHorizontal: -16,
+      paddingHorizontal: 16,
+    },
+    styleChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 12,
+      marginRight: 10,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      minWidth: 160,
+    },
+    styleChipSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    styleChipIcon: {
+      fontSize: 24,
+      marginRight: 10,
+    },
+    styleChipText: {
+      flex: 1,
+    },
+    styleChipName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    styleChipNameSelected: {
+      color: theme.colors.primary,
+    },
+    styleChipDesc: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
 
-  // Color Swatches
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  colorSwatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    marginBottom: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorSwatchSelected: {
-    borderWidth: 3,
-    borderColor: '#2d5016',
-  },
-  colorSwatchBorder: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  colorLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
+    // Option Chips
+    optionScroll: {
+      marginHorizontal: -16,
+      paddingHorizontal: 16,
+    },
+    optionChip: {
+      alignItems: 'center',
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 12,
+      marginRight: 10,
+      minWidth: 80,
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    optionChipSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    optionChipIcon: {
+      fontSize: 24,
+      marginBottom: 4,
+    },
+    optionChipLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.textSecondary,
+    },
+    optionChipLabelSelected: {
+      color: theme.colors.primary,
+      fontWeight: '600',
+    },
 
-  // Toggle Row
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    padding: 16,
-  },
-  toggleInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  toggleDesc: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
+    // Color Swatches
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 8,
+    },
+    colorSwatch: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
+      marginBottom: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    colorSwatchSelected: {
+      borderWidth: 3,
+      borderColor: theme.colors.primary,
+    },
+    colorSwatchBorder: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    colorLabel: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginBottom: 16,
+    },
 
-  // Level Cards
-  levelGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  levelCard: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  levelCardSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  levelIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  levelName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  levelNameSelected: {
-    color: '#2d5016',
-  },
-  levelDesc: {
-    fontSize: 11,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
+    // Toggle Row
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 16,
+    },
+    toggleInfo: {
+      flex: 1,
+      marginRight: 16,
+    },
+    toggleLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    toggleDesc: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
 
-  // Density Options
-  densitySlider: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  densityOption: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  densityOptionSelected: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#2d5016',
-  },
-  densityIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  densityName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  densityNameSelected: {
-    color: '#2d5016',
-  },
-  densityDesc: {
-    fontSize: 11,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
+    // Level Cards
+    levelGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    levelCard: {
+      flex: 1,
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 4,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    levelCardSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    levelIcon: {
+      fontSize: 28,
+      marginBottom: 8,
+    },
+    levelName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    levelNameSelected: {
+      color: theme.colors.primary,
+    },
+    levelDesc: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
 
-  // Footer
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingBottom: 24,
-  },
-  footerContent: {
-    padding: 16,
-  },
-  footerHint: {
-    fontSize: 13,
-    color: '#9ca3af',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  selectionPreview: {
-    marginBottom: 12,
-  },
-  selectionPreviewText: {
-    fontSize: 14,
-    color: '#2d5016',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  continueButton: {
-    backgroundColor: '#2d5016',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
-  continueButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-});
+    // Density Options
+    densitySlider: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    densityOption: {
+      flex: 1,
+      backgroundColor: theme.colors.borderLight,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 4,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    densityOptionSelected: {
+      backgroundColor: selectedBg,
+      borderColor: theme.colors.primary,
+    },
+    densityIcon: {
+      fontSize: 32,
+      marginBottom: 8,
+    },
+    densityName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    densityNameSelected: {
+      color: theme.colors.primary,
+    },
+    densityDesc: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+
+    // Footer
+    footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      paddingBottom: 24,
+    },
+    footerContent: {
+      padding: 16,
+    },
+    footerHint: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    selectionPreview: {
+      marginBottom: 12,
+    },
+    selectionPreviewText: {
+      fontSize: 14,
+      color: theme.colors.primary,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    continueButton: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    continueButtonDisabled: {
+      backgroundColor: '#9ca3af',
+    },
+    continueButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      marginRight: 8,
+    },
+  });
+};

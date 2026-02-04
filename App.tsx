@@ -135,9 +135,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             />
             <Text
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: "500",
-                marginTop: 2,
+                marginTop: 3,
                 color: isFocused
                   ? theme.colors.tabBarActive
                   : theme.colors.tabBarInactive,
@@ -145,6 +145,17 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             >
               {route.name}
             </Text>
+            <View
+              style={{
+                width: 20,
+                height: 3,
+                borderRadius: 2,
+                marginTop: 3,
+                backgroundColor: isFocused
+                  ? theme.colors.tabBarActive
+                  : "transparent",
+              }}
+            />
           </TouchableOpacity>
         );
       })}

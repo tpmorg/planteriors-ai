@@ -146,11 +146,17 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="images-outline" size={64} color={theme.colors.textSecondary} />
+      <View style={styles.emptyIconRing}>
+        <Ionicons name="leaf-outline" size={40} color={theme.colors.primary} />
+      </View>
       <Text style={styles.emptyTitle}>No designs yet</Text>
       <Text style={styles.emptyText}>
-        Create your first plant design to see it here
+        Snap a photo of your room and let AI add the perfect plants
       </Text>
+      <TouchableOpacity style={styles.emptyCreateButton} onPress={onNewDesign}>
+        <Ionicons name="add" size={18} color="white" />
+        <Text style={styles.emptyCreateText}>Create Your First Design</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -310,11 +316,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  emptyIconRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: theme.isDark ? theme.colors.surface : '#f0fdf4',
+    borderWidth: 2,
+    borderColor: theme.isDark ? theme.colors.border : '#bbf7d0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: theme.colors.text,
-    marginTop: 16,
+    marginTop: 24,
     marginBottom: 8,
   },
   emptyText: {
@@ -322,5 +338,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+    maxWidth: 240,
+  },
+  emptyCreateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 24,
+  },
+  emptyCreateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
