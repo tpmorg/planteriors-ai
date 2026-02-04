@@ -164,14 +164,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Designs</Text>
+          <Text style={styles.headerTitle}>Gallery</Text>
           <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
             <Ionicons name="add" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your designs...</Text>
+          <Text style={styles.loadingText}>Loading your images...</Text>
         </View>
       </SafeAreaView>
     );

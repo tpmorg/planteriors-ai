@@ -54,18 +54,7 @@ export const AuthScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {showBypass && (
-            <TouchableOpacity
-              style={[styles.button, styles.bypassButton]}
-              onPress={signInBypass}
-              disabled={isLoading}
-            >
-              <Ionicons name="rocket" size={18} color="#ffffff" />
-              <Text style={[styles.buttonText, styles.bypassButtonText]}>
-                Skip Login (Development)
-              </Text>
-            </TouchableOpacity>
-          )}
+          
         </View>
 
         <Text style={styles.disclaimer}>

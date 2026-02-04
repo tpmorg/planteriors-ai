@@ -13,8 +13,20 @@ const DB_VERSION = 2; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
+  private isInitializing: boolean = false;
 
   async initialize(): Promise<void> {
+    // Prevent concurrent initialization attempts
+    if (this.isInitializing) {
+      console.log('Database initialization already in progress, waiting...');
+      // Wait for current initialization to complete
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return;
+    }
+
+    this.isInitializing = true;
     try {
       this.db = await SQLite.openDatabaseAsync('plantai.db');
       await this.createTables();
@@ -23,6 +35,29 @@ export class DatabaseService {
     } catch (error) {
       console.error('Failed to initialize database:', error);
       throw error;
+    } finally {
+      this.isInitializing = false;
+    }
+  }
+
+  /**
+   * Ensures the database connection is valid.
+   * Re-initializes if the connection was lost (e.g., after hot reload or backgrounding).
+   */
+  private async ensureConnection(): Promise<void> {
+    if (!this.db) {
+      console.log('Database connection lost, re-initializing...');
+      await this.initialize();
+      return;
+    }
+
+    // Test if the connection is still valid by running a simple query
+    try {
+      await this.db.getFirstAsync('SELECT 1');
+    } catch (error) {
+      console.log('Database connection stale, re-initializing...', error);
+      this.db = null;
+      await this.initialize();
     }
   }
 
@@ -254,6 +289,7 @@ export class DatabaseService {
     individualPlantPlacement?: PlacementType;
     customPrompt?: string;
   }): Promise<SavedDesign> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -333,6 +369,7 @@ export class DatabaseService {
   }
 
   async getAllDesigns(): Promise<SavedDesign[]> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -349,6 +386,7 @@ export class DatabaseService {
   }
 
   async getDesignById(id: string): Promise<SavedDesign | null> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -365,6 +403,7 @@ export class DatabaseService {
   }
 
   async toggleFavorite(id: string): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -380,6 +419,7 @@ export class DatabaseService {
   }
 
   async deleteDesign(id: string): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -461,6 +501,7 @@ export class DatabaseService {
   // ============================================
 
   async saveSubscription(subscription: SubscriptionData): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -494,6 +535,7 @@ export class DatabaseService {
   }
 
   async getSubscription(userId: string): Promise<SubscriptionData | null> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -529,6 +571,7 @@ export class DatabaseService {
     status: string,
     expiryDate: number
   ): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -546,6 +589,7 @@ export class DatabaseService {
   }
 
   async deleteSubscription(userId: string): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -566,6 +610,7 @@ export class DatabaseService {
     generationType: 'free' | 'paid',
     requestData?: string
   ): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -582,6 +627,7 @@ export class DatabaseService {
   }
 
   async getFreeTrialUsage(userId: string): Promise<FreeTrialUsage> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -613,6 +659,7 @@ export class DatabaseService {
   }
 
   async updateFreeTrialUsage(userId: string, incrementBy: number = 1): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -644,6 +691,7 @@ export class DatabaseService {
   }
 
   async getTotalGenerations(userId: string): Promise<number> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -659,6 +707,7 @@ export class DatabaseService {
   }
 
   async assignUserIdToExistingDesigns(userId: string): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -678,6 +727,7 @@ export class DatabaseService {
   // ============================================
 
   async resetUserUsage(userId: string): Promise<void> {
+    await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
