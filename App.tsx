@@ -16,6 +16,7 @@ import { SubscriptionProvider } from "./src/contexts/SubscriptionContext";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { CameraScreen } from "./src/screens/CameraScreen";
 import { PlantSelectionScreen } from "./src/screens/PlantSelectionScreen";
+import { PlantLocationScreen } from "./src/screens/PlantLocationScreen";
 import { GenerationScreen } from "./src/screens/GenerationScreen";
 import { GalleryScreen } from "./src/screens/GalleryScreen";
 import { DesignDetailScreen } from "./src/screens/DesignDetailScreen";
@@ -29,6 +30,7 @@ import {
   GenerationRequest,
   GeneratedImage,
   SavedDesign,
+  PlantLocation,
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
 
@@ -37,6 +39,7 @@ type RootStackParamList = {
   MainApp: undefined;
   Camera: undefined;
   PlantSelection: { imageUri: string };
+  PlantLocation: { imageUri: string; request: Omit<GenerationRequest, 'imageUri' | 'location'> };
   Generation: { request: GenerationRequest };
   DesignDetail: { design: SavedDesign };
   Subscription: undefined;
@@ -236,6 +239,10 @@ function AppContent() {
               name="PlantSelection"
               component={PlantSelectionScreenWrapper}
             />
+            <Stack.Screen
+              name="PlantLocation"
+              component={PlantLocationScreenWrapper}
+            />
             <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
             <Stack.Screen
               name="DesignDetail"
@@ -269,11 +276,17 @@ function PlantSelectionScreenWrapper({ route, navigation }: any) {
   const { imageUri } = route.params;
 
   const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
-    const request: GenerationRequest = {
-      imageUri,
-      ...selectionData,
-    };
-    navigation.navigate("Generation", { request });
+    // For individual plant mode, go to location selection first
+    if (selectionData.mode === 'individual') {
+      navigation.navigate("PlantLocation", { imageUri, request: selectionData });
+    } else {
+      // For multi-plant mode, go directly to generation
+      const request: GenerationRequest = {
+        imageUri,
+        ...selectionData,
+      };
+      navigation.navigate("Generation", { request });
+    }
   };
 
   const handleBack = () => {
@@ -284,6 +297,32 @@ function PlantSelectionScreenWrapper({ route, navigation }: any) {
     <PlantSelectionScreen
       imageUri={imageUri}
       onPlantSelected={handlePlantSelected}
+      onBack={handleBack}
+    />
+  );
+}
+
+function PlantLocationScreenWrapper({ route, navigation }: any) {
+  const { imageUri, request } = route.params;
+
+  const handleLocationSelected = (location: PlantLocation) => {
+    const fullRequest: GenerationRequest = {
+      imageUri,
+      ...request,
+      location,
+    };
+    navigation.navigate("Generation", { request: fullRequest });
+  };
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return (
+    <PlantLocationScreen
+      imageUri={imageUri}
+      request={request}
+      onLocationSelected={handleLocationSelected}
       onBack={handleBack}
     />
   );

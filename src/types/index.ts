@@ -64,6 +64,8 @@ export interface GenerationRequest {
   plantOptions?: PlantOptions;
   // Individual plant mode fields (new)
   individualPlant?: IndividualPlantSelection;
+  // Location for individual plant placement (optional)
+  location?: PlantLocation;
   // Common
   prompt?: string;
 }
@@ -157,6 +159,15 @@ export interface IndividualPlantSelection {
   plant: IndividualPlant;
   size: PlantSize;
   placement: PlacementType;
+}
+
+// Plant location selection for precise placement
+export interface PlantLocation {
+  // All values are normalized (0-1) relative to image dimensions
+  x: number;      // Left edge of selection area
+  y: number;      // Top edge of selection area
+  width: number;  // Width of selection area
+  height: number; // Height of selection area
 }
 
 // Subscription & Payment Types

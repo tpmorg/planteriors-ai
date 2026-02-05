@@ -6,6 +6,7 @@ import {
   PlantSize,
   PlacementType,
   LightRequirement,
+  PlantLocation,
 } from "../types";
 import { env } from "../utils/env";
 import * as FileSystem from "expo-file-system/legacy";
@@ -91,14 +92,15 @@ export class GeminiService {
   private buildPrompt(request: GenerationRequest): string {
     // Check mode and delegate to appropriate method
     if (request.mode === 'individual' && request.individualPlant) {
-      return this.buildIndividualPlantPrompt(request.individualPlant, request.prompt);
+      return this.buildIndividualPlantPrompt(request.individualPlant, request.prompt, request.location);
     }
     return this.buildMultiPlantPrompt(request);
   }
 
   private buildIndividualPlantPrompt(
     selection: IndividualPlantSelection,
-    customPrompt?: string
+    customPrompt?: string,
+    location?: PlantLocation
   ): string {
     const { plant, size, placement } = selection;
 
@@ -124,6 +126,24 @@ export class GeminiService {
       'bright-direct': 'Place it in a sunny spot where it would receive direct sunlight from a window',
     };
 
+    // Build location instruction if provided
+    let locationInstruction = '';
+    if (location) {
+      // Convert normalized coordinates to percentage descriptions for the AI
+      const horizontalPosition = this.getHorizontalPosition(location.x, location.width);
+      const verticalPosition = this.getVerticalPosition(location.y, location.height);
+      const areaSize = this.getAreaSizeDescription(location.width, location.height);
+
+      locationInstruction = `
+CRITICAL PLACEMENT LOCATION:
+The user has specifically marked where they want the plant placed:
+- Horizontal position: ${horizontalPosition}
+- Vertical position: ${verticalPosition}
+- Target area size: ${areaSize}
+- The plant MUST be placed within this specified region of the image
+- Do NOT place the plant anywhere else - respect the user's chosen location exactly`;
+    }
+
     return `Add a single ${sizeDescriptions[size]} ${plant.name} (${plant.scientificName}) to this room image.
 
 Plant Details:
@@ -132,12 +152,13 @@ Plant Details:
 - Description: ${plant.description}
 - The plant should be ${placementDescriptions[placement]}
 - ${lightContexts[plant.lightRequirement]}
+${locationInstruction}
 
 Critical Requirements:
 1. Add ONLY ONE plant - a single ${plant.name}
 2. The plant must be ${sizeDescriptions[size]} specimen, appropriately scaled to the room
 3. Use an attractive pot or planter that complements the room's existing style and color palette
-4. Position the plant naturally where it would realistically thrive based on its light needs
+${location ? '4. Place the plant EXACTLY in the user-specified location marked above' : '4. Position the plant naturally where it would realistically thrive based on its light needs'}
 5. Maintain photorealistic quality with proper shadows, reflections, and lighting
 6. Keep ALL original room elements, furniture, and architecture EXACTLY as shown
 7. The plant should enhance the space as a single accent piece without overwhelming it
@@ -146,6 +167,28 @@ Critical Requirements:
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
 
 Generate this as a high-quality photorealistic image with the single ${plant.name} seamlessly integrated into the room.`;
+  }
+
+  private getHorizontalPosition(x: number, width: number): string {
+    const centerX = x + width / 2;
+    if (centerX < 0.33) return 'left side of the image';
+    if (centerX < 0.66) return 'center of the image';
+    return 'right side of the image';
+  }
+
+  private getVerticalPosition(y: number, height: number): string {
+    const centerY = y + height / 2;
+    if (centerY < 0.33) return 'upper portion of the image';
+    if (centerY < 0.66) return 'middle portion of the image';
+    return 'lower portion of the image';
+  }
+
+  private getAreaSizeDescription(width: number, height: number): string {
+    const area = width * height;
+    if (area < 0.05) return 'small area (subtle accent)';
+    if (area < 0.15) return 'medium area';
+    if (area < 0.30) return 'large area';
+    return 'very large area (major focal point)';
   }
 
   private buildMultiPlantPrompt(request: GenerationRequest): string {
