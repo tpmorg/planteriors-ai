@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "161202796930-krqs922rbi6sgshd67snb1rnfni74tcu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bcs.planterior",
+            "certificate_hash": "b79d7d9603b322e1a715ec33a88aa0143d567bf2"
+          }
+        },
+        {
           "client_id": "161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com",
           "client_type": 3
         }
