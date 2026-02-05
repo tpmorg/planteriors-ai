@@ -78,7 +78,9 @@
     "extra": {
       "eas": {
         "projectId": "a325c769-f080-4a11-abf8-23bf1a17ceb8"
-      }
+      },
+      "googleClientId": "${GOOGLE_CLIENT_ID}",
+      "geminiApiKey": "${GEMINI_API_KEY}"
     },
     "owner": "morgish"
   }

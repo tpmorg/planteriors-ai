@@ -29,7 +29,9 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
       }
     }
   },

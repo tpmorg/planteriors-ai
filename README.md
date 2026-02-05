@@ -78,6 +78,49 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 
    The app automatically loads these via [app.config.js](app.config.js) at build time.
 
+### Environment Variables & EAS Secrets
+
+The app uses a layered approach for environment variables:
+
+| Context | Source | Used For |
+|---------|--------|----------|
+| Local Development | `.env.local` | Running locally with `npm start` |
+| EAS Builds | EAS Secrets | Cloud builds via `eas build` |
+
+#### How It Works
+
+1. **Local Development**: `app.config.js` reads from `.env.local` using `dotenv`
+2. **EAS Builds**: EAS automatically injects secrets set via `eas secret`
+3. **Runtime**: `src/utils/env.ts` reads values from `Constants.expoConfig.extra`
+
+#### Managing EAS Secrets
+
+```bash
+# List all secrets
+eas secret:list
+
+# Create/update a secret
+eas secret:create --name GEMINI_API_KEY --value "your-api-key" --scope project
+
+# Delete a secret
+eas secret:delete GEMINI_API_KEY
+
+# Create secrets for different environments
+eas secret:create --name GEMINI_API_KEY --value "dev-key" --scope project --type string
+```
+
+#### Required Secrets for EAS Builds
+
+Set these secrets before running `eas build`:
+
+```bash
+eas secret:create --name GOOGLE_CLIENT_ID --value "your-client-id" --scope project
+eas secret:create --name GEMINI_API_KEY --value "your-api-key" --scope project
+eas secret:create --name TRUFLE_API_KEY --value "your-api-key" --scope project
+```
+
+The `app.config.js` automatically uses `process.env.*` which EAS populates from your secrets during builds.
+
 4. **Start the development server**
    ```bash
    # Start Expo development server
@@ -330,6 +373,89 @@ npx expo run:android --device  # Run on connected Android device
 
 # Performance profiling
 npx expo start --profiling     # Enable performance profiling
+```
+
+#### Testing with Android Emulators & ADB
+
+##### Setting Up Android Emulator (Tablets)
+
+```bash
+# List available AVDs (Android Virtual Devices)
+emulator -list-avds
+
+# Create a tablet emulator via Android Studio:
+# 1. Open Android Studio → Tools → Device Manager
+# 2. Click "Create Device"
+# 3. Select "Tablet" category → Choose device (e.g., Pixel Tablet, Nexus 9)
+# 4. Select system image (API 34 recommended)
+# 5. Name it (e.g., "Pixel_Tablet_API_34")
+
+# Start a specific emulator
+emulator -avd Pixel_Tablet_API_34
+
+# Start emulator with specific options
+emulator -avd Pixel_Tablet_API_34 -no-snapshot-load  # Fresh boot
+emulator -avd Pixel_Tablet_API_34 -gpu host          # Better graphics
+```
+
+##### ADB Commands for Development
+
+```bash
+# Check connected devices/emulators
+adb devices
+
+# Install APK on connected device/emulator
+adb install path/to/app.apk
+
+# Install APK and replace existing (update)
+adb install -r path/to/app.apk
+
+# Install on specific device (when multiple connected)
+adb -s emulator-5554 install path/to/app.apk
+
+# Uninstall app
+adb uninstall com.plantai.interior
+
+# View device logs (useful for debugging)
+adb logcat
+
+# Filter logs by app
+adb logcat | grep -i "plantai\|expo\|react"
+
+# Clear app data
+adb shell pm clear com.plantai.interior
+
+# Take screenshot
+adb exec-out screencap -p > screenshot.png
+
+# Record screen
+adb shell screenrecord /sdcard/demo.mp4
+adb pull /sdcard/demo.mp4
+```
+
+##### Installing EAS Builds on Emulators
+
+```bash
+# After running eas build, download the APK
+# Option 1: Use the URL from build output
+curl -o app.apk "https://expo.dev/artifacts/eas/..."
+
+# Option 2: Use eas build:run (installs automatically)
+eas build:run --platform android --profile development
+
+# Option 3: Download from expo.dev dashboard and install manually
+adb install ~/Downloads/application-*.apk
+```
+
+##### Testing on Multiple Device Sizes
+
+```bash
+# Start multiple emulators for testing different screen sizes
+emulator -avd Pixel_7_API_34 &      # Phone
+emulator -avd Pixel_Tablet_API_34 & # Tablet
+
+# Install on all connected devices
+adb devices | grep -v "List" | awk '{print $1}' | xargs -I {} adb -s {} install app.apk
 ```
 
 #### Environment Management
