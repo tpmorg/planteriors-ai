@@ -13,7 +13,6 @@ import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camer
 import * as ImagePicker from 'expo-image-picker';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
-import { cropImageToAspect } from '../utils/imageUtils';
 
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
@@ -64,7 +63,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypes as any,
-        allowsEditing: false,
+        allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
       });
@@ -87,11 +86,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     if (!previewImage) return;
     setIsCropping(true);
     try {
-      const cropped = await cropImageToAspect(previewImage, 4, 3);
-      onImageTaken(cropped);
-    } catch (error) {
-      console.error('Error cropping image:', error);
-      Alert.alert('Error', 'Failed to crop image');
+      onImageTaken(previewImage);
     } finally {
       setIsCropping(false);
     }
@@ -101,6 +96,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     setPreviewImage(null);
     setShowOptions(true);
   };
+
 
   if (!permission) {
     return (
@@ -202,7 +198,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
               {isCropping ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <AppIcon name="ArrowRight" size={18} color="white" />
+                <AppIcon name="Check" size={18} color="white" />
               )}
               <Text style={styles.primaryButtonText}>
                 {isCropping ? 'Processing…' : 'Continue'}

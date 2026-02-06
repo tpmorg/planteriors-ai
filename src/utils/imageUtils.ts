@@ -103,3 +103,33 @@ export async function cropImageToAspect(
     return uri;
   }
 }
+
+export async function cropImageWithRect(
+  uri: string,
+  crop: { originX: number; originY: number; width: number; height: number }
+): Promise<string> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [
+        {
+          crop: {
+            originX: Math.max(0, Math.floor(crop.originX)),
+            originY: Math.max(0, Math.floor(crop.originY)),
+            width: Math.max(1, Math.floor(crop.width)),
+            height: Math.max(1, Math.floor(crop.height)),
+          },
+        },
+      ],
+      {
+        compress: 0.9,
+        format: ImageManipulator.SaveFormat.JPEG,
+      }
+    );
+
+    return result.uri;
+  } catch (error) {
+    console.error('Error cropping image:', error);
+    return uri;
+  }
+}
