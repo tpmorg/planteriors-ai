@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import {
@@ -286,7 +286,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         {/* Header with overlay - positioned below status bar */}
         <View style={[styles.header, { top: insets.top }]}>
           <TouchableOpacity onPress={onBack} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <AppIcon name="ArrowLeft" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerActions}>
@@ -294,17 +294,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
               onPress={showModal}
               style={styles.headerButton}
             >
-              <Ionicons name="information-circle-outline" size={24} color="white" />
+              <AppIcon name="Info" size={24} color="white" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={toggleFavorite}
               style={styles.headerButton}
             >
-              <Ionicons
-                name={design.isFavorite ? 'heart' : 'heart-outline'}
+              <AppIcon
+                name="Heart"
                 size={24}
                 color={design.isFavorite ? '#dc2626' : 'white'}
+                weight={design.isFavorite ? 'fill' : 'regular'}
               />
             </TouchableOpacity>
 
@@ -313,15 +314,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
               style={styles.headerButton}
               disabled={isSharing}
             >
-              <Ionicons
-                name={isSharing ? 'hourglass-outline' : 'share-outline'}
+              <AppIcon
+                name={isSharing ? 'Hourglass' : 'ShareNetwork'}
                 size={24}
                 color="white"
               />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={deleteDesign} style={styles.headerButton}>
-              <Ionicons name="trash-outline" size={24} color="white" />
+            <AppIcon name="Trash" size={24} color="white" />
             </TouchableOpacity>
           </View>
         </View>
@@ -388,7 +389,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   {design.mode === 'individual' && design.individualPlant && (
                     <>
                       <View style={styles.infoItem}>
-                        <Ionicons name="leaf-outline" size={20} color={theme.colors.primary} />
+                        <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Plant</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
@@ -399,7 +400,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
 
                       <View style={styles.infoItem}>
-                        <Ionicons name="resize-outline" size={20} color={theme.colors.primary} />
+                        <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Size</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
@@ -407,7 +408,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
 
                       <View style={styles.infoItem}>
-                        <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
+                        <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
                           <Text style={styles.infoLabel}>Placement</Text>
                           <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
@@ -419,7 +420,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   {/* Multi-plant mode info */}
                   {design.mode !== 'individual' && design.plantType && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="leaf-outline" size={20} color={theme.colors.primary} />
+                      <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Plant Type</Text>
                         <Text style={styles.infoValue}>{design.plantType.name}</Text>
@@ -432,7 +433,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
                   {design.mode !== 'individual' && design.plantStyle && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="color-palette-outline" size={20} color={theme.colors.primary} />
+                      <AppIcon name="Palette" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Style</Text>
                         <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
@@ -445,7 +446,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
                   {design.customPrompt && (
                     <View style={styles.infoItem}>
-                      <Ionicons name="chatbox-outline" size={20} color={theme.colors.primary} />
+                      <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Custom Requirements</Text>
                         <Text style={styles.infoDescription}>
@@ -456,7 +457,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   )}
 
                   <View style={styles.infoItem}>
-                    <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
+                    <AppIcon name="Clock" size={20} color={theme.colors.primary} />
                     <View style={styles.infoContent}>
                       <Text style={styles.infoLabel}>Created</Text>
                       <Text style={styles.infoValue}>

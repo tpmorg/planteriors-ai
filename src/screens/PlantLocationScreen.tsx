@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { ArrowLeft, RotateCcw, Sparkles, Move } from 'lucide-react-native';
+import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 import { PlantLocation, GenerationRequest } from '../types';
 
@@ -175,7 +175,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={24} color={theme.colors.primary} />
+          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Choose Location</Text>
         <TouchableOpacity
@@ -183,14 +183,18 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
           style={[styles.resetButton, !hasSelection && styles.resetButtonDisabled]}
           disabled={!hasSelection}
         >
-          <RotateCcw size={20} color={hasSelection ? theme.colors.primary : theme.colors.textSecondary} />
+          <AppIcon
+            name="ArrowCounterClockwise"
+            size={20}
+            color={hasSelection ? theme.colors.primary : theme.colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
       {/* Instructions */}
       <View style={styles.instructionContainer}>
         <View style={styles.instructionIcon}>
-          <Move size={20} color={theme.colors.primary} />
+          <AppIcon name="ArrowsOutCardinal" size={20} color={theme.colors.primary} />
         </View>
         <View style={styles.instructionText}>
           <Text style={styles.instructionTitle}>
@@ -266,9 +270,12 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
 
                 {/* Center indicator */}
                 <View style={styles.centerIndicator}>
-                  <Text style={styles.plantEmoji}>
-                    {request.individualPlant?.plant.icon || '🌿'}
-                  </Text>
+                  <AppIcon
+                    name={request.individualPlant?.plant.icon || 'Leaf'}
+                    size={24}
+                    color={theme.colors.primary}
+                    style={styles.plantEmoji}
+                  />
                 </View>
               </View>
             </Animated.View>
@@ -276,14 +283,21 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         </GestureDetector>
       </View>
 
-      {/* Selection Info */}
-      {hasSelection && placementMode === 'choose' && (
-        <View style={styles.selectionInfo}>
+      {/* Selection Info (reserve space to keep image stable) */}
+      <View
+        style={[
+          styles.selectionInfo,
+          !(hasSelection && placementMode === 'choose') && styles.selectionInfoHidden,
+        ]}
+        pointerEvents={hasSelection && placementMode === 'choose' ? 'auto' : 'none'}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          <AppIcon name={request.individualPlant?.plant.icon || 'Leaf'} size={16} color={theme.colors.primary} />
           <Text style={styles.selectionInfoText}>
-            {request.individualPlant?.plant.icon} {plantName} will be placed in the selected area
+            {plantName} will be placed in the selected area
           </Text>
         </View>
-      )}
+      </View>
 
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
@@ -314,7 +328,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
             disabled={placementMode === 'choose' && !hasSelection}
           >
             <Text style={styles.continueButtonText}>Generate Design</Text>
-            <Sparkles size={20} color="white" />
+            <AppIcon name="StarFour" size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>
@@ -485,6 +499,11 @@ const createStyles = (theme: any) =>
       paddingVertical: 12,
       paddingHorizontal: 16,
       marginTop: 8,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    selectionInfoHidden: {
+      opacity: 0,
     },
     selectionInfoText: {
       fontSize: 14,

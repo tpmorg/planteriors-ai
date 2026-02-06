@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface PaywallModalProps {
@@ -43,7 +43,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
 
               <View style={styles.content}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="lock-closed" size={48} color={theme.colors.primary} />
+                  <AppIcon name="Lock" size={48} color={theme.colors.primary} />
                 </View>
 
                 <Text style={styles.title}>You've Reached Your Limit!</Text>
@@ -55,22 +55,22 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
 
                 <View style={styles.featuresList}>
                   <Feature
-                    icon="infinite"
+                    icon="Infinity"
                     text="Unlimited AI generations"
                     theme={theme}
                   />
                   <Feature
-                    icon="flash"
+                    icon="Lightning"
                     text="Priority processing"
                     theme={theme}
                   />
                   <Feature
-                    icon="image"
+                    icon="Image"
                     text="HD exports"
                     theme={theme}
                   />
                   <Feature
-                    icon="folder"
+                    icon="Folder"
                     text="Save unlimited designs"
                     theme={theme}
                   />
@@ -81,7 +81,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                   onPress={onUpgrade}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="sparkles" size={20} color={theme.colors.surface} />
+                  <AppIcon name="StarFour" size={20} color={theme.colors.surface} />
                   <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
                 </TouchableOpacity>
 
@@ -120,7 +120,7 @@ const Feature: React.FC<FeatureProps> = ({ icon, text, theme }) => {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name={icon as any} size={18} color={theme.colors.primary} />
+        <AppIcon name={icon} size={18} color={theme.colors.primary} />
       </View>
       <Text
         style={{

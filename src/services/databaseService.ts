@@ -526,7 +526,7 @@ export class DatabaseService {
           plant.scientificName,
           plant.description || null,
           plant.category || null,
-          plant.icon || '🌿',
+          plant.icon || 'Leaf',
           plant.careLevel || 'easy',
           plant.lightRequirement || 'bright-indirect',
           plant.waterRequirement || 'moderate',
@@ -840,9 +840,13 @@ export class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
+      const toDbValue = <T>(value: T | undefined | null): T | null => {
+        return value === undefined ? null : value;
+      };
+
       // Save image to local storage if it's a data URI
       let localImagePath: string | null = null;
-      if (design.generatedImageUri.startsWith('data:')) {
+      if (design.generatedImageUri?.startsWith('data:')) {
         localImagePath = await this.saveImageToLocal(design.generatedImageUri);
       }
 
@@ -867,18 +871,18 @@ export class DatabaseService {
           design.originalImageUri,
           design.generatedImageUri,
           localImagePath,
-          design.userId || null,
+          toDbValue(design.userId),
           design.mode,
-          plantTypeName,
-          plantTypeDescription,
-          plantStyleName,
-          plantStyleDescription,
-          design.individualPlantName || null,
-          design.individualPlantScientificName || null,
-          design.individualPlantSize || null,
-          design.individualPlantPlacement || null,
-          design.customPrompt || '',
-          Date.now()
+          plantTypeName ?? '',
+          plantTypeDescription ?? '',
+          plantStyleName ?? '',
+          plantStyleDescription ?? '',
+          toDbValue(design.individualPlantName),
+          toDbValue(design.individualPlantScientificName),
+          toDbValue(design.individualPlantSize),
+          toDbValue(design.individualPlantPlacement),
+          design.customPrompt ?? '',
+          Date.now(),
         ]
       );
 

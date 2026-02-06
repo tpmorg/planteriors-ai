@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from '../components/AppIcon';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
 import { databaseService } from "../services/databaseService";
@@ -278,14 +278,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
+            <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Generation Failed</Text>
           <View style={styles.placeholder} />
         </View>
 
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#dc2626" />
+          <AppIcon name="WarningCircle" size={64} color="#dc2626" />
           <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
           <Text style={styles.errorText}>{error}</Text>
 
@@ -299,7 +299,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           )}
 
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Ionicons name="refresh" size={20} color="white" />
+            <AppIcon name="ArrowClockwise" size={20} color="white" />
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
 
@@ -334,7 +334,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           {/* Overlay header with back button */}
           <View style={styles.resultHeader}>
             <TouchableOpacity onPress={onBack} style={styles.overlayBackButton}>
-              <Ionicons name="arrow-back" size={24} color="white" />
+              <AppIcon name="ArrowLeft" size={24} color="white" />
             </TouchableOpacity>
           </View>
 
@@ -353,7 +353,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
               style={styles.generateAgainButton}
               onPress={handleRetry}
             >
-              <Ionicons name="refresh" size={20} color="white" />
+              <AppIcon name="ArrowClockwise" size={20} color="white" />
               <Text style={styles.generateAgainText}>Generate Another</Text>
             </TouchableOpacity>
 
@@ -362,7 +362,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
               onPress={handleUseResult}
             >
               <Text style={styles.useResultText}>Save Design</Text>
-              <Ionicons name="checkmark" size={20} color="white" />
+              <AppIcon name="Check" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -374,7 +374,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
+          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Generating Design</Text>
         <View style={styles.placeholder} />

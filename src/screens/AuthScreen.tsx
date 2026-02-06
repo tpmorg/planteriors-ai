@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { env } from '../utils/env';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 
 export const AuthScreen: React.FC = () => {
   const { signInWithGoogle, signInWithApple, signInBypass, isLoading } = useAuth();
@@ -39,7 +39,7 @@ export const AuthScreen: React.FC = () => {
             onPress={signInWithGoogle}
             disabled={isLoading}
           >
-            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <AppIcon name="GoogleLogo" size={20} color="#4285F4" />
             <Text style={styles.buttonText}>Continue with Google</Text>
           </TouchableOpacity>
 
@@ -48,7 +48,11 @@ export const AuthScreen: React.FC = () => {
             onPress={signInWithApple}
             disabled={isLoading}
           >
-            <Ionicons name="logo-apple" size={20} color={theme.isDark ? '#000000' : '#ffffff'} />
+            <AppIcon
+              name="AppleLogo"
+              size={20}
+              color={theme.isDark ? '#000000' : '#ffffff'}
+            />
             <Text style={[styles.buttonText, styles.appleButtonText]}>
               Continue with Apple
             </Text>

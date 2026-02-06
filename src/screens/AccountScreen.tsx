@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -116,7 +116,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         <View style={styles.userSection}>
           <View style={styles.userInfo}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={40} color={theme.colors.primary} />
+              <AppIcon name="User" size={40} color={theme.colors.primary} />
             </View>
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
@@ -132,14 +132,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         {/* Subscription Status Card */}
         <View style={styles.subscriptionSection}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
+            <AppIcon name="StarFour" size={20} color={theme.colors.primary} />
             <Text style={styles.sectionTitle}>Subscription</Text>
           </View>
 
           {subscription?.isActive ? (
             <View style={styles.subscriptionCard}>
               <View style={styles.premiumBadge}>
-                <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+                <AppIcon name="CheckCircle" size={20} color={theme.colors.primary} />
                 <Text style={styles.premiumBadgeText}>Premium Member</Text>
               </View>
               <Text style={styles.subscriptionType}>
@@ -172,7 +172,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
                 style={styles.upgradeButton}
                 onPress={handleUpgrade}
               >
-                <Ionicons name="arrow-up-circle" size={20} color="white" />
+                <AppIcon name="ArrowCircleUp" size={20} color="white" />
                 <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
               </TouchableOpacity>
             </View>
@@ -183,7 +183,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         {usageStats && (
           <View style={styles.usageSection}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="stats-chart" size={20} color={theme.colors.primary} />
+              <AppIcon name="ChartBar" size={20} color={theme.colors.primary} />
               <Text style={styles.sectionTitle}>Usage Statistics</Text>
             </View>
             <View style={styles.usageCard}>
@@ -213,33 +213,33 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
 
         <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="Heart" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Favorites</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="download-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="DownloadSimple" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Downloads</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="share-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="ShareNetwork" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Share App</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="help-circle-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="Question" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.logoutSection}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#dc2626" />
+            <AppIcon name="SignOut" size={24} color="#dc2626" />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>

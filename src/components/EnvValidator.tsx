@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from './AppIcon';
 import { env } from '../utils/env';
 
 interface EnvValidatorProps {
@@ -54,7 +54,7 @@ export const EnvValidator: React.FC<EnvValidatorProps> = ({ children }) => {
     // Loading state
     return (
       <SafeAreaView style={styles.container}>
-        <Ionicons name="settings" size={48} color="#2d5016" />
+        <AppIcon name="Gear" size={48} color="#2d5016" />
         <Text style={styles.loadingText}>Validating configuration...</Text>
       </SafeAreaView>
     );
@@ -64,7 +64,7 @@ export const EnvValidator: React.FC<EnvValidatorProps> = ({ children }) => {
     // Error state
     return (
       <SafeAreaView style={styles.container}>
-        <Ionicons name="warning" size={48} color="#dc2626" />
+        <AppIcon name="WarningCircle" size={48} color="#dc2626" />
         <Text style={styles.errorTitle}>Configuration Required</Text>
         <Text style={styles.errorText}>
           Some environment variables are missing. The app may not function correctly.
@@ -79,7 +79,7 @@ export const EnvValidator: React.FC<EnvValidatorProps> = ({ children }) => {
         </View>
 
         <TouchableOpacity style={styles.setupButton} onPress={showSetupInstructions}>
-          <Ionicons name="information-circle" size={20} color="white" />
+          <AppIcon name="Info" size={20} color="white" />
           <Text style={styles.setupButtonText}>Setup Instructions</Text>
         </TouchableOpacity>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Layers, Flower2 } from 'lucide-react-native';
+import { AppIcon } from './AppIcon';
 import { PlantSelectionMode } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -27,7 +27,8 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
           onPress={() => onModeChange('multi-plant')}
           activeOpacity={0.7}
         >
-          <Layers
+          <AppIcon
+            name="SquaresFour"
             size={18}
             color={mode === 'multi-plant' ? theme.colors.primary : theme.colors.textSecondary}
           />
@@ -49,7 +50,8 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
           onPress={() => onModeChange('individual')}
           activeOpacity={0.7}
         >
-          <Flower2
+          <AppIcon
+            name="Flower"
             size={18}
             color={mode === 'individual' ? theme.colors.primary : theme.colors.textSecondary}
           />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface UsageIndicatorProps {
@@ -23,7 +23,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
     return (
       <View style={[styles.container, variant === 'compact' && styles.containerCompact]}>
         <View style={styles.premiumBadge}>
-          <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
+          <AppIcon name="StarFour" size={16} color={theme.colors.primary} />
           <Text style={styles.premiumText}>Premium Member</Text>
         </View>
         {variant === 'full' && (
@@ -36,7 +36,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   if (variant === 'compact') {
     return (
       <View style={[styles.container, styles.containerCompact]}>
-        <Ionicons name="leaf" size={16} color={theme.colors.primary} />
+        <AppIcon name="Leaf" size={16} color={theme.colors.primary} />
         <Text style={styles.compactText}>
           {freeRemaining} of 5 free remaining
         </Text>
@@ -75,7 +75,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       {onUpgradePress && (
         <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
-          <Ionicons name="arrow-up-circle" size={18} color={theme.colors.surface} />
+          <AppIcon name="ArrowCircleUp" size={18} color={theme.colors.surface} />
           <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
         </TouchableOpacity>
       )}

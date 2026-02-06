@@ -8,7 +8,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 
@@ -55,11 +55,11 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Appearance</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={cycleThroughThemeModes}>
-            <Ionicons name="color-palette-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="Palette" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Theme</Text>
             <View style={styles.menuValue}>
               <Text style={styles.menuValueText}>{getThemeModeDisplayName(themeMode)}</Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
         </View>
@@ -69,7 +69,7 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="image-outline" size={24} color={theme.colors.text} />
+              <AppIcon name="Image" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>High Quality Images</Text>
                 <Text style={styles.settingDescription}>
@@ -87,7 +87,7 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="save-outline" size={24} color={theme.colors.text} />
+              <AppIcon name="FloppyDisk" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Auto-save Designs</Text>
                 <Text style={styles.settingDescription}>
@@ -109,7 +109,7 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
+              <AppIcon name="Bell" size={24} color={theme.colors.text} />
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Push Notifications</Text>
                 <Text style={styles.settingDescription}>
@@ -130,15 +130,15 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Storage</Text>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="trash-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="Trash" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Clear Cache</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="download-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="DownloadSimple" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Manage Downloads</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -151,15 +151,15 @@ export const SettingsScreen: React.FC = () => {
           </View>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="document-text-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="FileText" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.text} />
+            <AppIcon name="ShieldCheck" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Terms of Service</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </ScrollView>

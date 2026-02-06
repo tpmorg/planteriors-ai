@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface CameraScreenProps {
@@ -121,7 +121,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <Ionicons name="images" size={24} color="white" />
+            <AppIcon name="Images" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Add Room Photo</Text>
           <View style={styles.placeholder} />
@@ -132,13 +132,13 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
             <Text style={styles.optionsTitle}>How would you like to add a room photo?</Text>
 
             <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
-              <Ionicons name="camera" size={32} color={theme.colors.primary} />
+              <AppIcon name="Camera" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Take Photo</Text>
               <Text style={styles.optionSubtitle}>Use your camera to capture a room</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
-              <Ionicons name="images" size={32} color={theme.colors.primary} />
+              <AppIcon name="Images" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Import from Gallery</Text>
               <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
             </TouchableOpacity>
@@ -153,11 +153,11 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={retakePhoto} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <AppIcon name="ArrowLeft" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Preview</Text>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <Ionicons name="close" size={24} color="white" />
+            <AppIcon name="X" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -167,12 +167,12 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
         <View style={styles.previewControls}>
           <TouchableOpacity style={styles.controlButton} onPress={retakePhoto}>
-            <Ionicons name="camera" size={24} color="white" />
+            <AppIcon name="Camera" size={24} color="white" />
             <Text style={styles.controlButtonText}>Retake</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.controlButton} onPress={confirmImage}>
-            <Ionicons name="checkmark" size={24} color="white" />
+            <AppIcon name="Check" size={24} color="white" />
             <Text style={styles.controlButtonText}>Use Photo</Text>
           </TouchableOpacity>
         </View>
@@ -184,14 +184,14 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-          <Ionicons name="images" size={24} color="white" />
+          <AppIcon name="Images" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Take Room Photo</Text>
         <TouchableOpacity
           onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
           style={styles.headerButton}
         >
-          <Ionicons name="camera-reverse" size={24} color="white" />
+          <AppIcon name="CameraRotate" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
@@ -208,7 +208,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       <View style={styles.controls}>
         <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-          <Ionicons name="images" size={24} color="white" />
+          <AppIcon name="Images" size={24} color="white" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.captureButton} onPress={takePicture}>

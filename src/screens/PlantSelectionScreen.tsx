@@ -9,7 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Check, ChevronUp, ChevronDown, Sparkles } from 'lucide-react-native';
+import { AppIcon } from '../components/AppIcon';
 import {
   PlantType,
   PlantStyle,
@@ -38,55 +38,55 @@ const PLANT_TYPES: PlantType[] = [
     id: 'succulents',
     name: 'Succulents',
     description: 'Low-maintenance, water-storing plants',
-    icon: '🌵',
+    icon: 'Cactus',
     styles: [
-      { id: 'modern', name: 'Modern', description: 'Clean, geometric arrangements', icon: '⚡' },
-      { id: 'rustic', name: 'Rustic', description: 'Natural, organic feel', icon: '🪵' },
-      { id: 'minimalist', name: 'Minimalist', description: 'Simple, elegant displays', icon: '⭕' },
+      { id: 'modern', name: 'Modern', description: 'Clean, geometric arrangements', icon: 'Lightning' },
+      { id: 'rustic', name: 'Rustic', description: 'Natural, organic feel', icon: 'Tree' },
+      { id: 'minimalist', name: 'Minimalist', description: 'Simple, elegant displays', icon: 'Circle' },
     ],
   },
   {
     id: 'tropical',
     name: 'Tropical',
     description: 'Lush, green foliage plants',
-    icon: '🌿',
+    icon: 'Leaf',
     styles: [
-      { id: 'jungle', name: 'Jungle', description: 'Dense, wild arrangements', icon: '🌴' },
-      { id: 'contemporary', name: 'Contemporary', description: 'Stylish, curated look', icon: '✨' },
-      { id: 'bohemian', name: 'Bohemian', description: 'Eclectic, artistic vibe', icon: '🎨' },
+      { id: 'jungle', name: 'Jungle', description: 'Dense, wild arrangements', icon: 'Tree' },
+      { id: 'contemporary', name: 'Contemporary', description: 'Stylish, curated look', icon: 'StarFour' },
+      { id: 'bohemian', name: 'Bohemian', description: 'Eclectic, artistic vibe', icon: 'PaintBrush' },
     ],
   },
   {
     id: 'flowering',
     name: 'Flowering',
     description: 'Colorful blooms and flowers',
-    icon: '🌸',
+    icon: 'Flower',
     styles: [
-      { id: 'cottage', name: 'Cottage', description: 'Charming, homey feel', icon: '🏡' },
-      { id: 'elegant', name: 'Elegant', description: 'Sophisticated arrangements', icon: '👑' },
-      { id: 'vibrant', name: 'Vibrant', description: 'Bold, colorful displays', icon: '🌈' },
+      { id: 'cottage', name: 'Cottage', description: 'Charming, homey feel', icon: 'House' },
+      { id: 'elegant', name: 'Elegant', description: 'Sophisticated arrangements', icon: 'Crown' },
+      { id: 'vibrant', name: 'Vibrant', description: 'Bold, colorful displays', icon: 'Palette' },
     ],
   },
   {
     id: 'hanging',
     name: 'Hanging',
     description: 'Trailing and cascading plants',
-    icon: '🪴',
+    icon: 'Plant',
     styles: [
-      { id: 'cascading', name: 'Cascading', description: 'Flowing, waterfall effect', icon: '💧' },
-      { id: 'structured', name: 'Structured', description: 'Organized, planned layout', icon: '📐' },
-      { id: 'natural', name: 'Natural', description: 'Organic, free-flowing', icon: '🍃' },
+      { id: 'cascading', name: 'Cascading', description: 'Flowing, waterfall effect', icon: 'Drop' },
+      { id: 'structured', name: 'Structured', description: 'Organized, planned layout', icon: 'Ruler' },
+      { id: 'natural', name: 'Natural', description: 'Organic, free-flowing', icon: 'Leaf' },
     ],
   },
 ];
 
 // Pot Styles Data
 const POT_STYLES: PotStyle[] = [
-  { id: 'ceramic', name: 'Ceramic', icon: '🏺' },
-  { id: 'terracotta', name: 'Terracotta', icon: '🧱' },
-  { id: 'modern', name: 'Modern', icon: '⬜' },
-  { id: 'woven', name: 'Woven', icon: '🧺' },
-  { id: 'concrete', name: 'Concrete', icon: '🪨' },
+  { id: 'ceramic', name: 'Ceramic', icon: 'PottedPlant' },
+  { id: 'terracotta', name: 'Terracotta', icon: 'CookingPot' },
+  { id: 'modern', name: 'Modern', icon: 'Square' },
+  { id: 'woven', name: 'Woven', icon: 'Basket' },
+  { id: 'concrete', name: 'Concrete', icon: 'Cube' },
 ];
 
 // Pot Colors Data
@@ -101,16 +101,16 @@ const POT_COLORS: PotColor[] = [
 
 // Maintenance Levels Data
 const MAINTENANCE_LEVELS: MaintenanceLevel[] = [
-  { id: 'low', name: 'Low', description: 'Minimal care needed', icon: '😌' },
-  { id: 'medium', name: 'Medium', description: 'Regular attention', icon: '🙂' },
-  { id: 'high', name: 'High', description: 'Daily care required', icon: '🧑‍🌾' },
+  { id: 'low', name: 'Low', description: 'Minimal care needed', icon: 'BatteryLow' },
+  { id: 'medium', name: 'Medium', description: 'Regular attention', icon: 'BatteryMedium' },
+  { id: 'high', name: 'High', description: 'Daily care required', icon: 'BatteryHigh' },
 ];
 
 // Placement Density Data
 const PLACEMENT_DENSITIES: PlacementDensity[] = [
-  { id: 'sparse', name: 'Sparse', description: 'Few accent plants', icon: '🌱' },
-  { id: 'moderate', name: 'Moderate', description: 'Balanced arrangement', icon: '🌿' },
-  { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: '🌳' },
+  { id: 'sparse', name: 'Sparse', description: 'Few accent plants', icon: 'Plant' },
+  { id: 'moderate', name: 'Moderate', description: 'Balanced arrangement', icon: 'Leaf' },
+  { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: 'Tree' },
 ];
 
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
@@ -207,7 +207,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       <View style={styles.sectionHeaderLeft}>
         <View style={[styles.sectionIndicator, sectionComplete && styles.sectionIndicatorComplete]}>
           {sectionComplete ? (
-            <Check size={14} color="#fff" />
+            <AppIcon name="Check" size={14} color="#fff" />
           ) : (
             <View style={styles.sectionIndicatorDot} />
           )}
@@ -218,9 +218,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         </View>
       </View>
       {expandedSection === section ? (
-        <ChevronUp size={20} color={theme.colors.textSecondary} />
+        <AppIcon name="CaretUp" size={20} color={theme.colors.textSecondary} />
       ) : (
-        <ChevronDown size={20} color={theme.colors.textSecondary} />
+        <AppIcon name="CaretDown" size={20} color={theme.colors.textSecondary} />
       )}
     </TouchableOpacity>
   );
@@ -230,7 +230,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={24} color={theme.colors.primary} />
+          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Design Your Space</Text>
         <View style={styles.placeholder} />
@@ -303,7 +303,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     ]}
                     onPress={() => handlePlantTypeSelect(plantType)}
                   >
-                    <Text style={styles.plantIcon}>{plantType.icon}</Text>
+                    <AppIcon
+                      name={plantType.icon}
+                      size={24}
+                      color={theme.colors.primary}
+                      style={styles.plantIcon}
+                    />
                     <Text style={[
                       styles.plantName,
                       selectedPlantType?.id === plantType.id && styles.plantNameSelected,
@@ -328,7 +333,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                         ]}
                         onPress={() => handleStyleSelect(style)}
                       >
-                        <Text style={styles.styleChipIcon}>{style.icon}</Text>
+                        <AppIcon
+                          name={style.icon}
+                          size={18}
+                          color={theme.colors.primary}
+                          style={styles.styleChipIcon}
+                        />
                         <View style={styles.styleChipText}>
                           <Text style={[
                             styles.styleChipName,
@@ -369,7 +379,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     ]}
                     onPress={() => setSelectedPotStyle(pot)}
                   >
-                    <Text style={styles.optionChipIcon}>{pot.icon}</Text>
+                    <AppIcon
+                      name={pot.icon}
+                      size={18}
+                      color={theme.colors.primary}
+                      style={styles.optionChipIcon}
+                    />
                     <Text style={[
                       styles.optionChipLabel,
                       selectedPotStyle.id === pot.id && styles.optionChipLabelSelected,
@@ -395,7 +410,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     onPress={() => setSelectedPotColor(color)}
                   >
                     {selectedPotColor.id === color.id && (
-                      <Check
+                      <AppIcon
+                        name="Check"
                         size={18}
                         color={color.id === 'white' || color.id === 'cream' ? theme.colors.primary : '#fff'}
                       />
@@ -443,7 +459,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     ]}
                     onPress={() => setMaintenanceLevel(level)}
                   >
-                    <Text style={styles.levelIcon}>{level.icon}</Text>
+                    <AppIcon
+                      name={level.icon}
+                      size={20}
+                      color={theme.colors.primary}
+                      style={styles.levelIcon}
+                    />
                     <Text style={[
                       styles.levelName,
                       maintenanceLevel.id === level.id && styles.levelNameSelected,
@@ -479,7 +500,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     ]}
                     onPress={() => setPlacementDensity(density)}
                   >
-                    <Text style={styles.densityIcon}>{density.icon}</Text>
+                    <AppIcon
+                      name={density.icon}
+                      size={20}
+                      color={theme.colors.primary}
+                      style={styles.densityIcon}
+                    />
                     <Text style={[
                       styles.densityName,
                       placementDensity.id === density.id && styles.densityNameSelected,
@@ -509,11 +535,22 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             </Text>
           ) : (
             <View style={styles.selectionPreview}>
-              <Text style={styles.selectionPreviewText}>
-                {mode === 'multi-plant'
-                  ? `${selectedPlantType?.icon} ${selectedPlantType?.name} • ${selectedStyle?.name}`
-                  : `${individualSelection?.plant.icon} ${individualSelection?.plant.name} • ${individualSelection?.size}`}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AppIcon
+                  name={
+                    mode === 'multi-plant'
+                      ? selectedPlantType?.icon || 'Leaf'
+                      : individualSelection?.plant.icon || 'Leaf'
+                  }
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.selectionPreviewText}>
+                  {mode === 'multi-plant'
+                    ? `${selectedPlantType?.name} • ${selectedStyle?.name}`
+                    : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
+                </Text>
+              </View>
             </View>
           )}
           <TouchableOpacity
@@ -524,7 +561,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             <Text style={styles.continueButtonText}>
               {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
             </Text>
-            <Sparkles size={20} color="white" />
+            <AppIcon name="StarFour" size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>

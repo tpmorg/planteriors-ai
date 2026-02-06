@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import { SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTabBar } from '../contexts/TabBarContext';
@@ -115,10 +115,11 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           style={styles.favoriteButton}
           onPress={() => toggleFavorite(item)}
         >
-          <Ionicons
-            name={item.isFavorite ? 'heart' : 'heart-outline'}
+          <AppIcon
+            name="Heart"
             size={18}
             color={item.isFavorite ? '#dc2626' : 'white'}
+            weight={item.isFavorite ? 'fill' : 'regular'}
           />
         </TouchableOpacity>
 
@@ -147,14 +148,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconRing}>
-        <Ionicons name="leaf-outline" size={40} color={theme.colors.primary} />
+        <AppIcon name="Leaf" size={40} color={theme.colors.primary} />
       </View>
       <Text style={styles.emptyTitle}>No designs yet</Text>
       <Text style={styles.emptyText}>
         Snap a photo of your room and let AI add the perfect plants
       </Text>
       <TouchableOpacity style={styles.emptyCreateButton} onPress={onNewDesign}>
-        <Ionicons name="add" size={18} color="white" />
+        <AppIcon name="Plus" size={18} color="white" />
         <Text style={styles.emptyCreateText}>Create Your First Design</Text>
       </TouchableOpacity>
     </View>
@@ -166,7 +167,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Gallery</Text>
           <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
-            <Ionicons name="add" size={24} color="white" />
+            <AppIcon name="Plus" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -182,7 +183,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Designs</Text>
         <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
-          <Ionicons name="add" size={24} color="white" />
+          <AppIcon name="Plus" size={24} color="white" />
         </TouchableOpacity>
       </View>
 

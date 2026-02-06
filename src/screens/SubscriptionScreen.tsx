@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '../components/AppIcon';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -109,7 +109,7 @@ export const SubscriptionScreen: React.FC = () => {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={28} color={theme.colors.text} />
+          <AppIcon name="X" size={28} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -120,7 +120,7 @@ export const SubscriptionScreen: React.FC = () => {
       >
         <View style={styles.heroSection}>
           <View style={styles.iconCircle}>
-            <Ionicons name="sparkles" size={40} color={theme.colors.primary} />
+            <AppIcon name="StarFour" size={40} color={theme.colors.primary} />
           </View>
           <Text style={styles.title}>Unlock Unlimited Plant Designs</Text>
           <Text style={styles.subtitle}>
@@ -130,7 +130,7 @@ export const SubscriptionScreen: React.FC = () => {
 
         {subscription?.isActive && (
           <View style={styles.currentPlanBadge}>
-            <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+            <AppIcon name="CheckCircle" size={20} color={theme.colors.primary} />
             <Text style={styles.currentPlanText}>
               Current Plan: {subscription.type === 'annual' ? 'Annual' : 'Monthly'}
             </Text>
@@ -160,7 +160,7 @@ export const SubscriptionScreen: React.FC = () => {
             <ActivityIndicator color={theme.colors.surface} />
           ) : (
             <>
-              <Ionicons name="card" size={20} color={theme.colors.surface} />
+              <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
               <Text style={styles.purchaseButtonText}>
                 Subscribe Now
               </Text>
@@ -302,7 +302,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           }}
         >
           {isSelected && (
-            <Ionicons name="checkmark" size={16} color={theme.colors.surface} />
+            <AppIcon name="Check" size={16} color={theme.colors.surface} />
           )}
         </View>
       </View>
@@ -313,11 +313,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
             key={index}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
           >
-            <Ionicons
-              name="checkmark-circle"
-              size={18}
-              color={theme.colors.primary}
-            />
+            <AppIcon name="CheckCircle" size={18} color={theme.colors.primary} />
             <Text
               style={{
                 fontSize: 15,

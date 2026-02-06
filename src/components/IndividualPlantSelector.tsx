@@ -9,7 +9,7 @@ import {
   Image,
   ListRenderItem,
 } from 'react-native';
-import { Search, Check, X, Droplets, Sun, Heart } from 'lucide-react-native';
+import { AppIcon } from './AppIcon';
 import {
   IndividualPlant,
   PlantSize,
@@ -111,31 +111,31 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     updateSelection(null, null, null);
   };
 
-  const getCareIcon = (level: string) => {
+  const getCareIconName = (level: string) => {
     switch (level) {
       case 'easy':
-        return '😌';
+        return 'BatteryLow';
       case 'moderate':
-        return '🙂';
+        return 'BatteryMedium';
       case 'difficult':
-        return '🧑‍🌾';
+        return 'BatteryHigh';
       default:
-        return '🌱';
+        return 'Plant';
     }
   };
 
-  const getLightIcon = (requirement: string) => {
+  const getLightIconName = (requirement: string) => {
     switch (requirement) {
       case 'low':
-        return '🌑';
+        return 'Moon';
       case 'low-to-bright':
-        return '🌤️';
+        return 'CloudSun';
       case 'bright-indirect':
-        return '☀️';
+        return 'Sun';
       case 'bright-direct':
-        return '🔆';
+        return 'Sun';
       default:
-        return '☀️';
+        return 'Sun';
     }
   };
 
@@ -152,14 +152,19 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         {plant.imageUrl ? (
           <Image source={plant.imageUrl} style={styles.plantCardImage} resizeMode="cover" />
         ) : (
-          <Text style={styles.plantCardIcon}>{plant.icon}</Text>
+          <AppIcon
+            name={plant.icon}
+            size={44}
+            color={theme.colors.primary}
+            style={styles.plantCardIcon}
+          />
         )}
         <Text style={styles.plantCardName} numberOfLines={1} ellipsizeMode="tail">
           {plant.name}
         </Text>
         <View style={styles.plantCardBadges}>
           {plant.petSafe && (
-            <Heart size={12} color={theme.colors.primary} fill={theme.colors.primary} />
+            <AppIcon name="Heart" size={12} color={theme.colors.primary} weight="fill" />
           )}
         </View>
       </TouchableOpacity>
@@ -186,7 +191,12 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
             {/* Search Bar */}
             <View style={styles.searchContainer}>
               <View style={styles.searchInputWrapper}>
-                <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
+                <AppIcon
+                  name="MagnifyingGlass"
+                  size={18}
+                  color={theme.colors.textSecondary}
+                  style={styles.searchIcon}
+                />
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search plants..."
@@ -196,7 +206,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <X size={18} color={theme.colors.textSecondary} />
+                    <AppIcon name="X" size={18} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -214,7 +224,12 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                         resizeMode="cover"
                       />
                     ) : (
-                      <Text style={styles.selectedIcon}>{selectedPlant.icon}</Text>
+                      <AppIcon
+                        name={selectedPlant.icon}
+                        size={36}
+                        color={theme.colors.primary}
+                        style={styles.selectedIcon}
+                      />
                     )}
                     <View style={styles.selectedTextContainer}>
                       <Text style={styles.selectedName}>{selectedPlant.name}</Text>
@@ -224,7 +239,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                     </View>
                   </View>
                   <TouchableOpacity onPress={clearSelection} style={styles.clearButton}>
-                    <X size={20} color={theme.colors.textSecondary} />
+                    <AppIcon name="X" size={20} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -233,9 +248,11 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                 {/* Care Info Badges */}
                 <View style={styles.careInfo}>
                   <View style={styles.careBadge}>
-                    <Text style={styles.careBadgeIcon}>
-                      {getCareIcon(selectedPlant.careLevel)}
-                    </Text>
+                    <AppIcon
+                      name={getCareIconName(selectedPlant.careLevel)}
+                      size={12}
+                      color={theme.colors.textSecondary}
+                    />
                     <Text style={styles.careBadgeText}>
                       {selectedPlant.careLevel.charAt(0).toUpperCase() +
                         selectedPlant.careLevel.slice(1)}{' '}
@@ -243,16 +260,18 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                     </Text>
                   </View>
                   <View style={styles.careBadge}>
-                    <Text style={styles.careBadgeIcon}>
-                      {getLightIcon(selectedPlant.lightRequirement)}
-                    </Text>
+                    <AppIcon
+                      name={getLightIconName(selectedPlant.lightRequirement)}
+                      size={12}
+                      color={theme.colors.textSecondary}
+                    />
                     <Text style={styles.careBadgeText}>
                       {selectedPlant.lightRequirement.replace(/-/g, ' ')}
                     </Text>
                   </View>
                   {selectedPlant.petSafe && (
                     <View style={[styles.careBadge, styles.petSafeBadge]}>
-                      <Heart size={12} color={theme.colors.primary} />
+                      <AppIcon name="Heart" size={12} color={theme.colors.primary} />
                       <Text style={[styles.careBadgeText, styles.petSafeText]}>
                         Pet safe
                       </Text>
@@ -274,7 +293,12 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                       ]}
                       onPress={() => handleSizeSelect(sizeOpt.id)}
                     >
-                      <Text style={styles.optionCardIcon}>{sizeOpt.icon}</Text>
+                      <AppIcon
+                        name={sizeOpt.icon}
+                        size={22}
+                        color={theme.colors.primary}
+                        style={styles.optionCardIcon}
+                      />
                       <Text
                         style={[
                           styles.optionCardName,
