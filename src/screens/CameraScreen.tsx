@@ -54,8 +54,13 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const pickImage = async () => {
     try {
+      const mediaTypes =
+        ImagePicker.MediaType?.Images
+          ? [ImagePicker.MediaType.Images]
+          : ImagePicker.MediaTypeOptions?.Images ?? ['images'];
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: mediaTypes as any,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,

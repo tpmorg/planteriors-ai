@@ -4,9 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   TextInput,
   Image,
+  ListRenderItem,
 } from 'react-native';
 import { Search, Check, X, Droplets, Sun, Heart } from 'lucide-react-native';
 import {
@@ -21,11 +22,15 @@ import { useTheme } from '../contexts/ThemeContext';
 interface IndividualPlantSelectorProps {
   onSelectionChange: (selection: IndividualPlantSelection | null) => void;
   selection: IndividualPlantSelection | null;
+  listHeader?: React.ReactNode;
+  listFooterSpacerHeight?: number;
 }
 
 export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = ({
   onSelectionChange,
   selection,
+  listHeader,
+  listFooterSpacerHeight = 0,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
@@ -40,24 +45,26 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
 
   // Filter plants based on search
   const [filteredPlants, setFilteredPlants] = useState<IndividualPlant[]>(INDIVIDUAL_PLANTS);
+  const [isListLoading, setIsListLoading] = useState(true);
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
   useEffect(() => {
+    setIsListLoading(true);
     const lowerQuery = searchQuery.toLowerCase().trim();
-    if (!lowerQuery) {
-      setFilteredPlants(INDIVIDUAL_PLANTS);
-    } else {
-      const filtered = INDIVIDUAL_PLANTS.filter(
-        (plant) =>
-          plant.name.toLowerCase().includes(lowerQuery) ||
-          plant.scientificName.toLowerCase().includes(lowerQuery) ||
-          plant.description.toLowerCase().includes(lowerQuery) ||
-          plant.category.toLowerCase().includes(lowerQuery)
-      );
-      setFilteredPlants(filtered);
-    }
+    const filtered = !lowerQuery
+      ? INDIVIDUAL_PLANTS
+      : INDIVIDUAL_PLANTS.filter(
+          (plant) =>
+            plant.name.toLowerCase().includes(lowerQuery) ||
+            plant.scientificName.toLowerCase().includes(lowerQuery) ||
+            plant.description.toLowerCase().includes(lowerQuery) ||
+            plant.category.toLowerCase().includes(lowerQuery)
+        );
+    setFilteredPlants(filtered);
+    const timeout = setTimeout(() => setIsListLoading(false), 50);
+    return () => clearTimeout(timeout);
   }, [searchQuery]);
 
   // Update parent when selection changes
@@ -132,171 +139,177 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search plants..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={18} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+  const renderPlantItem: ListRenderItem<IndividualPlant> = ({ item: plant }) => {
+    const isSelected = selectedPlant?.id === plant.id;
+
+    return (
+      <TouchableOpacity
+        key={plant.id}
+        style={[styles.plantCard, isSelected && styles.plantCardSelected]}
+        onPress={() => handlePlantSelect(plant)}
+        activeOpacity={0.7}
+      >
+        {plant.imageUrl ? (
+          <Image source={plant.imageUrl} style={styles.plantCardImage} resizeMode="cover" />
+        ) : (
+          <Text style={styles.plantCardIcon}>{plant.icon}</Text>
+        )}
+        <Text style={styles.plantCardName} numberOfLines={1} ellipsizeMode="tail">
+          {plant.name}
+        </Text>
+        <View style={styles.plantCardBadges}>
+          {plant.petSafe && (
+            <Heart size={12} color={theme.colors.primary} fill={theme.colors.primary} />
           )}
         </View>
-      </View>
+      </TouchableOpacity>
+    );
+  };
 
-      {/* Selected Plant Detail Panel */}
-      {selectedPlant && (
-        <View style={styles.selectedPanel}>
-          <View style={styles.selectedHeader}>
-            <View style={styles.selectedPlantInfo}>
-              {selectedPlant.imageUrl ? (
-                <Image
-                  source={selectedPlant.imageUrl}
-                  style={styles.selectedImage}
-                  resizeMode="cover"
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={selectedPlant ? [] : filteredPlants}
+        renderItem={renderPlantItem}
+        keyExtractor={(item) => item.id}
+        style={styles.plantGrid}
+        contentContainerStyle={styles.plantGridContent}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        windowSize={7}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputWrapper}>
+                <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search plants..."
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
-              ) : (
-                <Text style={styles.selectedIcon}>{selectedPlant.icon}</Text>
-              )}
-              <View style={styles.selectedTextContainer}>
-                <Text style={styles.selectedName}>{selectedPlant.name}</Text>
-                <Text style={styles.selectedScientific}>
-                  {selectedPlant.scientificName}
-                </Text>
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <X size={18} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-            <TouchableOpacity onPress={clearSelection} style={styles.clearButton}>
-              <X size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
 
-          <Text style={styles.selectedDescription}>{selectedPlant.description}</Text>
+            {/* Selected Plant Detail Panel */}
+            {selectedPlant && (
+              <View style={styles.selectedPanel}>
+                <View style={styles.selectedHeader}>
+                  <View style={styles.selectedPlantInfo}>
+                    {selectedPlant.imageUrl ? (
+                      <Image
+                        source={selectedPlant.imageUrl}
+                        style={styles.selectedImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.selectedIcon}>{selectedPlant.icon}</Text>
+                    )}
+                    <View style={styles.selectedTextContainer}>
+                      <Text style={styles.selectedName}>{selectedPlant.name}</Text>
+                      <Text style={styles.selectedScientific}>
+                        {selectedPlant.scientificName}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={clearSelection} style={styles.clearButton}>
+                    <X size={20} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-          {/* Care Info Badges */}
-          <View style={styles.careInfo}>
-            <View style={styles.careBadge}>
-              <Text style={styles.careBadgeIcon}>
-                {getCareIcon(selectedPlant.careLevel)}
-              </Text>
-              <Text style={styles.careBadgeText}>
-                {selectedPlant.careLevel.charAt(0).toUpperCase() +
-                  selectedPlant.careLevel.slice(1)}{' '}
-                care
-              </Text>
-            </View>
-            <View style={styles.careBadge}>
-              <Text style={styles.careBadgeIcon}>
-                {getLightIcon(selectedPlant.lightRequirement)}
-              </Text>
-              <Text style={styles.careBadgeText}>
-                {selectedPlant.lightRequirement.replace(/-/g, ' ')}
-              </Text>
-            </View>
-            {selectedPlant.petSafe && (
-              <View style={[styles.careBadge, styles.petSafeBadge]}>
-                <Heart size={12} color={theme.colors.primary} />
-                <Text style={[styles.careBadgeText, styles.petSafeText]}>
-                  Pet safe
-                </Text>
+                <Text style={styles.selectedDescription}>{selectedPlant.description}</Text>
+
+                {/* Care Info Badges */}
+                <View style={styles.careInfo}>
+                  <View style={styles.careBadge}>
+                    <Text style={styles.careBadgeIcon}>
+                      {getCareIcon(selectedPlant.careLevel)}
+                    </Text>
+                    <Text style={styles.careBadgeText}>
+                      {selectedPlant.careLevel.charAt(0).toUpperCase() +
+                        selectedPlant.careLevel.slice(1)}{' '}
+                      care
+                    </Text>
+                  </View>
+                  <View style={styles.careBadge}>
+                    <Text style={styles.careBadgeIcon}>
+                      {getLightIcon(selectedPlant.lightRequirement)}
+                    </Text>
+                    <Text style={styles.careBadgeText}>
+                      {selectedPlant.lightRequirement.replace(/-/g, ' ')}
+                    </Text>
+                  </View>
+                  {selectedPlant.petSafe && (
+                    <View style={[styles.careBadge, styles.petSafeBadge]}>
+                      <Heart size={12} color={theme.colors.primary} />
+                      <Text style={[styles.careBadgeText, styles.petSafeText]}>
+                        Pet safe
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Size Picker */}
+                <Text style={styles.optionLabel}>Size</Text>
+                <View style={styles.optionRow}>
+                  {PLANT_SIZE_OPTIONS.filter((opt) =>
+                    selectedPlant.availableSizes.includes(opt.id)
+                  ).map((sizeOpt) => (
+                    <TouchableOpacity
+                      key={sizeOpt.id}
+                      style={[
+                        styles.optionCard,
+                        selectedSize === sizeOpt.id && styles.optionCardSelected,
+                      ]}
+                      onPress={() => handleSizeSelect(sizeOpt.id)}
+                    >
+                      <Text style={styles.optionCardIcon}>{sizeOpt.icon}</Text>
+                      <Text
+                        style={[
+                          styles.optionCardName,
+                          selectedSize === sizeOpt.id && styles.optionCardNameSelected,
+                        ]}
+                      >
+                        {sizeOpt.name}
+                      </Text>
+                      <Text style={styles.optionCardDesc}>{sizeOpt.heightRange}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             )}
-          </View>
 
-          {/* Size Picker */}
-          <Text style={styles.optionLabel}>Size</Text>
-          <View style={styles.optionRow}>
-            {PLANT_SIZE_OPTIONS.filter((opt) =>
-              selectedPlant.availableSizes.includes(opt.id)
-            ).map((sizeOpt) => (
-              <TouchableOpacity
-                key={sizeOpt.id}
-                style={[
-                  styles.optionCard,
-                  selectedSize === sizeOpt.id && styles.optionCardSelected,
-                ]}
-                onPress={() => handleSizeSelect(sizeOpt.id)}
-              >
-                <Text style={styles.optionCardIcon}>{sizeOpt.icon}</Text>
-                <Text
-                  style={[
-                    styles.optionCardName,
-                    selectedSize === sizeOpt.id && styles.optionCardNameSelected,
-                  ]}
-                >
-                  {sizeOpt.name}
-                </Text>
-                <Text style={styles.optionCardDesc}>{sizeOpt.heightRange}</Text>
-              </TouchableOpacity>
-            ))}
+            {/* Plant Grid Header */}
+            {!selectedPlant && (
+              <Text style={styles.gridLabel}>
+                {searchQuery ? `${filteredPlants.length} plants found` : 'Select a plant'}
+              </Text>
+            )}
+          </>
+        }
+        ListFooterComponent={
+          listFooterSpacerHeight > 0 ? (
+            <View style={{ height: listFooterSpacerHeight }} />
+          ) : null
+        }
+      />
+      {isListLoading && (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingCard}>
+            <Text style={styles.loadingText}>Loading plants…</Text>
           </View>
-
         </View>
-      )}
-
-      {/* Plant Grid */}
-      {!selectedPlant && (
-        <>
-          <Text style={styles.gridLabel}>
-            {searchQuery
-              ? `${filteredPlants.length} plants found`
-              : 'Select a plant'}
-          </Text>
-          <ScrollView
-            style={styles.plantGrid}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.plantGridContent}
-          >
-            <View style={styles.plantGridInner}>
-              {filteredPlants.map((plantItem) => {
-                const plant = plantItem as IndividualPlant;
-                // @ts-ignore - TypeScript inference issue with filtered array
-                const isSelected = selectedPlant?.id === plant.id;
-                return (
-                <TouchableOpacity
-                  key={plant.id}
-                  style={[
-                    styles.plantCard,
-                    isSelected && styles.plantCardSelected,
-                  ]}
-                  onPress={() => handlePlantSelect(plant)}
-                  activeOpacity={0.7}
-                >
-                  {plant.imageUrl ? (
-                    <Image
-                      source={plant.imageUrl}
-                      style={styles.plantCardImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text style={styles.plantCardIcon}>{plant.icon}</Text>
-                  )}
-                  <Text
-                    style={styles.plantCardName}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {plant.name}
-                  </Text>
-                  <View style={styles.plantCardBadges}>
-                    {plant.petSafe && (
-                      <Heart size={12} color={theme.colors.primary} fill={theme.colors.primary} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-              })}
-            </View>
-          </ScrollView>
-        </>
       )}
     </View>
   );
@@ -346,9 +359,6 @@ const createStyles = (theme: any) => {
     plantGridContent: {
       paddingHorizontal: 12,
       paddingBottom: 120,
-    },
-    plantGridInner: {
-      flexDirection: 'column',
     },
     plantCard: {
       width: '100%',
@@ -514,6 +524,29 @@ const createStyles = (theme: any) => {
       fontSize: 10,
       color: theme.colors.textSecondary,
       textAlign: 'center',
+    },
+    loadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.35)',
+    },
+    loadingCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    loadingText: {
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '600',
     },
   });
 };

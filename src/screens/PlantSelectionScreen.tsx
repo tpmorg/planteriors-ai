@@ -236,36 +236,51 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Hero Section with Explanation */}
-        <View style={styles.heroSection}>
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+      {mode === 'individual' ? (
+        <IndividualPlantSelector
+          selection={individualSelection}
+          onSelectionChange={setIndividualSelection}
+          listFooterSpacerHeight={120 + insets.bottom}
+          listHeader={
+            <>
+              {/* Hero Section with Explanation */}
+              <View style={styles.heroSection}>
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                </View>
+                <View style={styles.heroContent}>
+                  <Text style={styles.heroTitle}>Transform Your Room</Text>
+                  <Text style={styles.heroDescription}>
+                    Choose a specific plant to see how it would look in your space.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Mode Toggle */}
+              <PlantModeToggle mode={mode} onModeChange={setMode} />
+            </>
+          }
+        />
+      ) : (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Hero Section with Explanation */}
+          <View style={styles.heroSection}>
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: imageUri }} style={styles.previewImage} />
+            </View>
+            <View style={styles.heroContent}>
+              <Text style={styles.heroTitle}>Transform Your Room</Text>
+              <Text style={styles.heroDescription}>
+                Customize your plant design by selecting the type of plants, pot styles, and
+                placement preferences.
+              </Text>
+            </View>
           </View>
-          <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Transform Your Room</Text>
-            <Text style={styles.heroDescription}>
-              {mode === 'multi-plant'
-                ? 'Customize your plant design by selecting the type of plants, pot styles, and placement preferences.'
-                : 'Choose a specific plant to see how it would look in your space.'}
-            </Text>
-          </View>
-        </View>
 
-        {/* Mode Toggle */}
-        <PlantModeToggle mode={mode} onModeChange={setMode} />
+          {/* Mode Toggle */}
+          <PlantModeToggle mode={mode} onModeChange={setMode} />
 
-        {/* Individual Plant Mode */}
-        {mode === 'individual' && (
-          <IndividualPlantSelector
-            selection={individualSelection}
-            onSelectionChange={setIndividualSelection}
-          />
-        )}
-
-        {/* Multi-Plant Mode - Plant Type & Style Section */}
-        {mode === 'multi-plant' && (
-          <>
+          {/* Multi-Plant Mode - Plant Type & Style Section */}
         <View style={styles.section}>
           <SectionHeader
             title="Plant Selection"
@@ -478,12 +493,10 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             </View>
           )}
         </View>
-        </>
-        )}
-
         {/* Bottom spacing for footer */}
         <View style={{ height: 120 + insets.bottom }} />
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* Fixed Footer */}
       <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
