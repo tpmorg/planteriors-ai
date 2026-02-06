@@ -7,9 +7,7 @@ import {
   Alert,
   Share,
   Dimensions,
-  Modal,
   ScrollView,
-  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +17,7 @@ import {
   GestureHandlerRootView,
   Gesture,
   GestureDetector,
+  Directions,
 } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -43,10 +42,11 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const getDesignDisplayText = (design: SavedDesign): { title: string; subtitle: string; shareMessage: string } => {
   if (design.mode === 'individual' && design.individualPlant) {
     const { name, size, placement } = design.individualPlant;
+    const placementLabel = placement === 'auto' ? 'no preference' : placement;
     return {
       title: name,
-      subtitle: `${size} • ${placement}`,
-      shareMessage: `Check out my plant design! Added a ${size} ${name} (${placement}) to my room.`,
+      subtitle: `${size} • ${placementLabel}`,
+      shareMessage: `Check out my plant design! Added a ${size} ${name} (${placementLabel}) to my room.`,
     };
   }
   // Multi-plant mode or fallback for legacy data
@@ -249,6 +249,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       }
     });
 
+  const swipeUpGesture = Gesture.Fling()
+    .direction(Directions.UP)
+    .onEnd(() => {
+      if (!showInfoModal) {
+        runOnJS(showModal)();
+      }
+    });
+
   const imageStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -320,7 +328,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
         {/* Full-screen zoomable image */}
         <View style={styles.imageContainer}>
-          <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, panGesture)}>
+          <GestureDetector
+            gesture={Gesture.Simultaneous(pinchGesture, panGesture, swipeUpGesture)}
+          >
             <Animated.View style={styles.imageWrapper}>
               <Animated.Image
                 source={{ uri: getImageUri() }}

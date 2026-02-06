@@ -15,11 +15,7 @@ import {
   PlacementType,
   IndividualPlantSelection,
 } from '../types';
-import {
-  INDIVIDUAL_PLANTS,
-  PLANT_SIZE_OPTIONS,
-  PLACEMENT_OPTIONS,
-} from '../data/plantDatabase';
+import { INDIVIDUAL_PLANTS, PLANT_SIZE_OPTIONS } from '../data/plantDatabase';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface IndividualPlantSelectorProps {
@@ -39,7 +35,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     selection?.size || null
   );
   const [selectedPlacement, setSelectedPlacement] = useState<PlacementType | null>(
-    selection?.placement || null
+    selection?.placement || 'auto'
   );
 
   // Filter plants based on search
@@ -88,7 +84,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       setSelectedPlant(plant);
       // Auto-select first available size and placement
       const defaultSize = plant.availableSizes[0];
-      const defaultPlacement = plant.suitablePlacements[0];
+      const defaultPlacement: PlacementType = 'auto';
       setSelectedSize(defaultSize);
       setSelectedPlacement(defaultPlacement);
       updateSelection(plant, defaultSize, defaultPlacement);
@@ -100,15 +96,10 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     updateSelection(selectedPlant, size, selectedPlacement);
   };
 
-  const handlePlacementSelect = (placement: PlacementType) => {
-    setSelectedPlacement(placement);
-    updateSelection(selectedPlant, selectedSize, placement);
-  };
-
   const clearSelection = () => {
     setSelectedPlant(null);
     setSelectedSize(null);
-    setSelectedPlacement(null);
+    setSelectedPlacement('auto');
     setSearchQuery('');
     updateSelection(null, null, null);
   };
@@ -248,34 +239,6 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
             ))}
           </View>
 
-          {/* Placement Picker */}
-          <Text style={styles.optionLabel}>Placement</Text>
-          <View style={styles.optionRow}>
-            {PLACEMENT_OPTIONS.filter((opt) =>
-              selectedPlant.suitablePlacements.includes(opt.id)
-            ).map((placementOpt) => (
-              <TouchableOpacity
-                key={placementOpt.id}
-                style={[
-                  styles.optionCard,
-                  selectedPlacement === placementOpt.id && styles.optionCardSelected,
-                ]}
-                onPress={() => handlePlacementSelect(placementOpt.id)}
-              >
-                <Text style={styles.optionCardIcon}>{placementOpt.icon}</Text>
-                <Text
-                  style={[
-                    styles.optionCardName,
-                    selectedPlacement === placementOpt.id &&
-                      styles.optionCardNameSelected,
-                  ]}
-                >
-                  {placementOpt.name}
-                </Text>
-                <Text style={styles.optionCardDesc}>{placementOpt.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
       )}
 
@@ -385,20 +348,19 @@ const createStyles = (theme: any) => {
       paddingBottom: 120,
     },
     plantGridInner: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: 'column',
     },
     plantCard: {
-      width: '47%',
+      width: '100%',
       backgroundColor: theme.colors.borderLight,
       borderRadius: 12,
-      margin: '1.5%',
-      padding: 10,
+      marginBottom: 12,
+      padding: 12,
       alignItems: 'center',
       justifyContent: 'flex-start',
       borderWidth: 2,
       borderColor: 'transparent',
-      paddingBottom: 12,
+      paddingBottom: 14,
     },
     plantCardSelected: {
       backgroundColor: selectedBg,
@@ -410,10 +372,10 @@ const createStyles = (theme: any) => {
       marginTop: 8,
     },
     plantCardImage: {
-      width: 80,
-      height: 80,
-      borderRadius: 10,
-      marginBottom: 8,
+      width: '100%',
+      height: 180,
+      borderRadius: 12,
+      marginBottom: 10,
       marginTop: 4,
     },
     plantCardName: {
@@ -454,9 +416,9 @@ const createStyles = (theme: any) => {
       marginRight: 12,
     },
     selectedImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 12,
+      width: 80,
+      height: 80,
+      borderRadius: 14,
       marginRight: 12,
     },
     selectedTextContainer: {

@@ -116,6 +116,7 @@ export class GeminiService {
       floor: 'placed directly on the floor in an attractive pot or planter that matches the room decor',
       shelf: 'positioned on a shelf, side table, or furniture surface in a decorative pot',
       hanging: 'suspended from the ceiling or mounted on the wall in a stylish hanging planter with trailing vines visible',
+      auto: 'placed in the most realistic spot based on the room layout and available surfaces',
     };
 
     // Light requirement context for realistic placement
@@ -135,14 +136,20 @@ export class GeminiService {
       const areaSize = this.getAreaSizeDescription(location.width, location.height);
 
       locationInstruction = `
-CRITICAL PLACEMENT LOCATION:
+HIGHEST PRIORITY - USER MARKED LOCATION:
 The user has specifically marked where they want the plant placed:
 - Horizontal position: ${horizontalPosition}
 - Vertical position: ${verticalPosition}
 - Target area size: ${areaSize}
 - The plant MUST be placed within this specified region of the image
-- Do NOT place the plant anywhere else - respect the user's chosen location exactly`;
+- Do NOT place the plant anywhere else - respect the user's chosen location exactly
+- If the marked location conflicts with a placement preference, adjust the placement to fit the marked region`;
     }
+
+    const hasExplicitPlacement = placement !== 'auto';
+    const placementInstruction = hasExplicitPlacement
+      ? `The plant MUST be ${placementDescriptions[placement]}. This placement preference is a top priority.`
+      : 'Choose the most realistic placement based on the room layout, available surfaces, and the plant’s light needs. Ensure physical support, avoid blocking walkways, and keep the placement believable.';
 
     return `Add a single ${sizeDescriptions[size]} ${plant.name} (${plant.scientificName}) to this room image.
 
@@ -150,7 +157,7 @@ Plant Details:
 - Common Name: ${plant.name}
 - Scientific Name: ${plant.scientificName}
 - Description: ${plant.description}
-- The plant should be ${placementDescriptions[placement]}
+- ${placementInstruction}
 - ${lightContexts[plant.lightRequirement]}
 ${locationInstruction}
 
@@ -158,7 +165,7 @@ Critical Requirements:
 1. Add ONLY ONE plant - a single ${plant.name}
 2. The plant must be ${sizeDescriptions[size]} specimen, appropriately scaled to the room
 3. Use an attractive pot or planter that complements the room's existing style and color palette
-${location ? '4. Place the plant EXACTLY in the user-specified location marked above' : '4. Position the plant naturally where it would realistically thrive based on its light needs'}
+${location ? '4. Place the plant EXACTLY in the user-specified location marked above (highest priority)' : hasExplicitPlacement ? '4. Follow the placement preference exactly (floor/shelf/hanging) as a top priority' : '4. Choose the most realistic placement based on physics, room layout, and light needs'}
 5. Maintain photorealistic quality with proper shadows, reflections, and lighting
 6. Keep ALL original room elements, furniture, and architecture EXACTLY as shown
 7. The plant should enhance the space as a single accent piece without overwhelming it

@@ -8,7 +8,7 @@ import {
   Image,
   Switch,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Check, ChevronUp, ChevronDown, Sparkles } from 'lucide-react-native';
 import {
   PlantType,
@@ -118,8 +118,10 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   onPlantSelected,
   onBack,
 }) => {
+  const insets = useSafeAreaInsets();
+
   // Mode state
-  const [mode, setMode] = useState<PlantSelectionMode>('multi-plant');
+  const [mode, setMode] = useState<PlantSelectionMode>('individual');
 
   // Individual plant selection state
   const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
@@ -480,24 +482,24 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         )}
 
         {/* Bottom spacing for footer */}
-        <View style={{ height: 120 }} />
+        <View style={{ height: 120 + insets.bottom }} />
       </ScrollView>
 
       {/* Fixed Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.footerContent}>
           {!isComplete ? (
             <Text style={styles.footerHint}>
               {mode === 'multi-plant'
                 ? 'Select a plant type and style to continue'
-                : 'Select a plant, size, and placement to continue'}
+                : 'Select a plant and size to continue'}
             </Text>
           ) : (
             <View style={styles.selectionPreview}>
               <Text style={styles.selectionPreviewText}>
                 {mode === 'multi-plant'
                   ? `${selectedPlantType?.icon} ${selectedPlantType?.name} • ${selectedStyle?.name}`
-                  : `${individualSelection?.plant.icon} ${individualSelection?.plant.name} • ${individualSelection?.size} • ${individualSelection?.placement}`}
+                  : `${individualSelection?.plant.icon} ${individualSelection?.plant.name} • ${individualSelection?.size}`}
               </Text>
             </View>
           )}
@@ -506,7 +508,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             onPress={handleContinue}
             disabled={!isComplete}
           >
-            <Text style={styles.continueButtonText}>Generate Design</Text>
+            <Text style={styles.continueButtonText}>
+              {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
+            </Text>
             <Sparkles size={20} color="white" />
           </TouchableOpacity>
         </View>
@@ -554,13 +558,14 @@ const createStyles = (theme: any) => {
       marginBottom: 8,
     },
     imageContainer: {
-      height: 180,
+      height: 240,
       position: 'relative',
+      backgroundColor: theme.colors.borderLight,
     },
     previewImage: {
       width: '100%',
       height: '100%',
-      resizeMode: 'cover',
+      resizeMode: 'contain',
     },
     heroContent: {
       padding: 20,

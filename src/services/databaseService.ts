@@ -9,7 +9,7 @@ import {
   FreeTrialUsage
 } from '../types';
 
-const DB_VERSION = 2; // Current database version
+const DB_VERSION = 3; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -138,6 +138,93 @@ export class DatabaseService {
     `;
     await this.db.execAsync(createFreeTrialUsageTable);
 
+    // Create plants table for plant codex
+    const createPlantsTable = `
+      CREATE TABLE IF NOT EXISTS plants (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        scientific_name TEXT NOT NULL,
+        description TEXT,
+        category TEXT,
+        icon TEXT,
+        care_level TEXT,
+        light_requirement TEXT,
+        water_requirement TEXT,
+        pet_safe INTEGER,
+        available_sizes TEXT,
+        suitable_placements TEXT,
+        trefle_id TEXT,
+        is_popular INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER
+      );
+    `;
+    await this.db.execAsync(createPlantsTable);
+
+    // Create plant images table
+    const createPlantImagesTable = `
+      CREATE TABLE IF NOT EXISTS plant_images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plant_id TEXT NOT NULL,
+        image_url TEXT NOT NULL,
+        local_path TEXT,
+        is_primary INTEGER DEFAULT 0,
+        source TEXT,
+        attribution TEXT,
+        downloaded_at INTEGER,
+        FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+      );
+    `;
+    await this.db.execAsync(createPlantImagesTable);
+
+    // Create FTS5 virtual table for full-text search
+    try {
+      await this.db.execAsync(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS plants_fts USING fts5(
+          name,
+          scientific_name,
+          description,
+          content='plants',
+          content_rowid='rowid'
+        );
+      `);
+
+      // Create triggers to sync FTS5
+      await this.db.execAsync(`
+        CREATE TRIGGER IF NOT EXISTS plants_ai AFTER INSERT ON plants BEGIN
+          INSERT INTO plants_fts(rowid, name, scientific_name, description)
+          VALUES (new.rowid, new.name, new.scientific_name, new.description);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS plants_ad AFTER DELETE ON plants BEGIN
+          INSERT INTO plants_fts(plants_fts, rowid, name, scientific_name, description)
+          VALUES ('delete', old.rowid, old.name, old.scientific_name, old.description);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS plants_au AFTER UPDATE ON plants BEGIN
+          INSERT INTO plants_fts(plants_fts, rowid, name, scientific_name, description)
+          VALUES ('delete', old.rowid, old.name, old.scientific_name, old.description);
+          INSERT INTO plants_fts(rowid, name, scientific_name, description)
+          VALUES (new.rowid, new.name, new.scientific_name, new.description);
+        END;
+      `);
+    } catch (error) {
+      console.warn('FTS5 not available, search will use LIKE queries:', error);
+    }
+
+    // Create search cache table
+    const createSearchCacheTable = `
+      CREATE TABLE IF NOT EXISTS plant_search_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query TEXT NOT NULL,
+        results_json TEXT NOT NULL,
+        result_count INTEGER,
+        searched_at INTEGER,
+        expires_at INTEGER
+      );
+    `;
+    await this.db.execAsync(createSearchCacheTable);
+
     // Create indexes
     await this.createIndexes();
   }
@@ -157,6 +244,26 @@ export class DatabaseService {
       `);
       await this.db.execAsync(`
         CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+      `);
+      
+      // Plant codex indexes
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_plants_category ON plants(category);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_plants_care_level ON plants(care_level);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_plants_popular ON plants(is_popular);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_plant_images_plant_id ON plant_images(plant_id);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_search_cache_query ON plant_search_cache(query);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON plant_search_cache(expires_at);
       `);
     } catch (error) {
       console.warn('Failed to create some indexes (may already exist):', error);
@@ -181,6 +288,13 @@ export class DatabaseService {
       console.log('Running migration to v2: Adding user_id and subscription support');
       await this.migrateToV2();
       await this.setDbVersion(2);
+    }
+
+    // Migration from v2 to v3: Add plant codex tables
+    if (currentVersion < 3) {
+      console.log('Running migration to v3: Adding plant codex tables');
+      await this.migrateToV3();
+      await this.setDbVersion(3);
     }
 
     console.log('Migrations complete. Database at version:', DB_VERSION);
@@ -270,6 +384,439 @@ export class DatabaseService {
     // Note: New tables (usage_tracking, subscriptions, free_trial_usage)
     // are created in createTables() with CREATE TABLE IF NOT EXISTS,
     // so they will be created automatically if they don't exist yet.
+  }
+
+  private async migrateToV3(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Plants table
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS plants (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          scientific_name TEXT NOT NULL,
+          description TEXT,
+          category TEXT,
+          icon TEXT,
+          care_level TEXT,
+          light_requirement TEXT,
+          water_requirement TEXT,
+          pet_safe INTEGER,
+          available_sizes TEXT,
+          suitable_placements TEXT,
+          trefle_id TEXT,
+          is_popular INTEGER DEFAULT 0,
+          created_at INTEGER,
+          updated_at INTEGER
+        );
+      `);
+
+      // Plant images table
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS plant_images (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          plant_id TEXT NOT NULL,
+          image_url TEXT NOT NULL,
+          local_path TEXT,
+          is_primary INTEGER DEFAULT 0,
+          source TEXT,
+          attribution TEXT,
+          downloaded_at INTEGER,
+          FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+        );
+      `);
+
+      // FTS5 virtual table
+      try {
+        await this.db.execAsync(`
+          CREATE VIRTUAL TABLE IF NOT EXISTS plants_fts USING fts5(
+            name,
+            scientific_name,
+            description,
+            content='plants',
+            content_rowid='rowid'
+          );
+        `);
+
+        // FTS5 triggers
+        await this.db.execAsync(`
+          CREATE TRIGGER IF NOT EXISTS plants_ai AFTER INSERT ON plants BEGIN
+            INSERT INTO plants_fts(rowid, name, scientific_name, description)
+            VALUES (new.rowid, new.name, new.scientific_name, new.description);
+          END;
+
+          CREATE TRIGGER IF NOT EXISTS plants_ad AFTER DELETE ON plants BEGIN
+            INSERT INTO plants_fts(plants_fts, rowid, name, scientific_name, description)
+            VALUES ('delete', old.rowid, old.name, old.scientific_name, old.description);
+          END;
+
+          CREATE TRIGGER IF NOT EXISTS plants_au AFTER UPDATE ON plants BEGIN
+            INSERT INTO plants_fts(plants_fts, rowid, name, scientific_name, description)
+            VALUES ('delete', old.rowid, old.name, old.scientific_name, old.description);
+            INSERT INTO plants_fts(rowid, name, scientific_name, description)
+            VALUES (new.rowid, new.name, new.scientific_name, new.description);
+          END;
+        `);
+      } catch (error) {
+        console.warn('FTS5 not available, falling back to LIKE queries');
+      }
+
+      // Search cache table
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS plant_search_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          query TEXT NOT NULL,
+          results_json TEXT NOT NULL,
+          result_count INTEGER,
+          searched_at INTEGER,
+          expires_at INTEGER
+        );
+      `);
+
+      // Indexes
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_plants_category ON plants(category);`);
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_plants_care_level ON plants(care_level);`);
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_plants_popular ON plants(is_popular);`);
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_plant_images_plant_id ON plant_images(plant_id);`);
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_search_cache_query ON plant_search_cache(query);`);
+      await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON plant_search_cache(expires_at);`);
+
+      console.log('Plant codex tables created successfully');
+    } catch (error) {
+      console.error('Failed to create plant codex tables:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // Plant Codex Methods
+  // ============================================
+
+  async savePlant(plant: {
+    id: string;
+    name: string;
+    scientificName: string;
+    description?: string;
+    category?: string;
+    icon?: string;
+    careLevel?: string;
+    lightRequirement?: string;
+    waterRequirement?: string;
+    petSafe?: boolean;
+    availableSizes?: string[];
+    suitablePlacements?: string[];
+    trefleId?: string;
+    isPopular?: boolean;
+  }): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        `INSERT OR REPLACE INTO plants (
+          id, name, scientific_name, description, category, icon,
+          care_level, light_requirement, water_requirement, pet_safe,
+          available_sizes, suitable_placements, trefle_id, is_popular,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          plant.id,
+          plant.name,
+          plant.scientificName,
+          plant.description || null,
+          plant.category || null,
+          plant.icon || '🌿',
+          plant.careLevel || 'easy',
+          plant.lightRequirement || 'bright-indirect',
+          plant.waterRequirement || 'moderate',
+          plant.petSafe ? 1 : 0,
+          plant.availableSizes ? JSON.stringify(plant.availableSizes) : '[]',
+          plant.suitablePlacements ? JSON.stringify(plant.suitablePlacements) : '[]',
+          plant.trefleId || null,
+          plant.isPopular ? 1 : 0,
+          Date.now(),
+          Date.now()
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to save plant:', error);
+      throw error;
+    }
+  }
+
+  async getPopularPlants(limit: number = 50): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const rows = await this.db.getAllAsync(
+        `SELECT p.*, 
+          pi.local_path as local_image_path,
+          pi.image_url as primary_image_url
+         FROM plants p
+         LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+         WHERE p.is_popular = 1
+         ORDER BY p.name ASC
+         LIMIT ?`,
+        [limit]
+      );
+
+      return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        scientificName: row.scientific_name,
+        description: row.description,
+        category: row.category,
+        icon: row.icon,
+        careLevel: row.care_level,
+        lightRequirement: row.light_requirement,
+        waterRequirement: row.water_requirement,
+        petSafe: row.pet_safe === 1,
+        availableSizes: row.available_sizes ? JSON.parse(row.available_sizes) : [],
+        suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
+        localImagePath: row.local_image_path,
+        primaryImageUrl: row.primary_image_url,
+        isPopular: row.is_popular === 1
+      }));
+    } catch (error) {
+      console.error('Failed to get popular plants:', error);
+      throw error;
+    }
+  }
+
+  async searchPlants(query: string, options: {
+    category?: string;
+    careLevel?: string;
+    lightRequirement?: string;
+    petSafe?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const { category, careLevel, lightRequirement, petSafe, limit = 20, offset = 0 } = options;
+
+    try {
+      let sql: string;
+      const params: any[] = [];
+
+      // Try FTS5 first, fall back to LIKE
+      const useFts = await this.checkFts5Available();
+
+      if (useFts && query.trim()) {
+        sql = `
+          SELECT p.*, 
+            pi.local_path as local_image_path,
+            pi.image_url as primary_image_url,
+            rank as search_rank
+          FROM plants p
+          JOIN plants_fts fts ON p.rowid = fts.rowid
+          LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+          WHERE plants_fts MATCH ?
+        `;
+        params.push(query.split(' ').map(t => `${t}*`).join(' OR '));
+      } else {
+        sql = `
+          SELECT p.*, 
+            pi.local_path as local_image_path,
+            pi.image_url as primary_image_url
+          FROM plants p
+          LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+          WHERE (p.name LIKE ? OR p.scientific_name LIKE ?)
+        `;
+        const likeQuery = `%${query}%`;
+        params.push(likeQuery, likeQuery);
+      }
+
+      // Add filters
+      if (category) {
+        sql += ` AND p.category = ?`;
+        params.push(category);
+      }
+      if (careLevel) {
+        sql += ` AND p.care_level = ?`;
+        params.push(careLevel);
+      }
+      if (lightRequirement) {
+        sql += ` AND p.light_requirement = ?`;
+        params.push(lightRequirement);
+      }
+      if (petSafe !== undefined) {
+        sql += ` AND p.pet_safe = ?`;
+        params.push(petSafe ? 1 : 0);
+      }
+
+      // Order and limit
+      sql += useFts ? ` ORDER BY rank ASC` : ` ORDER BY p.name ASC`;
+      sql += ` LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+
+      const rows = await this.db.getAllAsync(sql, params);
+
+      return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        scientificName: row.scientific_name,
+        description: row.description,
+        category: row.category,
+        icon: row.icon,
+        careLevel: row.care_level,
+        lightRequirement: row.light_requirement,
+        waterRequirement: row.water_requirement,
+        petSafe: row.pet_safe === 1,
+        availableSizes: row.available_sizes ? JSON.parse(row.available_sizes) : [],
+        suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
+        localImagePath: row.local_image_path,
+        primaryImageUrl: row.primary_image_url,
+        searchRank: row.search_rank,
+        isPopular: row.is_popular === 1
+      }));
+    } catch (error) {
+      console.error('Failed to search plants:', error);
+      throw error;
+    }
+  }
+
+  private async checkFts5Available(): Promise<boolean> {
+    if (!this.db) return false;
+    try {
+      await this.db.getFirstAsync(`SELECT 1 FROM plants_fts LIMIT 1`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async savePlantImage(plantId: string, image: {
+    imageUrl: string;
+    localPath?: string;
+    isPrimary?: boolean;
+    source?: string;
+    attribution?: string;
+  }): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        `INSERT INTO plant_images (plant_id, image_url, local_path, is_primary, source, attribution, downloaded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          plantId,
+          image.imageUrl,
+          image.localPath || null,
+          image.isPrimary ? 1 : 0,
+          image.source || 'unknown',
+          image.attribution || null,
+          Date.now()
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to save plant image:', error);
+      throw error;
+    }
+  }
+
+  async getPlantById(id: string): Promise<any | null> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const row = await this.db.getFirstAsync(
+        `SELECT p.*, 
+          pi.local_path as local_image_path,
+          pi.image_url as primary_image_url
+         FROM plants p
+         LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+         WHERE p.id = ?`,
+        [id]
+      );
+
+      if (!row) return null;
+
+      return {
+        id: row.id,
+        name: row.name,
+        scientificName: row.scientific_name,
+        description: row.description,
+        category: row.category,
+        icon: row.icon,
+        careLevel: row.care_level,
+        lightRequirement: row.light_requirement,
+        waterRequirement: row.water_requirement,
+        petSafe: row.pet_safe === 1,
+        availableSizes: row.available_sizes ? JSON.parse(row.available_sizes) : [],
+        suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
+        localImagePath: row.local_image_path,
+        primaryImageUrl: row.primary_image_url,
+        isPopular: row.is_popular === 1
+      };
+    } catch (error) {
+      console.error('Failed to get plant by ID:', error);
+      throw error;
+    }
+  }
+
+  async getPlantsCount(): Promise<number> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM plants`
+      );
+      return result?.count || 0;
+    } catch (error) {
+      console.error('Failed to get plants count:', error);
+      return 0;
+    }
+  }
+
+  async clearSearchCache(): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) return;
+
+    try {
+      await this.db.runAsync(`DELETE FROM plant_search_cache WHERE expires_at < ?`, [Date.now()]);
+    } catch (error) {
+      console.error('Failed to clear search cache:', error);
+    }
+  }
+
+  async saveSearchCache(query: string, results: any[]): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) return;
+
+    try {
+      const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
+      await this.db.runAsync(
+        `INSERT OR REPLACE INTO plant_search_cache (query, results_json, result_count, searched_at, expires_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [query.toLowerCase(), JSON.stringify(results), results.length, Date.now(), expiresAt]
+      );
+    } catch (error) {
+      console.error('Failed to save search cache:', error);
+    }
+  }
+
+  async getCachedSearch(query: string): Promise<any[] | null> {
+    await this.ensureConnection();
+    if (!this.db) return null;
+
+    try {
+      const row = await this.db.getFirstAsync<{ results_json: string }>(
+        `SELECT results_json FROM plant_search_cache 
+         WHERE query = ? AND expires_at > ?`,
+        [query.toLowerCase(), Date.now()]
+      );
+
+      return row ? JSON.parse(row.results_json) : null;
+    } catch (error) {
+      console.error('Failed to get cached search:', error);
+      return null;
+    }
   }
 
   async saveDesign(design: {

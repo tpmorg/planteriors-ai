@@ -39,6 +39,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'moderate',
     growthRate: 'slow',
     petSafe: false,
+    imageUrl: require('../../assets/plants/fiddle-leaf-fig.jpg'),
   },
   {
     id: 'bird-of-paradise',
@@ -70,6 +71,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/rubber-plant.jpg'),
   },
   {
     id: 'philodendron-brasil',
@@ -215,6 +217,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/aloe-vera.jpg'),
   },
   {
     id: 'jade-plant',
@@ -654,6 +657,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'slow',
     petSafe: true,
+    imageUrl: require('../../assets/plants/bromeliad.jpg'),
   },
   {
     id: 'kalanchoe',
@@ -719,6 +723,7 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     careLevel: 'easy',
     growthRate: 'moderate',
     petSafe: false,
+    imageUrl: require('../../assets/plants/lucky-bamboo.jpg'),
   },
 ];
 
@@ -749,6 +754,12 @@ export const PLANT_SIZE_OPTIONS: PlantSizeOption[] = [
 
 // Placement options with descriptions
 export const PLACEMENT_OPTIONS: PlacementOption[] = [
+  {
+    id: 'auto',
+    name: 'No preference',
+    description: 'Let the AI choose the best spot',
+    icon: '✨',
+  },
   {
     id: 'floor',
     name: 'Floor',
@@ -784,6 +795,7 @@ export const searchPlants = (query: string): IndividualPlant[] => {
 };
 
 export const filterPlantsByPlacement = (placement: PlacementType): IndividualPlant[] => {
+  if (placement === 'auto') return INDIVIDUAL_PLANTS;
   return INDIVIDUAL_PLANTS.filter((plant) => plant.suitablePlacements.includes(placement));
 };
 

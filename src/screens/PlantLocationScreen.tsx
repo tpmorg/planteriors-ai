@@ -8,7 +8,7 @@ import {
   Dimensions,
   LayoutChangeEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -23,7 +23,7 @@ import { PlantLocation, GenerationRequest } from '../types';
 interface PlantLocationScreenProps {
   imageUri: string;
   request: Omit<GenerationRequest, 'imageUri' | 'location'>;
-  onLocationSelected: (location: PlantLocation) => void;
+  onLocationSelected: (location: PlantLocation | null) => void;
   onBack: () => void;
 }
 
@@ -36,6 +36,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   onLocationSelected,
   onBack,
 }) => {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -44,6 +45,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
 
   // Selection state
   const [hasSelection, setHasSelection] = useState(false);
+  const [placementMode, setPlacementMode] = useState<'choose' | 'auto'>('choose');
 
   // Gesture state for drawing the rectangle
   const startX = useSharedValue(0);
@@ -149,8 +151,19 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   };
 
   const handleContinue = () => {
+    if (placementMode === 'auto') {
+      onLocationSelected(null);
+      return;
+    }
     if (finalSelection.current) {
       onLocationSelected(finalSelection.current);
+    }
+  };
+
+  const handleModeChange = (mode: 'choose' | 'auto') => {
+    setPlacementMode(mode);
+    if (mode === 'auto') {
+      handleReset();
     }
   };
 
@@ -187,6 +200,41 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
             Draw a rectangle on the area where the {plantSize} plant should be placed
           </Text>
         </View>
+      </View>
+
+      <View style={styles.modeToggle}>
+        <TouchableOpacity
+          style={[
+            styles.modeButton,
+            placementMode === 'choose' && styles.modeButtonActive,
+          ]}
+          onPress={() => handleModeChange('choose')}
+        >
+          <Text
+            style={[
+              styles.modeButtonText,
+              placementMode === 'choose' && styles.modeButtonTextActive,
+            ]}
+          >
+            Choose location (default)
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.modeButton,
+            placementMode === 'auto' && styles.modeButtonActive,
+          ]}
+          onPress={() => handleModeChange('auto')}
+        >
+          <Text
+            style={[
+              styles.modeButtonText,
+              placementMode === 'auto' && styles.modeButtonTextActive,
+            ]}
+          >
+            Let AI decide
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Image with Selection Area */}
@@ -229,7 +277,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
       </View>
 
       {/* Selection Info */}
-      {hasSelection && (
+      {hasSelection && placementMode === 'choose' && (
         <View style={styles.selectionInfo}>
           <Text style={styles.selectionInfoText}>
             {request.individualPlant?.plant.icon} {plantName} will be placed in the selected area
@@ -238,23 +286,32 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
       )}
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.footerContent}>
-          {!hasSelection ? (
+          {placementMode === 'choose' && !hasSelection ? (
             <Text style={styles.footerHint}>
               Tap and drag on the image to select plant location
             </Text>
-          ) : (
+          ) : placementMode === 'choose' ? (
             <View style={styles.selectionPreview}>
               <Text style={styles.selectionPreviewText}>
                 Location selected - ready to generate
               </Text>
             </View>
+          ) : (
+            <View style={styles.selectionPreview}>
+              <Text style={styles.selectionPreviewText}>
+                AI will choose the most realistic placement
+              </Text>
+            </View>
           )}
           <TouchableOpacity
-            style={[styles.continueButton, !hasSelection && styles.continueButtonDisabled]}
+            style={[
+              styles.continueButton,
+              placementMode === 'choose' && !hasSelection && styles.continueButtonDisabled,
+            ]}
             onPress={handleContinue}
-            disabled={!hasSelection}
+            disabled={placementMode === 'choose' && !hasSelection}
           >
             <Text style={styles.continueButtonText}>Generate Design</Text>
             <Sparkles size={20} color="white" />
@@ -323,6 +380,38 @@ const createStyles = (theme: any) =>
     instructionSubtitle: {
       fontSize: 13,
       color: theme.colors.textSecondary,
+    },
+    modeToggle: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modeButton: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modeButtonActive: {
+      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
+      borderColor: theme.colors.primary,
+    },
+    modeButtonText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    modeButtonTextActive: {
+      color: theme.colors.primary,
     },
     imageSection: {
       flex: 1,

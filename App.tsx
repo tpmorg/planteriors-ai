@@ -305,12 +305,10 @@ function PlantSelectionScreenWrapper({ route, navigation }: any) {
 function PlantLocationScreenWrapper({ route, navigation }: any) {
   const { imageUri, request } = route.params;
 
-  const handleLocationSelected = (location: PlantLocation) => {
-    const fullRequest: GenerationRequest = {
-      imageUri,
-      ...request,
-      location,
-    };
+  const handleLocationSelected = (location: PlantLocation | null) => {
+    const fullRequest: GenerationRequest = location
+      ? { imageUri, ...request, location }
+      : { imageUri, ...request };
     navigation.navigate("Generation", { request: fullRequest });
   };
 

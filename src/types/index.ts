@@ -117,8 +117,8 @@ export interface AuthState {
 export type LightRequirement = 'low' | 'low-to-bright' | 'bright-indirect' | 'bright-direct';
 export type WaterRequirement = 'low' | 'moderate' | 'high';
 export type PlantSize = 'small' | 'medium' | 'large';
-export type PlacementType = 'floor' | 'shelf' | 'hanging';
-export type PlantCategory = 'tropical' | 'succulent' | 'flowering' | 'fern' | 'palm' | 'vine';
+export type PlacementType = 'floor' | 'shelf' | 'hanging' | 'auto';
+export type PlantCategoryType = 'tropical' | 'succulent' | 'flowering' | 'fern' | 'palm' | 'vine';
 export type CareLevel = 'easy' | 'moderate' | 'difficult';
 export type GrowthRate = 'slow' | 'moderate' | 'fast';
 export type PlantSelectionMode = 'multi-plant' | 'individual';
@@ -129,7 +129,7 @@ export interface IndividualPlant {
   scientificName: string;
   description: string;
   icon: string;
-  category: PlantCategory;
+  category: PlantCategoryType;
   lightRequirement: LightRequirement;
   waterRequirement: WaterRequirement;
   availableSizes: PlantSize[];
@@ -159,6 +159,44 @@ export interface IndividualPlantSelection {
   plant: IndividualPlant;
   size: PlantSize;
   placement: PlacementType;
+}
+
+// Plant Codex Types
+export interface PlantSearchResult {
+  id: string;
+  name: string;
+  scientificName: string;
+  description?: string;
+  category: string;
+  icon: string;
+  careLevel: string;
+  lightRequirement: string;
+  waterRequirement?: string;
+  petSafe: boolean;
+  availableSizes: PlantSize[];
+  suitablePlacements: PlacementType[];
+  primaryImageUrl?: string;
+  localImagePath?: string;
+  searchRank?: number;
+  isPopular: boolean;
+}
+
+export interface PlantCategory {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+}
+
+export interface PlantSearchOptions {
+  query?: string;
+  category?: string;
+  careLevel?: string;
+  lightRequirement?: string;
+  petSafe?: boolean;
+  limit?: number;
+  offset?: number;
+  source?: 'local' | 'api' | 'all';
 }
 
 // Plant location selection for precise placement
