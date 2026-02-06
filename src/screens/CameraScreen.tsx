@@ -28,6 +28,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
   const [isCropping, setIsCropping] = useState(false);
+  const [isSystemCropping, setIsSystemCropping] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
   const { theme } = useTheme();
@@ -56,6 +57,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const pickImage = async () => {
     try {
+      setIsSystemCropping(true);
       const mediaTypes =
         ImagePicker.MediaType?.Images
           ? [ImagePicker.MediaType.Images]
@@ -72,9 +74,11 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         setPreviewImage(result.assets[0].uri);
         setShowOptions(false);
       }
+      setIsSystemCropping(false);
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
+      setIsSystemCropping(false);
     }
   };
 
@@ -121,6 +125,10 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         </TouchableOpacity>
       </SafeAreaView>
     );
+  }
+
+  if (isSystemCropping) {
+    return <SafeAreaView style={styles.container} />;
   }
 
   if (showOptions) {
