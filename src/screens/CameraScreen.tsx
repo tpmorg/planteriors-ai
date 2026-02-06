@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
+import { cropImageToAspect } from '../utils/imageUtils';
 
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
@@ -26,6 +28,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [facing, setFacing] = useState<CameraType>('back');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
+  const [isCropping, setIsCropping] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
   const { theme } = useTheme();
@@ -61,7 +64,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypes as any,
-        allowsEditing: true,
+        allowsEditing: false,
         aspect: [4, 3],
         quality: 0.8,
       });
@@ -80,9 +83,17 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     setShowOptions(false);
   };
 
-  const confirmImage = () => {
-    if (previewImage) {
-      onImageTaken(previewImage);
+  const confirmImage = async () => {
+    if (!previewImage) return;
+    setIsCropping(true);
+    try {
+      const cropped = await cropImageToAspect(previewImage, 4, 3);
+      onImageTaken(cropped);
+    } catch (error) {
+      console.error('Error cropping image:', error);
+      Alert.alert('Error', 'Failed to crop image');
+    } finally {
+      setIsCropping(false);
     }
   };
 
@@ -166,15 +177,38 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         </View>
 
         <View style={styles.previewControls}>
-          <TouchableOpacity style={styles.controlButton} onPress={retakePhoto}>
-            <AppIcon name="Camera" size={24} color="white" />
-            <Text style={styles.controlButtonText}>Retake</Text>
-          </TouchableOpacity>
+          <View style={styles.previewCopy}>
+            <Text style={styles.previewTitle}>Review Your Photo</Text>
+            <Text style={styles.previewSubtitle}>
+              Looks good? Continue to start your design.
+            </Text>
+          </View>
 
-          <TouchableOpacity style={styles.controlButton} onPress={confirmImage}>
-            <AppIcon name="Check" size={24} color="white" />
-            <Text style={styles.controlButtonText}>Use Photo</Text>
-          </TouchableOpacity>
+          <View style={styles.previewButtons}>
+            <TouchableOpacity
+              style={[styles.secondaryButton, isCropping && styles.buttonDisabled]}
+              onPress={retakePhoto}
+              disabled={isCropping}
+            >
+              <AppIcon name="Camera" size={18} color={theme.colors.primary} />
+              <Text style={styles.secondaryButtonText}>Retake</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, isCropping && styles.buttonDisabled]}
+              onPress={confirmImage}
+              disabled={isCropping}
+            >
+              {isCropping ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <AppIcon name="ArrowRight" size={18} color="white" />
+              )}
+              <Text style={styles.primaryButtonText}>
+                {isCropping ? 'Processing…' : 'Continue'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -349,19 +383,63 @@ const createStyles = (theme: any) => StyleSheet.create({
     resizeMode: 'contain',
   },
   previewControls: {
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  previewCopy: {
+    marginBottom: 12,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  previewSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+  },
+  previewButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 24,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    gap: 12,
   },
-  controlButton: {
+  primaryButton: {
+    flex: 1,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
-  controlButtonText: {
+  primaryButtonText: {
     color: 'white',
-    marginTop: 4,
-    fontSize: 12,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  secondaryButtonText: {
+    color: theme.colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   button: {
     backgroundColor: theme.colors.primary,
