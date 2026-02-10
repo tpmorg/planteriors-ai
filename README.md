@@ -7,7 +7,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 ![Planterior AI](https://via.placeholder.com/800x400/2d5016/ffffff?text=Planterior+AI)
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.81.4-blue.svg)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-52.0.0-black.svg)](https://expo.dev/)
+[![Expo](https://img.shields.io/badge/Expo-54.0.7-black.svg)](https://expo.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash%20Image%20Preview-green.svg)](https://aistudio.google.com/)
 
@@ -30,6 +30,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 - 📋 **Smart Modals** - 50% screen coverage with pull-to-close gestures
 - 💫 **Smooth Animations** - React Native Reanimated for fluid interactions
 - 📐 **Safe Area Support** - Dynamic positioning above native navigation
+- ✨ **Phosphor Icons** - Unified icon system for a consistent, professional UI
 
 ### 🎨 User Experience
 - ❤️ **Favorites System** - Heart toggle for favorite designs
@@ -37,6 +38,7 @@ Transform your interior spaces with AI-powered plant design recommendations. Tak
 - 🗑️ **Design Management** - Delete designs with confirmation
 - ⚙️ **Preferences** - High quality modes, auto-save, notifications
 - 📊 **Storage Management** - Cache clearing and download tracking
+- 🔒 **Usage Limits** - Free tier generation caps with subscription upgrade flow
 
 ## 🚀 Quick Start
 
@@ -132,30 +134,13 @@ The `app.config.js` automatically uses `process.env.*` which EAS populates from 
    npm run web     # Web Browser
    ```
 
-## Managing Claude plugins and MCPs
-
-In general, favor disabling all and enabling indidivual plugin skills for focused tasks. 
-
-# When you have plugins enabled, try:
-claude mcp list  # or similar command to see active MCP servers
-
-# When starting new Expo app or major refactor
-claude plugin enable expo-app-design
-claude plugin enable frontend-design
-
-# When deploying
-claude plugin enable expo-deployment
-
-# When upgrading Expo versions
-claude plugin enable upgrading-expo
-
-
 ## 📱 How It Works
 
 1. **🔑 Launch & Auth** - App opens with authentication screen (Google Sign-In or skip)
 2. **🏠 Main Interface** - Tab-based navigation: Gallery (home), Account, Settings
 3. **➕ Create Design** - Tap "+" button in gallery to start new design
 4. **📸 Capture** - Take a photo of your room or select from gallery
+   - Gallery images use the system crop UI for quick framing
 5. **🌱 Choose Plants** - Select from 4 plant types and multiple styles:
    - **Succulents** - Modern, Rustic, Minimalist
    - **Tropical Plants** - Jungle, Contemporary, Bohemian
@@ -165,6 +150,7 @@ claude plugin enable upgrading-expo
 7. **🖼️ View Results** - Full-screen image with pinch-to-zoom and gesture controls
 8. **ℹ️ Design Details** - Pull-up modal (50% screen) with plant information
 9. **💾 Save & Manage** - Auto-save to gallery, favorite, share, or delete designs
+10. **💳 Upgrade (Optional)** - Free tier limits prompt the subscription flow
 
 ## 🏗️ Architecture
 
@@ -173,7 +159,9 @@ planterior-ai/
 ├── src/
 │   ├── contexts/           # React Context
 │   │   ├── AuthContext.tsx         # OAuth authentication
-│   │   └── TabBarContext.tsx       # Tab navigation with scroll behavior
+│   │   ├── ThemeContext.tsx        # Light/dark/system theme
+│   │   ├── TabBarContext.tsx       # Tab navigation with scroll behavior
+│   │   └── SubscriptionContext.tsx # Usage limits & subscription status
 │   ├── screens/            # Main App Screens
 │   │   ├── AuthScreen.tsx          # Google Sign-In (launch screen)
 │   │   ├── GalleryScreen.tsx       # Main gallery with saved designs
@@ -185,7 +173,9 @@ planterior-ai/
 │   │   └── DesignDetailScreen.tsx  # Full-screen image with gestures
 │   ├── services/           # External APIs & Storage
 │   │   ├── geminiService.ts        # Gemini AI integration
-│   │   └── databaseService.ts      # SQLite local storage
+│   │   ├── databaseService.ts      # SQLite local storage
+│   │   ├── subscriptionService.ts  # Mock IAP + status
+│   │   └── usageTrackingService.ts # Free-tier tracking
 │   ├── types/              # TypeScript Definitions
 │   └── utils/              # Helper Functions
 ├── App.tsx                 # Tab navigation & app structure
