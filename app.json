@@ -50,8 +50,21 @@
             "CFBundleURLSchemes": [
               "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
             ]
+          },
+          {
+            "CFBundleURLName": "plant-interior-ai",
+            "CFBundleURLSchemes": [
+              "plant-interior-ai"
+            ]
+          },
+          {
+            "CFBundleURLName": "google-oauth",
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
+            ]
           }
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

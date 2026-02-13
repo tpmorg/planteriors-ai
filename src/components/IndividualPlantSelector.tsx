@@ -32,6 +32,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   listHeader,
   listFooterSpacerHeight = 0,
 }) => {
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
     selection?.plant || null
@@ -145,16 +146,24 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     return (
       <TouchableOpacity
         key={plant.id}
-        style={[styles.plantCard, isSelected && styles.plantCardSelected]}
+        style={[
+          styles.plantCard,
+          viewMode === 'grid' && styles.plantCardGrid,
+          isSelected && styles.plantCardSelected,
+        ]}
         onPress={() => handlePlantSelect(plant)}
         activeOpacity={0.7}
       >
         {plant.imageUrl ? (
-          <Image source={plant.imageUrl} style={styles.plantCardImage} resizeMode="cover" />
+          <Image
+            source={plant.imageUrl}
+            style={viewMode === 'grid' ? styles.plantCardImageGrid : styles.plantCardImage}
+            resizeMode="cover"
+          />
         ) : (
           <AppIcon
             name={plant.icon}
-            size={44}
+            size={viewMode === 'grid' ? 32 : 44}
             color={theme.colors.primary}
             style={styles.plantCardIcon}
           />
@@ -178,13 +187,19 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         renderItem={renderPlantItem}
         keyExtractor={(item) => item.id}
         style={styles.plantGrid}
-        contentContainerStyle={styles.plantGridContent}
+        contentContainerStyle={[
+          styles.plantGridContent,
+          viewMode === 'grid' && styles.plantGridContentCompact,
+        ]}
         showsVerticalScrollIndicator={false}
         initialNumToRender={8}
         windowSize={7}
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         removeClippedSubviews
+        numColumns={viewMode === 'grid' ? 2 : 1}
+        columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+        key={viewMode === 'grid' ? 'grid' : 'list'}
         ListHeaderComponent={
           <>
             {listHeader}
@@ -210,6 +225,18 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                   </TouchableOpacity>
                 )}
               </View>
+              <TouchableOpacity
+                style={styles.viewToggleButton}
+                onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                accessibilityLabel="Toggle plant list view"
+                accessibilityRole="button"
+              >
+                <AppIcon
+                  name={viewMode === 'grid' ? 'List' : 'SquaresFour'}
+                  size={18}
+                  color={theme.colors.textSecondary}
+                />
+              </TouchableOpacity>
             </View>
 
             {/* Selected Plant Detail Panel */}
@@ -350,14 +377,26 @@ const createStyles = (theme: any) => {
       paddingHorizontal: 16,
       paddingBottom: 12,
       backgroundColor: theme.colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
     },
     searchInputWrapper: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.borderLight,
       borderRadius: 12,
       paddingHorizontal: 12,
       height: 44,
+    },
+    viewToggleButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     searchIcon: {
       marginRight: 8,
@@ -384,6 +423,14 @@ const createStyles = (theme: any) => {
       paddingHorizontal: 12,
       paddingBottom: 120,
     },
+    plantGridContentCompact: {
+      paddingHorizontal: 12,
+    },
+    gridRow: {
+      gap: 12,
+      paddingHorizontal: 4,
+      marginBottom: 12,
+    },
     plantCard: {
       width: '100%',
       backgroundColor: theme.colors.borderLight,
@@ -395,6 +442,11 @@ const createStyles = (theme: any) => {
       borderWidth: 2,
       borderColor: 'transparent',
       paddingBottom: 14,
+    },
+    plantCardGrid: {
+      flex: 1,
+      marginBottom: 0,
+      paddingHorizontal: 10,
     },
     plantCardSelected: {
       backgroundColor: selectedBg,
@@ -410,6 +462,13 @@ const createStyles = (theme: any) => {
       height: 180,
       borderRadius: 12,
       marginBottom: 10,
+      marginTop: 4,
+    },
+    plantCardImageGrid: {
+      width: '100%',
+      height: 120,
+      borderRadius: 10,
+      marginBottom: 8,
       marginTop: 4,
     },
     plantCardName: {
