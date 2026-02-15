@@ -18,5 +18,7 @@ module.exports = ({ config }) => ({
     appleClientId: process.env.APPLE_CLIENT_ID || '',
     debugMode: process.env.DEBUG_MODE === 'true',
     apiTimeout: parseInt(process.env.API_TIMEOUT || '30000', 10),
+    revenueCatAppleApiKey: process.env.REVENUECAT_APPLE_API_KEY || '',
+    revenueCatGoogleApiKey: process.env.REVENUECAT_GOOGLE_API_KEY || '',
   },
 });

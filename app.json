@@ -32,7 +32,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
         }
-      ]
+      ],
+      "react-native-purchases"
     ],
     "ios": {
       "supportsTablet": true,
@@ -93,7 +94,9 @@
         "projectId": "a325c769-f080-4a11-abf8-23bf1a17ceb8"
       },
       "googleClientId": "${GOOGLE_CLIENT_ID}",
-      "geminiApiKey": "${GEMINI_API_KEY}"
+      "geminiApiKey": "${GEMINI_API_KEY}",
+      "revenueCatAppleApiKey": "${REVENUECAT_APPLE_API_KEY}",
+      "revenueCatGoogleApiKey": "${REVENUECAT_GOOGLE_API_KEY}"
     },
     "owner": "morgish"
   }

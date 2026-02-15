@@ -218,6 +218,7 @@ export interface SubscriptionProduct {
   period: 'month' | 'year';
   features: string[];
   savings?: string;
+  rcPackage?: any; // RevenueCat PurchasesPackage for purchase flow
 }
 
 export interface SubscriptionStatus {
@@ -227,6 +228,7 @@ export interface SubscriptionStatus {
   isMock: boolean;
   platform?: 'ios' | 'android';
   purchaseDate?: number;
+  entitlementId?: string;
 }
 
 export interface UsageStats {

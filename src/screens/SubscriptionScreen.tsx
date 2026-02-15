@@ -46,10 +46,11 @@ export const SubscriptionScreen: React.FC = () => {
       return;
     }
 
+    const selectedProduct = products.find(p => p.id === selectedProductId);
     setPurchasing(true);
 
     try {
-      const result = await purchaseSubscription(selectedProductId);
+      const result = await purchaseSubscription(selectedProductId, selectedProduct?.rcPackage);
 
       if (result.success) {
         Alert.alert(
@@ -145,7 +146,7 @@ export const SubscriptionScreen: React.FC = () => {
               isSelected={selectedProductId === product.id}
               onSelect={() => setSelectedProductId(product.id)}
               theme={theme}
-              isCurrentPlan={subscription?.isActive && subscription.type === product.period}
+              isCurrentPlan={!!(subscription?.isActive && ((subscription.type === 'monthly' && product.period === 'month') || (subscription.type === 'annual' && product.period === 'year')))}
             />
           ))}
         </View>
@@ -180,12 +181,6 @@ export const SubscriptionScreen: React.FC = () => {
             <Text style={styles.restoreButtonText}>Restore Purchases</Text>
           )}
         </TouchableOpacity>
-
-        {__DEV__ && (
-          <View style={styles.mockBadge}>
-            <Text style={styles.mockBadgeText}>MOCK PURCHASE MODE</Text>
-          </View>
-        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
@@ -443,20 +438,6 @@ const createStyles = (theme: any) =>
       fontSize: 16,
       color: theme.colors.textSecondary,
       fontWeight: '500',
-    },
-    mockBadge: {
-      backgroundColor: '#fef3c7',
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      marginTop: 16,
-      marginBottom: 16,
-    },
-    mockBadgeText: {
-      fontSize: 12,
-      fontWeight: 'bold',
-      color: '#92400e',
-      textAlign: 'center',
     },
     footer: {
       marginTop: 24,

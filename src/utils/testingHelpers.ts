@@ -59,8 +59,9 @@ export const SubscriptionTestingHelpers = {
     }
 
     try {
-      await subscriptionService.grantTestSubscription(userId, type);
-      console.log(`✅ Granted ${type} subscription to user: ${userId}`);
+      // With RevenueCat, test subscriptions must be granted through
+      // the RevenueCat dashboard or platform sandbox testing.
+      console.log(`⚠️ grantSubscription: Use RevenueCat dashboard or sandbox testing to grant ${type} subscription for user: ${userId}`);
     } catch (error) {
       console.error('❌ Failed to grant subscription:', error);
       throw error;

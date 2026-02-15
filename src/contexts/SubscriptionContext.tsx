@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import Purchases from 'react-native-purchases';
 import { subscriptionService } from '../services/subscriptionService';
 import { usageTrackingService } from '../services/usageTrackingService';
 import { SubscriptionStatus, UsageStats } from '../types';
@@ -11,7 +12,7 @@ interface SubscriptionContextType {
   canGenerate: boolean;
   usageStats: UsageStats | null;
 
-  purchaseSubscription: (productId: string) => Promise<{
+  purchaseSubscription: (productId: string, rcPackage?: any) => Promise<{
     success: boolean;
     error?: string;
   }>;
@@ -46,12 +47,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [canGenerate, setCanGenerate] = useState(true);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
 
-  // Load subscription status when user changes
+  // Initialize RevenueCat and load status when user changes
   useEffect(() => {
     if (user) {
-      loadSubscriptionStatus();
+      initRevenueCat(user.id);
     } else {
-      // Reset state when user logs out
+      subscriptionService.logOut();
       setSubscription(null);
       setFreeGenerationsRemaining(5);
       setCanGenerate(true);
@@ -59,6 +60,29 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setIsLoading(false);
     }
   }, [user]);
+
+  // Listen for real-time subscription status changes from RevenueCat
+  useEffect(() => {
+    const onCustomerInfoUpdate = () => {
+      loadSubscriptionStatus();
+    };
+    Purchases.addCustomerInfoUpdateListener(onCustomerInfoUpdate);
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(onCustomerInfoUpdate);
+    };
+  }, [user]);
+
+  const initRevenueCat = async (userId: string) => {
+    try {
+      setIsLoading(true);
+      await subscriptionService.configure(userId);
+      await subscriptionService.identifyUser(userId);
+      await loadSubscriptionStatus();
+    } catch (error) {
+      console.error('Error initializing RevenueCat:', error);
+      setIsLoading(false);
+    }
+  };
 
   const loadSubscriptionStatus = async () => {
     if (!user) return;
@@ -89,7 +113,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   };
 
   const purchaseSubscription = async (
-    productId: string
+    productId: string,
+    rcPackage?: any
   ): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return {
@@ -101,7 +126,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     try {
       setIsLoading(true);
 
-      const result = await subscriptionService.purchaseSubscription(user.id, productId);
+      const result = await subscriptionService.purchaseSubscription(user.id, productId, rcPackage);
 
       if (result.success) {
         // Refresh subscription status after successful purchase

@@ -1,276 +1,235 @@
 import { Platform } from 'react-native';
-import { databaseService } from './databaseService';
-import { SubscriptionProduct, SubscriptionStatus, SubscriptionData } from '../types';
+import Purchases, {
+  PurchasesPackage,
+  CustomerInfo,
+  LOG_LEVEL,
+  PACKAGE_TYPE,
+} from 'react-native-purchases';
+import Constants from 'expo-constants';
+import { SubscriptionProduct, SubscriptionStatus } from '../types';
 
-// Mock product catalog
-const MOCK_PRODUCTS: SubscriptionProduct[] = [
-  {
-    id: 'monthly_mock',
-    name: 'Premium Monthly',
-    price: '$9.99',
-    priceValue: 9.99,
-    currency: 'USD',
-    period: 'month',
-    features: [
-      'Unlimited AI generations',
-      'Priority processing',
-      'HD image exports',
-      'Save unlimited designs',
-    ],
-  },
-  {
-    id: 'annual_mock',
-    name: 'Premium Annual',
-    price: '$79.99',
-    priceValue: 79.99,
-    currency: 'USD',
-    period: 'year',
-    features: [
-      'Everything in Monthly',
-      'Save 33% vs monthly',
-      'Priority support',
-    ],
-    savings: 'Save $40/year',
-  },
-];
+const ENTITLEMENT_ID = 'premium';
 
 class SubscriptionService {
+  private isConfigured = false;
+
   /**
-   * Get available subscription products (mock)
+   * Initialize RevenueCat SDK. Call once at app startup after auth.
    */
-  async getAvailableProducts(): Promise<SubscriptionProduct[]> {
-    // In production, this would fetch from App Store / Play Store
-    // For now, return mock products
-    return MOCK_PRODUCTS;
+  async configure(userId?: string): Promise<void> {
+    if (this.isConfigured) return;
+
+    const apiKey = Platform.select({
+      ios: Constants.expoConfig?.extra?.revenueCatAppleApiKey,
+      android: Constants.expoConfig?.extra?.revenueCatGoogleApiKey,
+    });
+
+    if (!apiKey) {
+      console.error('RevenueCat API key not found for platform:', Platform.OS);
+      return;
+    }
+
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
+
+    Purchases.configure({
+      apiKey,
+      appUserID: userId || undefined,
+    });
+
+    this.isConfigured = true;
   }
 
   /**
-   * Purchase a subscription (mock implementation)
+   * Identify user with RevenueCat (call after auth).
+   */
+  async identifyUser(userId: string): Promise<void> {
+    try {
+      await Purchases.logIn(userId);
+    } catch (error) {
+      console.error('RevenueCat identify error:', error);
+    }
+  }
+
+  /**
+   * Log out user from RevenueCat (call on sign-out).
+   */
+  async logOut(): Promise<void> {
+    try {
+      await Purchases.logOut();
+    } catch (error) {
+      console.error('RevenueCat logout error:', error);
+    }
+  }
+
+  /**
+   * Get available subscription products from RevenueCat offerings.
+   */
+  async getAvailableProducts(): Promise<SubscriptionProduct[]> {
+    try {
+      const offerings = await Purchases.getOfferings();
+      const currentOffering = offerings.current;
+
+      if (!currentOffering) {
+        console.warn('No current RevenueCat offering found');
+        return [];
+      }
+
+      return currentOffering.availablePackages.map((pkg) =>
+        this.mapPackageToProduct(pkg)
+      );
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Purchase a subscription package.
    */
   async purchaseSubscription(
-    userId: string,
-    productId: string
+    _userId: string,
+    productId: string,
+    rcPackage?: PurchasesPackage
   ): Promise<{
     success: boolean;
     subscription: SubscriptionStatus;
     error?: string;
   }> {
     try {
-      // Simulate processing delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Determine subscription type and duration
-      const isAnnual = productId.includes('annual');
-      const subscriptionType = isAnnual ? 'annual' : 'monthly';
-      const durationDays = isAnnual ? 365 : 30;
-      const now = Date.now();
-      const expiryDate = now + durationDays * 24 * 60 * 60 * 1000;
-
-      // Create subscription data
-      const subscriptionData: SubscriptionData = {
-        userId,
-        subscriptionStatus: 'active',
-        subscriptionType,
-        purchaseToken: `mock_token_${Date.now()}`,
-        originalTransactionId: `mock_txn_${userId}_${Date.now()}`,
-        platform: Platform.OS === 'ios' ? 'ios' : 'android',
-        purchaseDate: now,
-        expiryDate,
-        isMock: true,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      // Save to database
-      await databaseService.saveSubscription(subscriptionData);
-
-      // Return success with subscription status
-      return {
-        success: true,
-        subscription: {
-          isActive: true,
-          type: subscriptionType,
-          expiryDate,
-          isMock: true,
-          platform: Platform.OS === 'ios' ? 'ios' : 'android',
-          purchaseDate: now,
-        },
-      };
-    } catch (error) {
-      console.error('Mock purchase failed:', error);
-      return {
-        success: false,
-        subscription: {
-          isActive: false,
-          type: null,
-          expiryDate: null,
-          isMock: true,
-        },
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  /**
-   * Get a user's current subscription status
-   */
-  async getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-    try {
-      const subscription = await databaseService.getSubscription(userId);
-
-      if (!subscription) {
-        return {
-          isActive: false,
-          type: null,
-          expiryDate: null,
-          isMock: true,
-        };
-      }
-
-      // Check if subscription is still active
-      const now = Date.now();
-      const isActive =
-        subscription.subscriptionStatus === 'active' &&
-        subscription.expiryDate !== null &&
-        subscription.expiryDate > now;
-
-      // If expired, update status in database
-      if (!isActive && subscription.subscriptionStatus === 'active') {
-        await databaseService.updateSubscriptionStatus(
-          userId,
-          'expired',
-          subscription.expiryDate || now
+      if (!rcPackage) {
+        const offerings = await Purchases.getOfferings();
+        rcPackage = offerings.current?.availablePackages.find(
+          (pkg) => pkg.product.identifier === productId
         );
       }
 
+      if (!rcPackage) {
+        return {
+          success: false,
+          subscription: this.defaultStatus(),
+          error: 'Product not found',
+        };
+      }
+
+      const { customerInfo } = await Purchases.purchasePackage(rcPackage);
+      const status = this.mapCustomerInfoToStatus(customerInfo);
+
+      return { success: status.isActive, subscription: status };
+    } catch (error: any) {
+      if (error.userCancelled) {
+        return {
+          success: false,
+          subscription: this.defaultStatus(),
+          error: 'Purchase cancelled',
+        };
+      }
+      console.error('Purchase error:', error);
       return {
-        isActive,
-        type: isActive ? subscription.subscriptionType : null,
-        expiryDate: subscription.expiryDate,
-        isMock: subscription.isMock,
-        platform: subscription.platform,
-        purchaseDate: subscription.purchaseDate,
-      };
-    } catch (error) {
-      console.error('Error getting subscription status:', error);
-      return {
-        isActive: false,
-        type: null,
-        expiryDate: null,
-        isMock: true,
+        success: false,
+        subscription: this.defaultStatus(),
+        error: error.message || 'Purchase failed',
       };
     }
   }
 
   /**
-   * Restore purchases (mock implementation)
-   * In production, this would query the app store for previous purchases
+   * Get current subscription status from RevenueCat.
    */
-  async restorePurchases(userId: string): Promise<{
+  async getSubscriptionStatus(_userId: string): Promise<SubscriptionStatus> {
+    try {
+      const customerInfo = await Purchases.getCustomerInfo();
+      return this.mapCustomerInfoToStatus(customerInfo);
+    } catch (error) {
+      console.error('Error getting subscription status:', error);
+      return this.defaultStatus();
+    }
+  }
+
+  /**
+   * Restore purchases via RevenueCat.
+   */
+  async restorePurchases(_userId: string): Promise<{
     success: boolean;
     restored: number;
     error?: string;
   }> {
     try {
-      // Simulate processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // In mock mode, just refresh the current subscription status
-      const subscription = await databaseService.getSubscription(userId);
-
-      if (subscription && subscription.subscriptionStatus === 'active') {
-        return {
-          success: true,
-          restored: 1,
-        };
-      }
-
+      const customerInfo = await Purchases.restorePurchases();
+      const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       return {
         success: true,
-        restored: 0,
+        restored: entitlement ? 1 : 0,
       };
-    } catch (error) {
-      console.error('Error restoring purchases:', error);
+    } catch (error: any) {
       return {
         success: false,
         restored: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error.message || 'Restore failed',
       };
     }
   }
 
   /**
-   * Cancel subscription (mock implementation)
-   */
-  async cancelSubscription(userId: string): Promise<{
-    success: boolean;
-    error?: string;
-  }> {
-    try {
-      // Simulate processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const subscription = await databaseService.getSubscription(userId);
-      if (!subscription) {
-        return {
-          success: false,
-          error: 'No subscription found',
-        };
-      }
-
-      // Update status to cancelled
-      await databaseService.updateSubscriptionStatus(
-        userId,
-        'cancelled',
-        subscription.expiryDate || Date.now()
-      );
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error cancelling subscription:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  /**
-   * Grant a test subscription (for testing purposes only)
-   */
-  async grantTestSubscription(
-    userId: string,
-    type: 'monthly' | 'annual'
-  ): Promise<void> {
-    const durationDays = type === 'annual' ? 365 : 30;
-    const now = Date.now();
-    const expiryDate = now + durationDays * 24 * 60 * 60 * 1000;
-
-    const subscriptionData: SubscriptionData = {
-      userId,
-      subscriptionStatus: 'active',
-      subscriptionType: type,
-      purchaseToken: `test_token_${Date.now()}`,
-      originalTransactionId: `test_txn_${userId}_${Date.now()}`,
-      platform: Platform.OS === 'ios' ? 'ios' : 'android',
-      purchaseDate: now,
-      expiryDate,
-      isMock: true,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await databaseService.saveSubscription(subscriptionData);
-    console.log(`Granted test ${type} subscription for user:`, userId);
-  }
-
-  /**
-   * Refresh subscription status (would verify with store in production)
+   * Refresh subscription status from RevenueCat.
    */
   async refreshSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-    // In mock mode, just return current status
-    // In production, this would verify the receipt with Apple/Google
     return await this.getSubscriptionStatus(userId);
+  }
+
+  // --- Helper methods ---
+
+  private mapPackageToProduct(pkg: PurchasesPackage): SubscriptionProduct {
+    const product = pkg.product;
+    const isAnnual = pkg.packageType === PACKAGE_TYPE.ANNUAL;
+
+    return {
+      id: product.identifier,
+      name: isAnnual ? 'Premium Annual' : 'Premium Monthly',
+      price: product.priceString,
+      priceValue: product.price,
+      currency: product.currencyCode,
+      period: isAnnual ? 'year' : 'month',
+      features: isAnnual
+        ? ['Everything in Monthly', 'Save 33% vs monthly', 'Priority support']
+        : ['Unlimited AI generations', 'Priority processing', 'HD image exports', 'Save unlimited designs'],
+      savings: isAnnual ? 'BEST VALUE' : undefined,
+      rcPackage: pkg,
+    };
+  }
+
+  private mapCustomerInfoToStatus(customerInfo: CustomerInfo): SubscriptionStatus {
+    const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+
+    if (!entitlement) {
+      return this.defaultStatus();
+    }
+
+    const isAnnual = entitlement.productIdentifier?.includes('annual');
+
+    return {
+      isActive: true,
+      type: isAnnual ? 'annual' : 'monthly',
+      expiryDate: entitlement.expirationDate
+        ? new Date(entitlement.expirationDate).getTime()
+        : null,
+      isMock: false,
+      platform: entitlement.store === 'PLAY_STORE' ? 'android' : 'ios',
+      purchaseDate: entitlement.originalPurchaseDate
+        ? new Date(entitlement.originalPurchaseDate).getTime()
+        : undefined,
+      entitlementId: ENTITLEMENT_ID,
+    };
+  }
+
+  private defaultStatus(): SubscriptionStatus {
+    return {
+      isActive: false,
+      type: null,
+      expiryDate: null,
+      isMock: false,
+    };
   }
 }
 
