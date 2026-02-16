@@ -32,8 +32,7 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.161202796930-np9orfkt885ej10ienccr4rc98n5oar4"
         }
-      ],
-      "react-native-purchases"
+      ]
     ],
     "ios": {
       "supportsTablet": true,
