@@ -275,7 +275,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
@@ -316,7 +316,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   if (generatedImageUri && !isGenerating && isImageGenerated) {
     return (
-      <SafeAreaView style={styles.fullScreenContainer}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.fullScreenContainer}>
         <Animated.View
           style={[
             styles.resultContainer,
@@ -371,7 +371,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />

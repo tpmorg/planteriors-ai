@@ -32,6 +32,8 @@ import { useTheme } from '../contexts/ThemeContext';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
+  designs?: SavedDesign[];
+  initialIndex?: number;
   onBack: () => void;
   onDesignDeleted: () => void;
 }
@@ -61,11 +63,32 @@ const getDesignDisplayText = (design: SavedDesign): { title: string; subtitle: s
 
 export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   design: initialDesign,
+  designs: initialDesigns = [],
+  initialIndex = 0,
   onBack,
   onDesignDeleted,
 }) => {
   const insets = useSafeAreaInsets();
-  const [design, setDesign] = useState<SavedDesign>(initialDesign);
+  const modalOpenTranslateY = Math.max(insets.top + 56, screenHeight * 0.22);
+  const modalBaseHeight = screenHeight - modalOpenTranslateY;
+  const modalHeight = modalBaseHeight * 0.8;
+  const modalOpenY = screenHeight - modalHeight;
+  const [designList, setDesignList] = useState<SavedDesign[]>(
+    initialDesigns.length > 0 ? initialDesigns : [initialDesign]
+  );
+  const [currentIndex, setCurrentIndex] = useState<number>(() => {
+    if (initialDesigns.length === 0) return 0;
+    const found = initialDesigns.findIndex((d) => d.id === initialDesign.id);
+    if (found !== -1) return found;
+    if (initialIndex >= 0 && initialIndex < initialDesigns.length) return initialIndex;
+    return 0;
+  });
+  const [design, setDesign] = useState<SavedDesign>(() => {
+    const initialFromList = (initialDesigns.length > 0
+      ? initialDesigns.find((d) => d.id === initialDesign.id)
+      : undefined);
+    return initialFromList || initialDesign;
+  });
   const [isSharing, setIsSharing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -101,7 +124,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const showModal = () => {
     setShowInfoModal(true);
-    modalTranslateY.value = withTiming(screenHeight * 0.5, { duration: 300 });
+    modalTranslateY.value = withTiming(modalOpenY, { duration: 300 });
     backdropOpacity.value = withTiming(0.5, { duration: 300 });
   };
 
@@ -114,10 +137,16 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const toggleFavorite = async () => {
     try {
       await databaseService.toggleFavorite(design.id);
-      setDesign(prev => ({
-        ...prev,
-        isFavorite: !prev.isFavorite,
-      }));
+      setDesign(prev => {
+        const updated = {
+          ...prev,
+          isFavorite: !prev.isFavorite,
+        };
+        setDesignList((prevList) =>
+          prevList.map((item) => (item.id === updated.id ? updated : item))
+        );
+        return updated;
+      });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
       Alert.alert('Error', 'Failed to update favorite');
@@ -199,6 +228,36 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     }
   };
 
+  const resetImageTransform = () => {
+    scale.value = withSpring(1);
+    savedScale.value = 1;
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  };
+
+  const navigateToIndex = (index: number) => {
+    if (index < 0 || index >= designList.length) return;
+    setCurrentIndex(index);
+    setDesign(designList[index]);
+    if (showInfoModal) {
+      hideModal();
+    }
+    resetImageTransform();
+  };
+
+  const goToPrevious = () => {
+    if (currentIndex > 0) {
+      navigateToIndex(currentIndex - 1);
+    }
+  };
+
+  const goToNext = () => {
+    if (currentIndex < designList.length - 1) {
+      navigateToIndex(currentIndex + 1);
+    }
+  };
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -228,14 +287,27 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       savedTranslateY.value = translateY.value;
     });
 
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (scale.value > 1) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      }
+    });
+
   // Modal pan gesture for pull-to-close
   const modalPanGesture = Gesture.Pan()
     .onUpdate((event) => {
-      const newY = screenHeight * 0.5 + Math.max(0, event.translationY);
+      const newY = modalOpenY + Math.max(0, event.translationY);
       modalTranslateY.value = newY;
 
       // Update backdrop opacity based on drag distance
-      const dragProgress = Math.max(0, event.translationY) / (screenHeight * 0.5);
+      const dragProgress = Math.max(0, event.translationY) / modalHeight;
       backdropOpacity.value = 0.5 * (1 - dragProgress);
     })
     .onEnd((event) => {
@@ -243,8 +315,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         // Close modal if dragged down enough or with sufficient velocity
         runOnJS(hideModal)();
       } else {
-        // Snap back to 50% position
-        modalTranslateY.value = withTiming(screenHeight * 0.5, { duration: 200 });
+        // Snap back to open position
+        modalTranslateY.value = withTiming(modalOpenY, { duration: 200 });
         backdropOpacity.value = withTiming(0.5, { duration: 200 });
       }
     });
@@ -254,6 +326,22 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     .onEnd(() => {
       if (!showInfoModal) {
         runOnJS(showModal)();
+      }
+    });
+
+  const swipeLeftGesture = Gesture.Fling()
+    .direction(Directions.LEFT)
+    .onEnd(() => {
+      if (scale.value <= 1 && !showInfoModal) {
+        runOnJS(goToNext)();
+      }
+    });
+
+  const swipeRightGesture = Gesture.Fling()
+    .direction(Directions.RIGHT)
+    .onEnd(() => {
+      if (scale.value <= 1 && !showInfoModal) {
+        runOnJS(goToPrevious)();
       }
     });
 
@@ -282,7 +370,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         {/* Header with overlay - positioned below status bar */}
         <View style={[styles.header, { top: insets.top }]}>
           <TouchableOpacity onPress={onBack} style={styles.headerButton}>
@@ -330,7 +418,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         {/* Full-screen zoomable image */}
         <View style={styles.imageContainer}>
           <GestureDetector
-            gesture={Gesture.Simultaneous(pinchGesture, panGesture, swipeUpGesture)}
+            gesture={Gesture.Simultaneous(
+              doubleTapGesture,
+              pinchGesture,
+              panGesture,
+              swipeUpGesture,
+              swipeLeftGesture,
+              swipeRightGesture
+            )}
           >
             <Animated.View style={styles.imageWrapper}>
               <Animated.Image
@@ -338,6 +433,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 style={[styles.image, imageStyle]}
                 resizeMode="contain"
               />
+              {designList.length > 1 && (
+                <View style={styles.imageCounter}>
+                  <Text style={styles.imageCounterText}>
+                    {currentIndex + 1} / {designList.length}
+                  </Text>
+                </View>
+              )}
             </Animated.View>
           </GestureDetector>
         </View>
@@ -355,9 +457,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             </Animated.View>
 
             {/* Modal Panel */}
-            <Animated.View style={[styles.modalPanel, modalStyle]}>
-              {/* Draggable Header */}
-              <GestureDetector gesture={modalPanGesture}>
+            <GestureDetector gesture={modalPanGesture}>
+              <Animated.View style={[styles.modalPanel, modalStyle, { height: modalHeight }]}>
+                {/* Draggable Header */}
                 <Animated.View style={styles.modalHeader}>
                   <TouchableOpacity
                     onPress={hideModal}
@@ -368,106 +470,110 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                     <Text style={styles.modalTitle}>Design Details</Text>
                   </TouchableOpacity>
                 </Animated.View>
-              </GestureDetector>
 
-              {/* Modal Content */}
-              <ScrollView style={styles.modalContent}>
-                {(() => {
-                  const displayText = getDesignDisplayText(design);
-                  return (
-                    <View style={styles.titleSection}>
-                      <Text style={styles.plantTypeTitle}>{displayText.title}</Text>
-                      <Text style={styles.plantStyleSubtitle}>
-                        {displayText.subtitle}
-                      </Text>
-                    </View>
-                  );
-                })()}
+                {/* Modal Content */}
+                <ScrollView
+                  style={styles.modalContent}
+                  contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {(() => {
+                    const displayText = getDesignDisplayText(design);
+                    return (
+                      <View style={styles.titleSection}>
+                        <Text style={styles.plantTypeTitle}>{displayText.title}</Text>
+                        <Text style={styles.plantStyleSubtitle}>
+                          {displayText.subtitle}
+                        </Text>
+                      </View>
+                    );
+                  })()}
 
-                <View style={styles.infoGrid}>
-                  {/* Individual plant mode info */}
-                  {design.mode === 'individual' && design.individualPlant && (
-                    <>
+                  <View style={styles.infoGrid}>
+                    {/* Individual plant mode info */}
+                    {design.mode === 'individual' && design.individualPlant && (
+                      <>
+                        <View style={styles.infoItem}>
+                          <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
+                          <View style={styles.infoContent}>
+                            <Text style={styles.infoLabel}>Plant</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
+                            <Text style={styles.infoDescription}>
+                              {design.individualPlant.scientificName}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.infoItem}>
+                          <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
+                          <View style={styles.infoContent}>
+                            <Text style={styles.infoLabel}>Size</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.infoItem}>
+                          <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
+                          <View style={styles.infoContent}>
+                            <Text style={styles.infoLabel}>Placement</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                    {/* Multi-plant mode info */}
+                    {design.mode !== 'individual' && design.plantType && (
                       <View style={styles.infoItem}>
                         <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Plant</Text>
-                          <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
+                          <Text style={styles.infoLabel}>Plant Type</Text>
+                          <Text style={styles.infoValue}>{design.plantType.name}</Text>
                           <Text style={styles.infoDescription}>
-                            {design.individualPlant.scientificName}
+                            {design.plantType.description}
                           </Text>
                         </View>
                       </View>
+                    )}
 
+                    {design.mode !== 'individual' && design.plantStyle && (
                       <View style={styles.infoItem}>
-                        <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
+                        <AppIcon name="Palette" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Size</Text>
-                          <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
+                          <Text style={styles.infoLabel}>Style</Text>
+                          <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.plantStyle.description}
+                          </Text>
                         </View>
                       </View>
+                    )}
 
+                    {design.customPrompt && (
                       <View style={styles.infoItem}>
-                        <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
+                        <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Placement</Text>
-                          <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                          <Text style={styles.infoLabel}>Custom Requirements</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.customPrompt}
+                          </Text>
                         </View>
                       </View>
-                    </>
-                  )}
+                    )}
 
-                  {/* Multi-plant mode info */}
-                  {design.mode !== 'individual' && design.plantType && (
                     <View style={styles.infoItem}>
-                      <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
+                      <AppIcon name="Clock" size={20} color={theme.colors.primary} />
                       <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>Plant Type</Text>
-                        <Text style={styles.infoValue}>{design.plantType.name}</Text>
-                        <Text style={styles.infoDescription}>
-                          {design.plantType.description}
+                        <Text style={styles.infoLabel}>Created</Text>
+                        <Text style={styles.infoValue}>
+                          {formatDate(design.createdAt)}
                         </Text>
                       </View>
-                    </View>
-                  )}
-
-                  {design.mode !== 'individual' && design.plantStyle && (
-                    <View style={styles.infoItem}>
-                      <AppIcon name="Palette" size={20} color={theme.colors.primary} />
-                      <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>Style</Text>
-                        <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                        <Text style={styles.infoDescription}>
-                          {design.plantStyle.description}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {design.customPrompt && (
-                    <View style={styles.infoItem}>
-                      <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
-                      <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>Custom Requirements</Text>
-                        <Text style={styles.infoDescription}>
-                          {design.customPrompt}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  <View style={styles.infoItem}>
-                    <AppIcon name="Clock" size={20} color={theme.colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Created</Text>
-                      <Text style={styles.infoValue}>
-                        {formatDate(design.createdAt)}
-                      </Text>
                     </View>
                   </View>
-                </View>
-              </ScrollView>
-            </Animated.View>
+                </ScrollView>
+              </Animated.View>
+            </GestureDetector>
           </>
         )}
       </View>
@@ -511,6 +617,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 24,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  imageCounterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   image: {
     width: screenWidth,
     height: screenHeight,
@@ -532,7 +652,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: screenHeight * 0.5,
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

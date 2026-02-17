@@ -19,7 +19,7 @@ export const AuthScreen: React.FC = () => {
   const styles = createStyles(theme);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
           <Image

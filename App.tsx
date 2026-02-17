@@ -41,7 +41,7 @@ type RootStackParamList = {
   PlantSelection: { imageUri: string };
   PlantLocation: { imageUri: string; request: Omit<GenerationRequest, 'imageUri' | 'location'> };
   Generation: { request: GenerationRequest };
-  DesignDetail: { design: SavedDesign };
+  DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   Subscription: undefined;
 };
 
@@ -356,8 +356,12 @@ function GalleryScreenWrapper({ navigation }: any) {
     navigation.navigate("Camera");
   };
 
-  const handleDesignSelect = (design: SavedDesign) => {
-    navigation.navigate("DesignDetail", { design });
+  const handleDesignSelect = (
+    design: SavedDesign,
+    designs: SavedDesign[],
+    initialIndex: number
+  ) => {
+    navigation.navigate("DesignDetail", { design, designs, initialIndex });
   };
 
   const handleUpgradePress = () => {
@@ -374,7 +378,7 @@ function GalleryScreenWrapper({ navigation }: any) {
 }
 
 function DesignDetailScreenWrapper({ route, navigation }: any) {
-  const { design } = route.params;
+  const { design, designs, initialIndex } = route.params;
 
   const handleBack = () => {
     navigation.goBack();
@@ -387,6 +391,8 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
   return (
     <DesignDetailScreen
       design={design}
+      designs={designs}
+      initialIndex={initialIndex}
       onBack={handleBack}
       onDesignDeleted={handleDesignDeleted}
     />

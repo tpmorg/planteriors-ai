@@ -104,7 +104,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   if (!permission) {
     return (
-      <SafeAreaView style={styles.permissionContainer}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.permissionContainer}>
         <Text style={styles.permissionText}>Requesting camera permission...</Text>
       </SafeAreaView>
     );
@@ -112,7 +112,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={styles.permissionContainer}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.permissionContainer}>
         <Text style={styles.permissionText}>Camera permission required</Text>
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
@@ -128,12 +128,12 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   }
 
   if (isSystemCropping) {
-    return <SafeAreaView style={styles.container} />;
+    return <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container} />;
   }
 
   if (showOptions) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <AppIcon name="Images" size={24} color="white" />
@@ -165,7 +165,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   if (previewImage) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={retakePhoto} style={styles.headerButton}>
             <AppIcon name="ArrowLeft" size={24} color="white" />
@@ -219,7 +219,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.headerButton}>
           <AppIcon name="Images" size={24} color="white" />

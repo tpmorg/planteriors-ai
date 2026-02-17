@@ -103,7 +103,7 @@ export const SubscriptionScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'right', 'bottom', 'left']}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.closeButton}
