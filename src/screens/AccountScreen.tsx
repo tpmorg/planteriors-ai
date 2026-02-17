@@ -102,7 +102,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}

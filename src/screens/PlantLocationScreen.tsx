@@ -171,7 +171,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   const plantSize = request.individualPlant?.size || 'medium';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>

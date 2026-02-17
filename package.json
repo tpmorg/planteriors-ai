@@ -55,7 +55,13 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "dotenv": "^17.2.3",
+    "sqlite3": "^5.1.7",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "overrides": {
+    "@firebase/auth": {
+      "@react-native-async-storage/async-storage": "^2.2.0"
+    },
+    "private": true
+  }
 }

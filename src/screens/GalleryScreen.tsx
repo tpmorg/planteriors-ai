@@ -21,7 +21,7 @@ import { UsageIndicator } from '../components/UsageIndicator';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
-  onDesignSelect: (design: SavedDesign) => void;
+  onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
   onUpgradePress?: () => void;
 }
 
@@ -63,8 +63,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     loadDesigns();
   }, [loadDesigns]);
 
-  const handleDesignPress = (design: SavedDesign) => {
-    onDesignSelect(design);
+  const handleDesignPress = (design: SavedDesign, index: number) => {
+    onDesignSelect(design, designs, index);
   };
 
   const toggleFavorite = async (design: SavedDesign) => {
@@ -97,10 +97,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     return design.localImagePath || design.generatedImageUri;
   };
 
-  const renderDesignItem = ({ item }: { item: SavedDesign }) => (
+  const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => (
     <TouchableOpacity
       style={styles.designItem}
-      onPress={() => handleDesignPress(item)}
+      onPress={() => handleDesignPress(item, index)}
       activeOpacity={0.8}
     >
       <View style={styles.imageContainer}>
@@ -163,7 +163,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Gallery</Text>
           <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
@@ -179,7 +179,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Designs</Text>
         <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>

@@ -226,7 +226,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
