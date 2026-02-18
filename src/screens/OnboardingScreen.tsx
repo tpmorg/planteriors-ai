@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  Image,
+  ImageSourcePropType,
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
@@ -18,8 +20,8 @@ interface OnboardingSlide {
   id: string;
   title: string;
   description: string;
-  beforeLabel?: string;
-  afterLabel?: string;
+  image?: ImageSourcePropType;
+  imageResizeMode?: 'cover' | 'contain';
   modeTitle?: string;
   modeDescription?: string;
 }
@@ -31,7 +33,6 @@ interface OnboardingScreenProps {
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 40;
-
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   fromSettings = false,
   onComplete,
@@ -48,14 +49,24 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
       title: 'Welcome to Planterior AI',
       description:
         'Turn real room photos into polished plant-forward interiors with guided AI layouts.',
+      image: require('../../assets/onboarding/onboarding-1.png'),
+      imageResizeMode: 'cover',
     },
     {
-      id: 'before-after',
-      title: 'See the Transformation',
+      id: 'before',
+      title: 'Before',
       description:
-        'Use your own room photo and generate an after-image that feels magazine-ready and realistic.',
-      beforeLabel: 'Before',
-      afterLabel: 'After',
+        'Start with your original room photo exactly as it is.',
+      image: require('../../assets/onboarding/planterior-before-1.png'),
+      imageResizeMode: 'contain',
+    },
+    {
+      id: 'after',
+      title: 'After',
+      description:
+        'Generate a polished plant-forward transformation with realistic placement.',
+      image: require('../../assets/onboarding/planterior-after-1.png'),
+      imageResizeMode: 'contain',
     },
     {
       id: 'single-mode',
@@ -111,26 +122,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         <Text style={styles.slideTitle}>{item.title}</Text>
         <Text style={styles.slideDescription}>{item.description}</Text>
 
-        {item.beforeLabel && item.afterLabel && (
-          <View style={styles.beforeAfterRow}>
-            <View style={styles.imageMock}>
-              <View style={styles.mockHeader}>
-                <AppIcon name="ImageSquare" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.mockHeaderText}>{item.beforeLabel}</Text>
-              </View>
-              <View style={styles.mockArtBefore} />
-              <Text style={styles.mockCaption}>Placeholder image</Text>
-            </View>
-
-            <View style={styles.imageMock}>
-              <View style={styles.mockHeader}>
-                <AppIcon name="Sparkle" size={16} color={theme.colors.primary} />
-                <Text style={styles.mockHeaderText}>{item.afterLabel}</Text>
-              </View>
-              <View style={styles.mockArtAfter} />
-              <Text style={styles.mockCaption}>Generated preview</Text>
-            </View>
-          </View>
+        {item.image && (
+          <Image
+            source={item.image}
+            style={styles.heroImage}
+            resizeMode={item.imageResizeMode ?? 'cover'}
+          />
         )}
 
         {item.modeTitle && item.modeDescription && (
@@ -292,48 +289,14 @@ const createStyles = (theme: any) =>
       lineHeight: 24,
       color: theme.colors.textSecondary,
     },
-    beforeAfterRow: {
-      flexDirection: 'row',
-      gap: 10,
-      marginTop: 22,
-    },
-    imageMock: {
-      flex: 1,
+    heroImage: {
+      marginTop: 20,
+      width: '100%',
+      height: 250,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      backgroundColor: theme.isDark ? theme.colors.card : '#faf7f2',
-      padding: 10,
-    },
-    mockHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 10,
-    },
-    mockHeaderText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-    mockArtBefore: {
-      height: 120,
-      borderRadius: 10,
-      backgroundColor: theme.isDark ? '#2f3a34' : '#e9e1d2',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    mockArtAfter: {
-      height: 120,
-      borderRadius: 10,
-      backgroundColor: theme.isDark ? '#335543' : '#d9ebde',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    mockCaption: {
-      marginTop: 8,
-      fontSize: 12,
-      color: theme.colors.textSecondary,
+      backgroundColor: theme.isDark ? theme.colors.card : '#f5efe3',
     },
     modeInfo: {
       marginTop: 22,
@@ -432,4 +395,3 @@ const createStyles = (theme: any) =>
       color: theme.colors.surface,
     },
   });
-
