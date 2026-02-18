@@ -23,6 +23,7 @@ import { DesignDetailScreen } from "./src/screens/DesignDetailScreen";
 import { AccountScreen } from "./src/screens/AccountScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
+import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
@@ -33,6 +34,7 @@ import {
   PlantLocation,
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
+import { onboardingService } from "./src/services/onboardingService";
 
 type RootStackParamList = {
   Auth: undefined;
@@ -43,6 +45,7 @@ type RootStackParamList = {
   Generation: { request: GenerationRequest };
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   Subscription: undefined;
+  Onboarding: { fromSettings?: boolean } | undefined;
 };
 
 type TabParamList = {
@@ -177,7 +180,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen name="Gallery" component={GalleryScreenWrapper} />
       <Tab.Screen name="Account" component={AccountScreenWrapper} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreenWrapper} />
     </Tab.Navigator>
   );
 }
@@ -190,10 +193,20 @@ function AccountScreenWrapper({ navigation }: any) {
   return <AccountScreen onUpgradePress={handleUpgradePress} />;
 }
 
+function SettingsScreenWrapper({ navigation }: any) {
+  const handleOpenOnboarding = () => {
+    navigation.navigate("Onboarding", { fromSettings: true });
+  };
+
+  return <SettingsScreen onOpenOnboarding={handleOpenOnboarding} />;
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const { theme } = useTheme();
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [showOnboardingFirstRun, setShowOnboardingFirstRun] = useState(false);
 
   useEffect(() => {
     const initializeDatabase = async () => {
@@ -208,7 +221,22 @@ function AppContent() {
     initializeDatabase();
   }, []);
 
-  if (isLoading || !dbInitialized) {
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (!isAuthenticated || !dbInitialized) {
+        setOnboardingChecked(false);
+        return;
+      }
+
+      const isDone = await onboardingService.isCompleted();
+      setShowOnboardingFirstRun(!isDone);
+      setOnboardingChecked(true);
+    };
+
+    checkOnboardingStatus();
+  }, [isAuthenticated, dbInitialized]);
+
+  if (isLoading || !dbInitialized || (isAuthenticated && !onboardingChecked)) {
     return <SplashScreen />;
   }
 
@@ -232,7 +260,11 @@ function AppContent() {
       <TabBarProvider>
         <StatusBar style={theme.isDark ? "light" : "dark"} />
         <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Navigator
+            screenOptions={{ headerShown: false }}
+            initialRouteName={showOnboardingFirstRun ? "Onboarding" : "MainApp"}
+          >
+            <Stack.Screen name="Onboarding" component={OnboardingScreenWrapper} />
             <Stack.Screen name="MainApp" component={MainTabNavigator} />
             <Stack.Screen name="Camera" component={CameraScreenWrapper} />
             <Stack.Screen
@@ -258,6 +290,23 @@ function AppContent() {
       </TabBarProvider>
     </SubscriptionProvider>
   );
+}
+
+function OnboardingScreenWrapper({ route, navigation }: any) {
+  const fromSettings = route.params?.fromSettings === true;
+
+  const handleComplete = async () => {
+    await onboardingService.markCompleted();
+
+    if (fromSettings) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.replace("MainApp");
+  };
+
+  return <OnboardingScreen fromSettings={fromSettings} onComplete={handleComplete} />;
 }
 
 function CameraScreenWrapper({ navigation }: any) {

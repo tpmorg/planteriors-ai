@@ -8,16 +8,42 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
+import { onboardingService } from '../services/onboardingService';
 
-export const SettingsScreen: React.FC = () => {
+interface SettingsScreenProps {
+  onOpenOnboarding?: () => void;
+}
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [highQuality, setHighQuality] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isMounted = true;
+
+      const loadOnboardingStatus = async () => {
+        const completed = await onboardingService.isCompleted();
+        if (isMounted) {
+          setOnboardingCompleted(completed);
+        }
+      };
+
+      loadOnboardingStatus();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   const getThemeModeDisplayName = (mode: ThemeMode): string => {
     switch (mode) {
@@ -35,6 +61,11 @@ export const SettingsScreen: React.FC = () => {
     const currentIndex = modes.indexOf(themeMode);
     const nextIndex = (currentIndex + 1) % modes.length;
     setThemeMode(modes[nextIndex]);
+  };
+
+  const handleDebugOnboardingToggle = async (value: boolean) => {
+    await onboardingService.setCompleted(value);
+    setOnboardingCompleted(value);
   };
 
   const styles = createStyles(theme);
@@ -143,6 +174,54 @@ export const SettingsScreen: React.FC = () => {
             <Text style={styles.menuText}>Manage Downloads</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Guided Tour</Text>
+
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Onboarding</Text>
+            <View style={styles.onboardingStatus}>
+              <AppIcon
+                name={onboardingCompleted ? 'CheckCircle' : 'Clock'}
+                size={16}
+                color={onboardingCompleted ? theme.colors.primary : theme.colors.textSecondary}
+              />
+              <Text style={styles.infoValue}>
+                {onboardingCompleted ? 'Completed' : 'Not completed'}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={onOpenOnboarding}
+            disabled={!onOpenOnboarding}
+          >
+            <AppIcon name="Slideshow" size={24} color={theme.colors.text} />
+            <Text style={styles.menuText}>View Onboarding Again</Text>
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+
+          {__DEV__ && (
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingLabel}>Mark Onboarding Complete (Debug)</Text>
+                  <Text style={styles.settingDescription}>
+                    Turn off to reset onboarding and show it on next app launch.
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={onboardingCompleted}
+                onValueChange={handleDebugOnboardingToggle}
+                trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+                thumbColor={theme.colors.switchThumb}
+              />
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -304,5 +383,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: theme.colors.textSecondary,
+  },
+  onboardingStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });
