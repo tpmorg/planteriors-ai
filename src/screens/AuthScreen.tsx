@@ -11,13 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { env } from '../utils/env';
 import { AppIcon } from '../components/AppIcon';
 
 export const AuthScreen: React.FC = () => {
-  const { signInWithGoogle, signInWithApple, signInBypass, isLoading } = useAuth();
+  const { signInWithGoogle, signInWithApple, isLoading } = useAuth();
   const { theme } = useTheme();
-  const showBypass = env.isDebugMode() || __DEV__;
+  // const showBypass = env.isDebugMode() || __DEV__;
   const styles = createStyles(theme);
 
   const openExternalLink = async (url: string) => {
@@ -83,7 +82,7 @@ export const AuthScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {showBypass && (
+          {/* {showBypass && (
             <TouchableOpacity
               style={[styles.button, styles.bypassButton]}
               onPress={signInBypass}
@@ -94,7 +93,7 @@ export const AuthScreen: React.FC = () => {
                 Dev Bypass Login
               </Text>
             </TouchableOpacity>
-          )}
+          )} */}
         </View>
 
         <Text style={styles.disclaimer}>

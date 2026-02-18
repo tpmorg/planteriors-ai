@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 
 interface AccountScreenProps {
   onUpgradePress?: () => void;
@@ -169,7 +170,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
             <View style={styles.subscriptionCard}>
               <Text style={styles.freePlanText}>Free Plan</Text>
               <Text style={styles.freePlanDetails}>
-                {freeGenerationsRemaining} of 5 free generations remaining
+                {freeGenerationsRemaining} of {FREE_GENERATION_LIMIT} free generations remaining
               </Text>
               <TouchableOpacity
                 style={styles.upgradeButton}

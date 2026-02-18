@@ -2,7 +2,7 @@ import { databaseService } from './databaseService';
 import { subscriptionService } from './subscriptionService';
 import { UsageStats } from '../types';
 
-const FREE_GENERATION_LIMIT = 5;
+export const FREE_GENERATION_LIMIT = 20;
 
 class UsageTrackingService {
   /**

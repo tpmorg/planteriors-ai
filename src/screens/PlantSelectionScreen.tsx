@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   ScrollView,
   Image,
   Switch,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -113,6 +116,10 @@ const PLACEMENT_DENSITIES: PlacementDensity[] = [
   { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: 'Tree' },
 ];
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
   onPlantSelected,
@@ -125,6 +132,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   // Individual plant selection state
   const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
+  const [isPlantSearchActive, setIsPlantSearchActive] = useState(false);
 
   // Multi-plant selection state
   const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
@@ -142,6 +150,16 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+
+  useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [isPlantSearchActive, individualSelection]);
+
+  useEffect(() => {
+    if (mode !== 'individual') {
+      setIsPlantSearchActive(false);
+    }
+  }, [mode]);
 
   const handlePlantTypeSelect = (plantType: PlantType) => {
     setSelectedPlantType(plantType);
@@ -242,21 +260,28 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         <IndividualPlantSelector
           selection={individualSelection}
           onSelectionChange={setIndividualSelection}
-          listFooterSpacerHeight={120 + insets.bottom}
+          onSearchActiveChange={setIsPlantSearchActive}
+          listFooterSpacerHeight={
+            isPlantSearchActive && !individualSelection
+              ? 24 + insets.bottom
+              : 120 + insets.bottom
+          }
           listHeader={
             <>
               {/* Hero Section with Explanation */}
-              <View style={styles.heroSection}>
-                <View style={styles.imageContainer}>
-                  <Image source={{ uri: imageUri }} style={styles.previewImage} />
+              {(!isPlantSearchActive || individualSelection) && (
+                <View style={styles.heroSection}>
+                  <View style={styles.imageContainer}>
+                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  </View>
+                  <View style={styles.heroContent}>
+                    <Text style={styles.heroTitle}>Transform Your Room</Text>
+                    <Text style={styles.heroDescription}>
+                      Choose a specific plant to see how it would look in your space.
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.heroContent}>
-                  <Text style={styles.heroTitle}>Transform Your Room</Text>
-                  <Text style={styles.heroDescription}>
-                    Choose a specific plant to see how it would look in your space.
-                  </Text>
-                </View>
-              </View>
+              )}
 
               {/* Mode Toggle */}
               <PlantModeToggle mode={mode} onModeChange={setMode} />
@@ -527,46 +552,47 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       )}
 
       {/* Fixed Footer */}
-      <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
-        <View style={styles.footerContent}>
-          {!isComplete ? (
-            <Text style={styles.footerHint}>
-              {mode === 'multi-plant'
-                ? 'Select a plant type and style to continue'
-                : 'Select a plant and size to continue'}
-            </Text>
-          ) : (
-            <View style={styles.selectionPreview}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <AppIcon
-                  name={
-                    mode === 'multi-plant'
-                      ? selectedPlantType?.icon || 'Leaf'
-                      : individualSelection?.plant.icon || 'Leaf'
-                  }
-                  size={18}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.selectionPreviewText}>
-                  {mode === 'multi-plant'
-                    ? `${selectedPlantType?.name} • ${selectedStyle?.name}`
-                    : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
-                </Text>
+      {!(mode === 'individual' && isPlantSearchActive && !individualSelection) && (
+        <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
+          <View style={styles.footerContent}>
+            {!isComplete ? (
+              <Text style={styles.footerHint}>
+                {mode === 'multi-plant'
+                  ? 'Select a plant type and style to continue'
+                  : 'Select a plant and size to continue'}
+              </Text>
+            ) : (
+              <View style={styles.selectionPreview}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <AppIcon
+                    name={
+                      mode === 'multi-plant'
+                        ? selectedPlantType?.icon || 'Leaf'
+                        : individualSelection?.plant.icon || 'Leaf'
+                    }
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text style={styles.selectionPreviewText}>
+                    {mode === 'multi-plant'
+                      ? `${selectedPlantType?.name} • ${selectedStyle?.name}`
+                      : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
-            onPress={handleContinue}
-            disabled={!isComplete}
-          >
-            <Text style={styles.continueButtonText}>
-              {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
-            </Text>
-            <AppIcon name="StarFour" size={20} color="white" />
-          </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
+              onPress={handleContinue}
+              disabled={!isComplete}
+            >
+              <Text style={styles.continueButtonText}>
+                {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -1005,7 +1031,6 @@ const createStyles = (theme: any) => {
       paddingVertical: 17,
       paddingHorizontal: 24,
       borderRadius: 14,
-      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: theme.colors.shadow,
@@ -1021,7 +1046,6 @@ const createStyles = (theme: any) => {
       color: 'white',
       fontSize: 16,
       fontWeight: '600',
-      marginRight: 8,
     },
   });
 };

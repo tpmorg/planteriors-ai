@@ -328,7 +328,6 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
             disabled={placementMode === 'choose' && !hasSelection}
           >
             <Text style={styles.continueButtonText}>Generate Design</Text>
-            <AppIcon name="StarFour" size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>
@@ -540,7 +539,6 @@ const createStyles = (theme: any) =>
       paddingVertical: 16,
       paddingHorizontal: 24,
       borderRadius: 12,
-      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -551,7 +549,6 @@ const createStyles = (theme: any) =>
       color: 'white',
       fontSize: 16,
       fontWeight: '600',
-      marginRight: 8,
     },
   });
 
