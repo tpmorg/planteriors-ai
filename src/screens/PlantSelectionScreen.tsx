@@ -227,6 +227,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -577,23 +579,41 @@ const createStyles = (theme: any) => {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    backdropBlobA: {
+      position: 'absolute',
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: theme.isDark ? 'rgba(143,179,154,0.1)' : 'rgba(78,107,87,0.08)',
+      top: -70,
+      right: -80,
+    },
+    backdropBlobB: {
+      position: 'absolute',
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+      bottom: 120,
+      left: -90,
+    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      backgroundColor: 'transparent',
     },
     backButton: {
       padding: 8,
     },
     headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.primary,
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.colors.text,
+      fontFamily: 'serif',
+      letterSpacing: 0.2,
     },
     placeholder: {
       width: 40,
@@ -605,7 +625,17 @@ const createStyles = (theme: any) => {
     // Hero Section
     heroSection: {
       backgroundColor: theme.colors.surface,
-      marginBottom: 8,
+      marginBottom: 12,
+      borderRadius: 20,
+      marginHorizontal: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: theme.isDark ? 0.26 : 0.12,
+      shadowRadius: 14,
+      elevation: 8,
     },
     imageContainer: {
       height: 240,
@@ -621,21 +651,32 @@ const createStyles = (theme: any) => {
       padding: 20,
     },
     heroTitle: {
-      fontSize: 24,
+      fontSize: 30,
       fontWeight: '700',
       color: theme.colors.text,
-      marginBottom: 8,
+      marginBottom: 10,
+      fontFamily: 'serif',
+      letterSpacing: 0.2,
     },
     heroDescription: {
-      fontSize: 14,
+      fontSize: 15,
       color: theme.colors.textSecondary,
-      lineHeight: 20,
+      lineHeight: 22,
     },
 
     // Sections
     section: {
       backgroundColor: theme.colors.surface,
-      marginBottom: 8,
+      marginBottom: 12,
+      marginHorizontal: 12,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.24 : 0.1,
+      shadowRadius: 12,
+      elevation: 7,
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -670,7 +711,7 @@ const createStyles = (theme: any) => {
       backgroundColor: theme.colors.textSecondary,
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '600',
       color: theme.colors.text,
     },
@@ -684,7 +725,7 @@ const createStyles = (theme: any) => {
       paddingBottom: 20,
     },
     subsectionLabel: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '600',
       color: theme.colors.text,
       marginBottom: 12,
@@ -961,12 +1002,17 @@ const createStyles = (theme: any) => {
     },
     continueButton: {
       backgroundColor: theme.colors.primary,
-      paddingVertical: 16,
+      paddingVertical: 17,
       paddingHorizontal: 24,
-      borderRadius: 12,
+      borderRadius: 14,
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.35 : 0.2,
+      shadowRadius: 10,
+      elevation: 8,
     },
     continueButtonDisabled: {
       backgroundColor: '#9ca3af',

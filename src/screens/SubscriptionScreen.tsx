@@ -103,6 +103,8 @@ export const SubscriptionScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'right', 'bottom', 'left']}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -145,7 +147,11 @@ export const SubscriptionScreen: React.FC = () => {
               isSelected={selectedProductId === product.id}
               onSelect={() => setSelectedProductId(product.id)}
               theme={theme}
-              isCurrentPlan={subscription?.isActive && subscription.type === product.period}
+              isCurrentPlan={Boolean(
+                subscription?.isActive &&
+                ((product.period === 'year' && subscription.type === 'annual') ||
+                  (product.period === 'month' && subscription.type === 'monthly'))
+              )}
             />
           ))}
         </View>
@@ -218,12 +224,17 @@ const PlanCard: React.FC<PlanCardProps> = ({
     <TouchableOpacity
       style={[
         {
-          backgroundColor: theme.colors.surface,
-          borderRadius: 16,
+          backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
+          borderRadius: 20,
           padding: 20,
           borderWidth: 2,
           borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-          marginBottom: 12,
+          marginBottom: 14,
+          shadowColor: theme.colors.shadow,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: theme.isDark ? 0.24 : 0.08,
+          shadowRadius: 12,
+          elevation: 3,
         },
         isCurrentPlan && { opacity: 0.7 },
       ]}
@@ -235,19 +246,20 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <View
           style={{
             position: 'absolute',
-            top: -10,
+            top: -12,
             right: 20,
             backgroundColor: theme.colors.primary,
-            paddingHorizontal: 12,
-            paddingVertical: 4,
-            borderRadius: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 5,
+            borderRadius: 14,
           }}
         >
           <Text
             style={{
               fontSize: 12,
-              fontWeight: 'bold',
+              fontWeight: '700',
               color: theme.colors.surface,
+              letterSpacing: 0.3,
             }}
           >
             BEST VALUE
@@ -260,7 +272,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <Text
             style={{
               fontSize: 20,
-              fontWeight: 'bold',
+              fontWeight: '700',
               color: theme.colors.text,
               marginBottom: 4,
             }}
@@ -270,7 +282,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <Text
             style={{
               fontSize: 28,
-              fontWeight: 'bold',
+              fontWeight: '700',
               color: theme.colors.primary,
               marginBottom: 8,
             }}
@@ -318,6 +330,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               style={{
                 fontSize: 15,
                 color: theme.colors.text,
+                lineHeight: 20,
               }}
             >
               {feature}
@@ -356,58 +369,96 @@ const createStyles = (theme: any) =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    backdropBlobA: {
+      position: 'absolute',
+      width: 280,
+      height: 280,
+      borderRadius: 140,
+      backgroundColor: theme.isDark ? 'rgba(143,179,154,0.12)' : 'rgba(78,107,87,0.11)',
+      top: -80,
+      left: -80,
+    },
+    backdropBlobB: {
+      position: 'absolute',
+      width: 300,
+      height: 300,
+      borderRadius: 150,
+      backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+      bottom: -140,
+      right: -100,
+    },
     header: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
     },
     closeButton: {
       padding: 8,
+      borderRadius: 14,
+      backgroundColor: theme.isDark ? 'rgba(31,36,33,0.8)' : 'rgba(255,255,255,0.9)',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     content: {
       flex: 1,
     },
     contentContainer: {
       paddingHorizontal: 20,
+      paddingTop: 6,
       paddingBottom: 40,
     },
     heroSection: {
       alignItems: 'center',
-      marginBottom: 32,
+      marginBottom: 28,
+      paddingVertical: 28,
+      paddingHorizontal: 20,
+      borderRadius: 24,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: theme.isDark ? 0.26 : 0.09,
+      shadowRadius: 18,
+      elevation: 4,
     },
     iconCircle: {
       width: 100,
       height: 100,
       borderRadius: 50,
-      backgroundColor: theme.isDark ? theme.colors.surface : '#f0fdf4',
+      backgroundColor: theme.isDark ? 'rgba(86,194,138,0.18)' : 'rgba(47,122,82,0.13)',
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
     },
     title: {
-      fontSize: 28,
-      fontWeight: 'bold',
+      fontSize: 34,
+      fontWeight: '700',
       color: theme.colors.text,
       textAlign: 'center',
-      marginBottom: 8,
+      marginBottom: 10,
+      fontFamily: 'serif',
     },
     subtitle: {
       fontSize: 16,
       color: theme.colors.textSecondary,
       textAlign: 'center',
+      lineHeight: 23,
     },
     currentPlanBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      backgroundColor: theme.isDark ? theme.colors.surface : '#f0fdf4',
+      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
       paddingVertical: 12,
       paddingHorizontal: 16,
-      borderRadius: 12,
+      borderRadius: 14,
       marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     currentPlanText: {
       fontSize: 15,
@@ -424,8 +475,13 @@ const createStyles = (theme: any) =>
       gap: 10,
       backgroundColor: theme.colors.primary,
       paddingVertical: 16,
-      borderRadius: 12,
+      borderRadius: 16,
       marginBottom: 16,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: theme.isDark ? 0.28 : 0.16,
+      shadowRadius: 12,
+      elevation: 4,
     },
     purchaseButtonDisabled: {
       opacity: 0.6,
@@ -438,6 +494,10 @@ const createStyles = (theme: any) =>
     restoreButton: {
       paddingVertical: 12,
       alignItems: 'center',
+      borderRadius: 12,
+      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     restoreButtonText: {
       fontSize: 16,
@@ -460,9 +520,7 @@ const createStyles = (theme: any) =>
     },
     footer: {
       marginTop: 24,
-      paddingTop: 24,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
+      paddingTop: 18,
     },
     footerText: {
       fontSize: 13,

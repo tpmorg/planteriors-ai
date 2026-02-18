@@ -41,6 +41,8 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
@@ -49,6 +51,7 @@ export const SettingsScreen: React.FC = () => {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
+          <Text style={styles.subtitle}>Control quality, storage, and app behavior</Text>
         </View>
 
         <View style={styles.section}>
@@ -172,33 +175,66 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  backdropBlobA: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: theme.isDark ? 'rgba(143,179,154,0.1)' : 'rgba(78,107,87,0.1)',
+    top: -90,
+    left: -70,
+  },
+  backdropBlobB: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+    bottom: -130,
+    right: -80,
+  },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginTop: 8,
+    marginBottom: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
+    fontSize: 32,
+    fontWeight: '700',
+    color: theme.colors.text,
+    letterSpacing: 0.2,
+    fontFamily: 'serif',
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   section: {
     backgroundColor: theme.colors.surface,
-    marginTop: 20,
-    paddingVertical: 8,
+    marginTop: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.text,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.background,
+    paddingVertical: 10,
+    letterSpacing: 0.2,
   },
   settingItem: {
     flexDirection: 'row',

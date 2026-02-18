@@ -164,6 +164,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+        <View style={styles.backdropBlobA} />
+        <View style={styles.backdropBlobB} />
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Gallery</Text>
           <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
@@ -180,8 +182,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Designs</Text>
+        <Text style={styles.headerTitle}>My Spaces</Text>
         <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
           <AppIcon name="Plus" size={24} color="white" />
         </TouchableOpacity>
@@ -219,29 +223,53 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  backdropBlobA: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: theme.isDark ? 'rgba(143,179,154,0.12)' : 'rgba(78,107,87,0.11)',
+    top: -90,
+    left: -60,
+  },
+  backdropBlobB: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+    bottom: -120,
+    right: -80,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingTop: 14,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
+    fontSize: 30,
+    fontWeight: '700',
+    color: theme.colors.text,
     flex: 1,
+    letterSpacing: 0.2,
+    fontFamily: 'serif',
   },
   newDesignButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
   placeholder: {
     width: 40,
@@ -256,7 +284,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   listContainer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     flexGrow: 1,
   },
   row: {
@@ -264,13 +293,20 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   designItem: {
     width: itemSize,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   imageContainer: {
     position: 'relative',
-    borderRadius: 12,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.32 : 0.14,
+    shadowRadius: 12,
+    elevation: 8,
   },
   designImage: {
     width: '100%',
@@ -278,12 +314,12 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 17,
+    width: 34,
+    height: 34,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -292,23 +328,25 @@ const createStyles = (theme: any) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   plantTypeText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   plantStyleText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 11,
     opacity: 0.9,
+    marginTop: 2,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: 8,
     textAlign: 'center',
   },
   emptyContainer: {
@@ -328,18 +366,19 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 26,
+    fontWeight: '700',
     color: theme.colors.text,
     marginTop: 24,
-    marginBottom: 8,
+    marginBottom: 10,
+    fontFamily: 'serif',
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 240,
+    lineHeight: 22,
+    maxWidth: 270,
   },
   emptyCreateButton: {
     flexDirection: 'row',
