@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -207,6 +207,8 @@ function AppContent() {
   const [dbInitialized, setDbInitialized] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showOnboardingFirstRun, setShowOnboardingFirstRun] = useState(false);
+  const [showAuthTransitionSplash, setShowAuthTransitionSplash] = useState(false);
+  const previousAuthRef = useRef(isAuthenticated);
 
   useEffect(() => {
     const initializeDatabase = async () => {
@@ -236,7 +238,26 @@ function AppContent() {
     checkOnboardingStatus();
   }, [isAuthenticated, dbInitialized]);
 
-  if (isLoading || !dbInitialized || (isAuthenticated && !onboardingChecked)) {
+  useEffect(() => {
+    if (previousAuthRef.current === false && isAuthenticated) {
+      setShowAuthTransitionSplash(true);
+      const timer = setTimeout(() => {
+        setShowAuthTransitionSplash(false);
+      }, 650);
+
+      previousAuthRef.current = isAuthenticated;
+      return () => clearTimeout(timer);
+    }
+
+    previousAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  if (
+    isLoading ||
+    !dbInitialized ||
+    (isAuthenticated && !onboardingChecked) ||
+    showAuthTransitionSplash
+  ) {
     return <SplashScreen />;
   }
 

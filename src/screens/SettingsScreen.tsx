@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Linking,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,8 +22,6 @@ interface SettingsScreenProps {
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
   const [notifications, setNotifications] = useState(true);
-  const [autoSave, setAutoSave] = useState(true);
-  const [highQuality, setHighQuality] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -68,6 +68,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
     setOnboardingCompleted(value);
   };
 
+  const openExternalLink = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        Alert.alert('Link Unavailable', 'Unable to open this link on your device.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Link Error', 'Something went wrong while opening the link.');
+    }
+  };
+
   const styles = createStyles(theme);
 
   return (
@@ -96,46 +109,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
               <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Generation</Text>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <AppIcon name="Image" size={24} color={theme.colors.text} />
-              <View style={styles.settingText}>
-                <Text style={styles.settingLabel}>High Quality Images</Text>
-                <Text style={styles.settingDescription}>
-                  Generate higher resolution images (uses more credits)
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={highQuality}
-              onValueChange={setHighQuality}
-              trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
-              thumbColor={theme.colors.switchThumb}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <AppIcon name="FloppyDisk" size={24} color={theme.colors.text} />
-              <View style={styles.settingText}>
-                <Text style={styles.settingLabel}>Auto-save Designs</Text>
-                <Text style={styles.settingDescription}>
-                  Automatically save generated designs to gallery
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={autoSave}
-              onValueChange={setAutoSave}
-              trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
-              thumbColor={theme.colors.switchThumb}
-            />
-          </View>
         </View>
 
         <View style={styles.section}>
@@ -232,13 +205,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
             <Text style={styles.infoValue}>1.0.0</Text>
           </View>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => openExternalLink('https://planterior.app/privacy')}
+          >
             <AppIcon name="FileText" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Privacy Policy</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => openExternalLink('https://planterior.app/terms')}
+          >
             <AppIcon name="ShieldCheck" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Terms of Service</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
