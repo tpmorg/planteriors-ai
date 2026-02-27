@@ -46,6 +46,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [freeGenerationsRemaining, setFreeGenerationsRemaining] = useState(5);
   const [canGenerate, setCanGenerate] = useState(true);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [isRevenueCatReady, setIsRevenueCatReady] = useState(false);
 
   // Initialize RevenueCat and load status when user changes
   useEffect(() => {
@@ -57,12 +58,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setFreeGenerationsRemaining(5);
       setCanGenerate(true);
       setUsageStats(null);
+      setIsRevenueCatReady(false);
       setIsLoading(false);
     }
   }, [user]);
 
   // Listen for real-time subscription status changes from RevenueCat
   useEffect(() => {
+    if (!user || !isRevenueCatReady) return;
     const onCustomerInfoUpdate = () => {
       loadSubscriptionStatus();
     };
@@ -70,16 +73,20 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     return () => {
       Purchases.removeCustomerInfoUpdateListener(onCustomerInfoUpdate);
     };
-  }, [user]);
+  }, [user, isRevenueCatReady]);
 
   const initRevenueCat = async (userId: string) => {
     try {
       setIsLoading(true);
-      await subscriptionService.configure(userId);
-      await subscriptionService.identifyUser(userId);
+      const configured = await subscriptionService.configure(userId);
+      if (configured) {
+        await subscriptionService.identifyUser(userId);
+      }
+      setIsRevenueCatReady(configured);
       await loadSubscriptionStatus();
     } catch (error) {
       console.error('Error initializing RevenueCat:', error);
+      setIsRevenueCatReady(false);
       setIsLoading(false);
     }
   };

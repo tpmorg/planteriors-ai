@@ -12,12 +12,13 @@ const ENTITLEMENT_ID = 'premium';
 
 class SubscriptionService {
   private isConfigured = false;
+  private didWarnMissingKey = false;
 
   /**
    * Initialize RevenueCat SDK. Call once at app startup after auth.
    */
-  async configure(userId?: string): Promise<void> {
-    if (this.isConfigured) return;
+  async configure(userId?: string): Promise<boolean> {
+    if (this.isConfigured) return true;
 
     const apiKey = Platform.select({
       ios: Constants.expoConfig?.extra?.revenueCatAppleApiKey,
@@ -25,8 +26,15 @@ class SubscriptionService {
     });
 
     if (!apiKey) {
-      console.error('RevenueCat API key not found for platform:', Platform.OS);
-      return;
+      if (!this.didWarnMissingKey) {
+        this.didWarnMissingKey = true;
+        console.warn('RevenueCat API key not found for platform:', Platform.OS);
+      }
+      return false;
+    }
+
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return false;
     }
 
     if (__DEV__) {
@@ -39,12 +47,22 @@ class SubscriptionService {
     });
 
     this.isConfigured = true;
+    return true;
+  }
+
+  private async ensureConfigured(userId?: string): Promise<boolean> {
+    if (!this.isConfigured) {
+      await this.configure(userId);
+    }
+    return this.isConfigured;
   }
 
   /**
    * Identify user with RevenueCat (call after auth).
    */
   async identifyUser(userId: string): Promise<void> {
+    const ok = await this.ensureConfigured(userId);
+    if (!ok) return;
     try {
       await Purchases.logIn(userId);
     } catch (error) {
@@ -56,6 +74,8 @@ class SubscriptionService {
    * Log out user from RevenueCat (call on sign-out).
    */
   async logOut(): Promise<void> {
+    const ok = await this.ensureConfigured();
+    if (!ok) return;
     try {
       await Purchases.logOut();
     } catch (error) {
@@ -67,6 +87,8 @@ class SubscriptionService {
    * Get available subscription products from RevenueCat offerings.
    */
   async getAvailableProducts(): Promise<SubscriptionProduct[]> {
+    const ok = await this.ensureConfigured();
+    if (!ok) return [];
     try {
       const offerings = await Purchases.getOfferings();
       const currentOffering = offerings.current;
@@ -97,6 +119,14 @@ class SubscriptionService {
     subscription: SubscriptionStatus;
     error?: string;
   }> {
+    const ok = await this.ensureConfigured(_userId);
+    if (!ok) {
+      return {
+        success: false,
+        subscription: this.defaultStatus(),
+        error: 'Purchases not available',
+      };
+    }
     try {
       if (!rcPackage) {
         const offerings = await Purchases.getOfferings();
@@ -138,6 +168,8 @@ class SubscriptionService {
    * Get current subscription status from RevenueCat.
    */
   async getSubscriptionStatus(_userId: string): Promise<SubscriptionStatus> {
+    const ok = await this.ensureConfigured(_userId);
+    if (!ok) return this.defaultStatus();
     try {
       const customerInfo = await Purchases.getCustomerInfo();
       return this.mapCustomerInfoToStatus(customerInfo);
@@ -155,6 +187,14 @@ class SubscriptionService {
     restored: number;
     error?: string;
   }> {
+    const ok = await this.ensureConfigured(_userId);
+    if (!ok) {
+      return {
+        success: false,
+        restored: 0,
+        error: 'Purchases not available',
+      };
+    }
     try {
       const customerInfo = await Purchases.restorePurchases();
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
