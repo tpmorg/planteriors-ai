@@ -1,4 +1,4 @@
-import { usageTrackingService } from '../services/usageTrackingService';
+import { usageTrackingService, FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 import { subscriptionService } from '../services/subscriptionService';
 import { databaseService } from '../services/databaseService';
 
@@ -26,7 +26,7 @@ export const SubscriptionTestingHelpers = {
   },
 
   /**
-   * Use up all free generations for a user (set to 5)
+   * Use up all free generations for a user
    */
   async exhaustFreeGenerations(userId: string): Promise<void> {
     if (!__DEV__) {
@@ -35,8 +35,7 @@ export const SubscriptionTestingHelpers = {
     }
 
     try {
-      // Track 5 free generations
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < FREE_GENERATION_LIMIT; i++) {
         await usageTrackingService.trackGeneration(userId, 'free');
       }
       console.log(`✅ Exhausted free generations for user: ${userId}`);
@@ -161,12 +160,12 @@ export const SubscriptionTestingHelpers = {
       await this.completeReset(userId);
       console.log('  1. ✅ Reset to clean state');
 
-      // 2. Check initial state (should be 5 remaining)
+      // 2. Check initial state (should be full remaining)
       let state = await this.getUsageState(userId);
-      if (state.remaining !== 5) {
-        throw new Error(`Expected 5 free remaining, got ${state.remaining}`);
+      if (state.remaining !== FREE_GENERATION_LIMIT) {
+        throw new Error(`Expected ${FREE_GENERATION_LIMIT} free remaining, got ${state.remaining}`);
       }
-      console.log('  2. ✅ Initial state correct (5 free remaining)');
+      console.log(`  2. ✅ Initial state correct (${FREE_GENERATION_LIMIT} free remaining)`);
 
       // 3. Use 3 generations
       for (let i = 0; i < 3; i++) {

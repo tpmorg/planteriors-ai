@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
+import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 
 interface UsageIndicatorProps {
   freeRemaining: number;
@@ -38,14 +39,14 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
       <View style={[styles.container, styles.containerCompact]}>
         <AppIcon name="Leaf" size={16} color={theme.colors.primary} />
         <Text style={styles.compactText}>
-          {freeRemaining} of 5 free remaining
+          {freeRemaining} of {FREE_GENERATION_LIMIT} free remaining
         </Text>
       </View>
     );
   }
 
   // Full variant for free plan
-  const progressPercentage = (freeRemaining / 5) * 100;
+  const progressPercentage = (freeRemaining / FREE_GENERATION_LIMIT) * 100;
 
   return (
     <View style={styles.container}>
@@ -69,7 +70,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
           />
         </View>
         <Text style={styles.progressText}>
-          {freeRemaining} of 5 remaining
+          {freeRemaining} of {FREE_GENERATION_LIMIT} remaining
         </Text>
       </View>
 

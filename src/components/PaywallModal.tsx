@@ -11,6 +11,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
+import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 
 interface PaywallModalProps {
   visible: boolean;
@@ -49,8 +50,8 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                 <Text style={styles.title}>You've Reached Your Limit!</Text>
 
                 <Text style={styles.description}>
-                  You've used all 5 free generations. Upgrade to Premium to continue creating
-                  beautiful plant-enhanced designs.
+                  You've used all {FREE_GENERATION_LIMIT} free generations. Upgrade to Premium
+                  to continue creating beautiful plant-enhanced designs.
                 </Text>
 
                 <View style={styles.featuresList}>

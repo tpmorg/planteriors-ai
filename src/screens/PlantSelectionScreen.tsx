@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   ScrollView,
   Image,
   Switch,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -113,6 +116,10 @@ const PLACEMENT_DENSITIES: PlacementDensity[] = [
   { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: 'Tree' },
 ];
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
   onPlantSelected,
@@ -125,6 +132,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   // Individual plant selection state
   const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
+  const [isPlantSearchActive, setIsPlantSearchActive] = useState(false);
 
   // Multi-plant selection state
   const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
@@ -142,6 +150,16 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+
+  useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [isPlantSearchActive, individualSelection]);
+
+  useEffect(() => {
+    if (mode !== 'individual') {
+      setIsPlantSearchActive(false);
+    }
+  }, [mode]);
 
   const handlePlantTypeSelect = (plantType: PlantType) => {
     setSelectedPlantType(plantType);
@@ -227,6 +245,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -240,21 +260,28 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         <IndividualPlantSelector
           selection={individualSelection}
           onSelectionChange={setIndividualSelection}
-          listFooterSpacerHeight={120 + insets.bottom}
+          onSearchActiveChange={setIsPlantSearchActive}
+          listFooterSpacerHeight={
+            isPlantSearchActive && !individualSelection
+              ? 24 + insets.bottom
+              : 120 + insets.bottom
+          }
           listHeader={
             <>
               {/* Hero Section with Explanation */}
-              <View style={styles.heroSection}>
-                <View style={styles.imageContainer}>
-                  <Image source={{ uri: imageUri }} style={styles.previewImage} />
+              {(!isPlantSearchActive || individualSelection) && (
+                <View style={styles.heroSection}>
+                  <View style={styles.imageContainer}>
+                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  </View>
+                  <View style={styles.heroContent}>
+                    <Text style={styles.heroTitle}>Transform Your Room</Text>
+                    <Text style={styles.heroDescription}>
+                      Choose a specific plant to see how it would look in your space.
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.heroContent}>
-                  <Text style={styles.heroTitle}>Transform Your Room</Text>
-                  <Text style={styles.heroDescription}>
-                    Choose a specific plant to see how it would look in your space.
-                  </Text>
-                </View>
-              </View>
+              )}
 
               {/* Mode Toggle */}
               <PlantModeToggle mode={mode} onModeChange={setMode} />
@@ -525,46 +552,47 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       )}
 
       {/* Fixed Footer */}
-      <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
-        <View style={styles.footerContent}>
-          {!isComplete ? (
-            <Text style={styles.footerHint}>
-              {mode === 'multi-plant'
-                ? 'Select a plant type and style to continue'
-                : 'Select a plant and size to continue'}
-            </Text>
-          ) : (
-            <View style={styles.selectionPreview}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <AppIcon
-                  name={
-                    mode === 'multi-plant'
-                      ? selectedPlantType?.icon || 'Leaf'
-                      : individualSelection?.plant.icon || 'Leaf'
-                  }
-                  size={18}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.selectionPreviewText}>
-                  {mode === 'multi-plant'
-                    ? `${selectedPlantType?.name} • ${selectedStyle?.name}`
-                    : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
-                </Text>
+      {!(mode === 'individual' && isPlantSearchActive && !individualSelection) && (
+        <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
+          <View style={styles.footerContent}>
+            {!isComplete ? (
+              <Text style={styles.footerHint}>
+                {mode === 'multi-plant'
+                  ? 'Select a plant type and style to continue'
+                  : 'Select a plant and size to continue'}
+              </Text>
+            ) : (
+              <View style={styles.selectionPreview}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <AppIcon
+                    name={
+                      mode === 'multi-plant'
+                        ? selectedPlantType?.icon || 'Leaf'
+                        : individualSelection?.plant.icon || 'Leaf'
+                    }
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text style={styles.selectionPreviewText}>
+                    {mode === 'multi-plant'
+                      ? `${selectedPlantType?.name} • ${selectedStyle?.name}`
+                      : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
-            onPress={handleContinue}
-            disabled={!isComplete}
-          >
-            <Text style={styles.continueButtonText}>
-              {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
-            </Text>
-            <AppIcon name="StarFour" size={20} color="white" />
-          </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
+              onPress={handleContinue}
+              disabled={!isComplete}
+            >
+              <Text style={styles.continueButtonText}>
+                {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -577,23 +605,41 @@ const createStyles = (theme: any) => {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    backdropBlobA: {
+      position: 'absolute',
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: theme.isDark ? 'rgba(143,179,154,0.1)' : 'rgba(78,107,87,0.08)',
+      top: -70,
+      right: -80,
+    },
+    backdropBlobB: {
+      position: 'absolute',
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+      bottom: 120,
+      left: -90,
+    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      backgroundColor: 'transparent',
     },
     backButton: {
       padding: 8,
     },
     headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.primary,
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.colors.text,
+      fontFamily: 'serif',
+      letterSpacing: 0.2,
     },
     placeholder: {
       width: 40,
@@ -605,7 +651,17 @@ const createStyles = (theme: any) => {
     // Hero Section
     heroSection: {
       backgroundColor: theme.colors.surface,
-      marginBottom: 8,
+      marginBottom: 12,
+      borderRadius: 20,
+      marginHorizontal: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: theme.isDark ? 0.26 : 0.12,
+      shadowRadius: 14,
+      elevation: 8,
     },
     imageContainer: {
       height: 240,
@@ -621,21 +677,32 @@ const createStyles = (theme: any) => {
       padding: 20,
     },
     heroTitle: {
-      fontSize: 24,
+      fontSize: 30,
       fontWeight: '700',
       color: theme.colors.text,
-      marginBottom: 8,
+      marginBottom: 10,
+      fontFamily: 'serif',
+      letterSpacing: 0.2,
     },
     heroDescription: {
-      fontSize: 14,
+      fontSize: 15,
       color: theme.colors.textSecondary,
-      lineHeight: 20,
+      lineHeight: 22,
     },
 
     // Sections
     section: {
       backgroundColor: theme.colors.surface,
-      marginBottom: 8,
+      marginBottom: 12,
+      marginHorizontal: 12,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.24 : 0.1,
+      shadowRadius: 12,
+      elevation: 7,
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -670,7 +737,7 @@ const createStyles = (theme: any) => {
       backgroundColor: theme.colors.textSecondary,
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '600',
       color: theme.colors.text,
     },
@@ -684,7 +751,7 @@ const createStyles = (theme: any) => {
       paddingBottom: 20,
     },
     subsectionLabel: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '600',
       color: theme.colors.text,
       marginBottom: 12,
@@ -961,12 +1028,16 @@ const createStyles = (theme: any) => {
     },
     continueButton: {
       backgroundColor: theme.colors.primary,
-      paddingVertical: 16,
+      paddingVertical: 17,
       paddingHorizontal: 24,
-      borderRadius: 12,
-      flexDirection: 'row',
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.35 : 0.2,
+      shadowRadius: 10,
+      elevation: 8,
     },
     continueButtonDisabled: {
       backgroundColor: '#9ca3af',
@@ -975,7 +1046,6 @@ const createStyles = (theme: any) => {
       color: 'white',
       fontSize: 16,
       fontWeight: '600',
-      marginRight: 8,
     },
   });
 };

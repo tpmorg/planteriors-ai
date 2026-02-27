@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 
 interface AccountScreenProps {
   onUpgradePress?: () => void;
@@ -103,6 +104,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
@@ -111,6 +114,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
       >
         <View style={styles.header}>
           <Text style={styles.title}>Account</Text>
+          <Text style={styles.subtitle}>Your plan, profile, and preferences</Text>
         </View>
 
         <View style={styles.userSection}>
@@ -166,7 +170,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
             <View style={styles.subscriptionCard}>
               <Text style={styles.freePlanText}>Free Plan</Text>
               <Text style={styles.freePlanDetails}>
-                {freeGenerationsRemaining} of 5 free generations remaining
+                {freeGenerationsRemaining} of {FREE_GENERATION_LIMIT} free generations remaining
               </Text>
               <TouchableOpacity
                 style={styles.upgradeButton}
@@ -253,26 +257,59 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  backdropBlobA: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: theme.isDark ? 'rgba(143,179,154,0.1)' : 'rgba(78,107,87,0.1)',
+    top: -90,
+    left: -70,
+  },
+  backdropBlobB: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
+    bottom: -130,
+    right: -80,
+  },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginTop: 8,
+    marginBottom: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
+    fontSize: 32,
+    fontWeight: '700',
+    color: theme.colors.text,
+    letterSpacing: 0.2,
+    fontFamily: 'serif',
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
   userSection: {
     backgroundColor: theme.colors.surface,
-    marginTop: 20,
+    marginTop: 10,
     paddingHorizontal: 20,
     paddingVertical: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   userInfo: {
     flexDirection: 'row',
@@ -304,6 +341,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     marginTop: 20,
     paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   menuItem: {
     flexDirection: 'row',
@@ -320,18 +365,18 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginLeft: 16,
   },
   logoutSection: {
-    marginTop: 40,
-    paddingHorizontal: 20,
+    marginTop: 28,
+    paddingHorizontal: 2,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surface,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: '#f8b4b4',
   },
   logoutText: {
     fontSize: 16,
@@ -345,6 +390,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -353,14 +406,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: theme.colors.text,
+    letterSpacing: 0.2,
   },
   subscriptionCard: {
     backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   premiumBadge: {
     flexDirection: 'row',
@@ -398,10 +454,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: '#92400e',
   },
   manageButton: {
-    backgroundColor: theme.colors.border,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   manageButtonText: {
     fontSize: 14,
@@ -426,7 +484,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 8,
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: theme.isDark ? 0.25 : 0.12,
+    shadowRadius: 10,
+    elevation: 3,
   },
   upgradeButtonText: {
     fontSize: 15,
@@ -439,12 +502,22 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   usageCard: {
     backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   usageStat: {
     flexDirection: 'row',

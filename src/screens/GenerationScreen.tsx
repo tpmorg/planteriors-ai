@@ -276,6 +276,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   if (error) {
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+        <View style={styles.backdropBlobA} />
+        <View style={styles.backdropBlobB} />
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
@@ -292,7 +294,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           {generatedImageUri && !isImageGenerated && (
             <View style={styles.placeholderInfo}>
               <Text style={styles.placeholderInfoText}>
-                📱 For debugging: A placeholder image was returned instead of a
+                For debugging: A placeholder image was returned instead of a
                 generated one. Check the console logs for API response details.
               </Text>
             </View>
@@ -372,6 +374,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <View style={styles.backdropBlobA} />
+      <View style={styles.backdropBlobB} />
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
@@ -418,8 +422,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           <Text style={styles.plantInfoTitle}>Creating your design with:</Text>
           <Text style={styles.plantInfoDetail}>
             {request.mode === 'individual' && request.individualPlant
-              ? `🌱 ${request.individualPlant.plant.name} (${request.individualPlant.size}, ${request.individualPlant.placement})`
-              : `🌱 ${request.plantType?.name} • ${request.plantStyle?.name} Style`}
+              ? `${request.individualPlant.plant.name} (${request.individualPlant.size}, ${request.individualPlant.placement})`
+              : `${request.plantType?.name} • ${request.plantStyle?.name} Style`}
           </Text>
         </View>
 
@@ -455,6 +459,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  backdropBlobA: {
+    position: "absolute",
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: theme.isDark ? "rgba(86,194,138,0.1)" : "rgba(47,122,82,0.09)",
+    top: -110,
+    left: -90,
+  },
+  backdropBlobB: {
+    position: "absolute",
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: "rgba(181,122,82,0.08)",
+    bottom: -80,
+    right: -70,
+  },
   fullScreenContainer: {
     flex: 1,
     backgroundColor: "#000000",
@@ -464,18 +486,22 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingTop: 14,
+    paddingBottom: 10,
+    backgroundColor: "transparent",
   },
   backButton: {
-    padding: 8,
+    padding: 10,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontSize: 28,
+    fontWeight: "700",
+    color: theme.colors.text,
+    fontFamily: "serif",
   },
   placeholder: {
     width: 40,
@@ -487,10 +513,17 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   originalImageContainer: {
     height: 200,
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
     marginBottom: 32,
     position: "relative",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: theme.isDark ? 0.28 : 0.14,
+    shadowRadius: 14,
+    elevation: 8,
   },
   originalImage: {
     width: "100%",
@@ -502,7 +535,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.62)",
     padding: 12,
   },
   imageLabelText: {
@@ -513,6 +546,16 @@ const createStyles = (theme: any) => StyleSheet.create({
   progressContainer: {
     marginBottom: 24,
     alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 10,
+    elevation: 5,
   },
   progressBar: {
     width: "100%",
@@ -535,6 +578,12 @@ const createStyles = (theme: any) => StyleSheet.create({
   stepContainer: {
     alignItems: "center",
     marginBottom: 32,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
   },
   stepText: {
     fontSize: 16,
@@ -565,11 +614,16 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   plantInfo: {
     backgroundColor: theme.colors.surface,
-    padding: 16,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 16,
     marginBottom: 32,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 10,
+    elevation: 5,
   },
   plantInfoTitle: {
     fontSize: 14,
@@ -600,11 +654,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     padding: 24,
   },
   errorTitle: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: "bold",
     color: "#dc2626",
     marginTop: 16,
     marginBottom: 8,
+    fontFamily: "serif",
   },
   errorText: {
     fontSize: 16,
@@ -614,9 +669,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   retryButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
@@ -651,8 +706,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 4,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingVertical: 8,
+    backgroundColor: "rgba(0,0,0,0.22)",
   },
   overlayBackButton: {
     padding: 8,
@@ -669,7 +724,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.14)",
   },
   resultTitle: {
     color: "white",
@@ -715,7 +770,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 6,
   },
   generateAgainText: {
-    color: "#1f3f10",
+    color: theme.colors.primaryDark,
     fontSize: 15,
     fontWeight: "600",
     marginLeft: 8,
@@ -723,7 +778,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   useResultButton: {
     flex: 1,
     height: 50,
-    backgroundColor: "#2d5016",
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 12,

@@ -8,6 +8,9 @@ import {
   TextInput,
   Image,
   ListRenderItem,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { AppIcon } from './AppIcon';
 import {
@@ -22,6 +25,7 @@ import { useTheme } from '../contexts/ThemeContext';
 interface IndividualPlantSelectorProps {
   onSelectionChange: (selection: IndividualPlantSelection | null) => void;
   selection: IndividualPlantSelection | null;
+  onSearchActiveChange?: (isActive: boolean) => void;
   listHeader?: React.ReactNode;
   listFooterSpacerHeight?: number;
 }
@@ -29,11 +33,13 @@ interface IndividualPlantSelectorProps {
 export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = ({
   onSelectionChange,
   selection,
+  onSearchActiveChange,
   listHeader,
   listFooterSpacerHeight = 0,
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
     selection?.plant || null
   );
@@ -68,6 +74,20 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!onSearchActiveChange) {
+      return;
+    }
+
+    const isActive =
+      !selectedPlant && (isSearchFocused || searchQuery.trim().length > 0);
+    onSearchActiveChange(isActive);
+
+    return () => {
+      onSearchActiveChange(false);
+    };
+  }, [selectedPlant, isSearchFocused, searchQuery, onSearchActiveChange]);
+
   // Update parent when selection changes
   const updateSelection = (
     plant: IndividualPlant | null,
@@ -89,6 +109,8 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       setSelectedPlacement(null);
       updateSelection(null, null, null);
     } else {
+      Keyboard.dismiss();
+      setIsSearchFocused(false);
       setSelectedPlant(plant);
       // Auto-select first available size and placement
       const defaultSize = plant.availableSizes[0];
@@ -181,7 +203,11 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}
+    >
       <FlatList
         data={selectedPlant ? [] : filteredPlants}
         renderItem={renderPlantItem}
@@ -200,6 +226,9 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         numColumns={viewMode === 'grid' ? 2 : 1}
         columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
         key={viewMode === 'grid' ? 'grid' : 'list'}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         ListHeaderComponent={
           <>
             {listHeader}
@@ -218,6 +247,9 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                   placeholderTextColor={theme.colors.textSecondary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
+                  returnKeyType="search"
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -362,7 +394,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
           </View>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

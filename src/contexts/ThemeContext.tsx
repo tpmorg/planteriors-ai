@@ -30,21 +30,21 @@ export interface Theme {
 
 const lightTheme: Theme = {
   colors: {
-    primary: '#2d5016',
-    primaryDark: '#1a3009',
-    background: '#f9fafb',
-    surface: '#ffffff',
+    primary: '#4e6b57',
+    primaryDark: '#355746',
+    background: '#f6f3ee',
+    surface: '#fffdf9',
     card: '#ffffff',
-    text: '#374151',
-    textSecondary: '#6b7280',
-    border: '#e5e7eb',
-    borderLight: '#f3f4f6',
-    tabBarBackground: '#ffffff',
-    tabBarActive: '#2d5016',
-    tabBarInactive: '#9ca3af',
-    switchTrackTrue: '#86efac',
-    switchTrackFalse: '#e5e7eb',
-    switchThumb: '#2d5016',
+    text: '#1d1f1e',
+    textSecondary: '#6f716f',
+    border: '#e7e2d8',
+    borderLight: '#f1ece3',
+    tabBarBackground: '#fffdf9',
+    tabBarActive: '#4e6b57',
+    tabBarInactive: '#8d8f8d',
+    switchTrackTrue: '#9cc5ae',
+    switchTrackFalse: '#dbd5ca',
+    switchThumb: '#355746',
     shadow: '#000000',
   },
   isDark: false,
@@ -52,21 +52,21 @@ const lightTheme: Theme = {
 
 const darkTheme: Theme = {
   colors: {
-    primary: '#86efac',
-    primaryDark: '#4ade80',
-    background: '#111827',
-    surface: '#1f2937',
-    card: '#374151',
-    text: '#f9fafb',
-    textSecondary: '#9ca3af',
-    border: '#4b5563',
-    borderLight: '#374151',
-    tabBarBackground: '#1f2937',
-    tabBarActive: '#86efac',
-    tabBarInactive: '#6b7280',
-    switchTrackTrue: '#4ade80',
-    switchTrackFalse: '#4b5563',
-    switchThumb: '#86efac',
+    primary: '#56c28a',
+    primaryDark: '#3e9d6a',
+    background: '#171a18',
+    surface: '#1f2421',
+    card: '#252b27',
+    text: '#eceae4',
+    textSecondary: '#a8aca6',
+    border: '#353d37',
+    borderLight: '#2b322d',
+    tabBarBackground: '#1f2421',
+    tabBarActive: '#56c28a',
+    tabBarInactive: '#7b827c',
+    switchTrackTrue: '#3e9d6a',
+    switchTrackFalse: '#3c443e',
+    switchThumb: '#56c28a',
     shadow: '#000000',
   },
   isDark: true,
@@ -87,7 +87,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('light');
   const [systemColorScheme, setSystemColorScheme] = useState<ColorSchemeName>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -97,14 +97,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       try {
         // Check if system is in dark mode
         const systemScheme = Appearance.getColorScheme();
-        console.log('Raw system color scheme:', systemScheme, 'type:', typeof systemScheme);
         const isSystemDark = systemScheme === 'dark';
-        console.log('System is in dark mode:', isSystemDark);
         setSystemColorScheme(isSystemDark ? 'dark' : 'light');
 
         // Load user's theme preference
         const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-        console.log('User theme preference:', savedMode);
         if (savedMode && ['light', 'dark', 'system'].includes(savedMode)) {
           setThemeModeState(savedMode as ThemeMode);
         }
@@ -122,9 +119,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Listen for system dark/light mode changes
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      console.log('System appearance changed - raw value:', colorScheme, 'type:', typeof colorScheme);
       const isSystemDark = colorScheme === 'dark';
-      console.log('System switched to dark mode:', isSystemDark);
       setSystemColorScheme(isSystemDark ? 'dark' : 'light');
     });
 
@@ -133,8 +128,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Choose which theme to use based on user preference
   const getActualTheme = (): Theme => {
-    console.log('Theme decision - User wants:', themeMode, 'System is dark:', systemColorScheme === 'dark');
-
     // During initialization, use light theme as default
     if (!isInitialized) {
       return lightTheme;
@@ -142,31 +135,22 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     if (themeMode === 'system') {
       // Use our app's dark theme when system is dark, light theme when system is light
-      const useOurDarkTheme = systemColorScheme === 'dark';
-      console.log('Following system - using our', useOurDarkTheme ? 'DARK' : 'LIGHT', 'theme');
-      return useOurDarkTheme ? darkTheme : lightTheme;
+      return systemColorScheme === 'dark' ? darkTheme : lightTheme;
     }
 
     // User manually chose light or dark
-    const useOurDarkTheme = themeMode === 'dark';
-    console.log('User manually chose our', useOurDarkTheme ? 'DARK' : 'LIGHT', 'theme');
-    return useOurDarkTheme ? darkTheme : lightTheme;
+    return themeMode === 'dark' ? darkTheme : lightTheme;
   };
 
   const setThemeMode = async (mode: ThemeMode) => {
     try {
-      console.log('User switching theme mode to:', mode);
-
       // Update preference immediately
       setThemeModeState(mode);
 
       // If switching to "follow system", check current system state right now
       if (mode === 'system') {
         const currentScheme = Appearance.getColorScheme();
-        console.log('Switching to follow system - raw scheme value:', currentScheme, 'type:', typeof currentScheme);
-        const isSystemDark = currentScheme === 'dark';
-        console.log('Switching to follow system - system is currently dark:', isSystemDark);
-        setSystemColorScheme(isSystemDark ? 'dark' : 'light');
+        setSystemColorScheme(currentScheme === 'dark' ? 'dark' : 'light');
       }
 
       // Save preference
