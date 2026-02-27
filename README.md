@@ -52,6 +52,67 @@ npm run android        # Android emulator
 npx tsc --noEmit       # Type check
 ```
 
+## Stack (high level)
+
+- React Native 0.81 + Expo SDK 54 (Dev Client)
+- Firebase Auth (Google)
+- SQLite via expo-sqlite
+- Gemini 2.5 Flash Image Preview (image generation)
+- RevenueCat (react-native-purchases) for subscriptions
+
+## Common Commands
+
+```bash
+# Metro (Dev Client)
+npm start
+
+# Local native build/install (requires Android Studio / Xcode)
+npx expo run:android
+npx expo run:ios
+
+# EAS dev builds (Dev Client)
+npm run build:dev:android
+npm run build:dev:ios
+
+# EAS preview builds
+npm run build:preview:android
+npm run build:preview:ios
+
+# EAS production builds
+npm run build:prod:android
+npm run build:prod:ios
+```
+
+Notes:
+- Use **EAS dev builds** when adding/updating native deps or plugins.
+- Use **Metro only** for JS/TS changes.
+
+## ADB / Android Debugging
+
+Package name: `com.bcs.planterior`
+
+```bash
+# Devices
+adb devices
+
+# Install APK
+adb install -r path/to/app.apk
+
+# Clear app data
+adb shell pm clear com.bcs.planterior
+
+# Uninstall
+adb uninstall com.bcs.planterior
+
+# Logs
+adb logcat | grep -i planterior
+adb logcat *:S ReactNative:V ReactNativeJS:V
+
+# Forward Metro port (if needed)
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8082 tcp:8082
+```
+
 For detailed architecture and technical docs, see [CLAUDE.md](CLAUDE.md).
 
 ## When to Rebuild
