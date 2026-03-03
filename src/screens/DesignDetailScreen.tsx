@@ -8,6 +8,10 @@ import {
   Share,
   Dimensions,
   ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -39,6 +43,13 @@ interface DesignDetailScreenProps {
   initialIndex?: number;
   onBack: () => void;
   onDesignDeleted: () => void;
+  onRefineDesign: (design: SavedDesign, refinementPrompt: string) => void;
+}
+
+interface RefinementMessage {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -70,6 +81,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   initialIndex = 0,
   onBack,
   onDesignDeleted,
+  onRefineDesign,
 }) => {
   const insets = useSafeAreaInsets();
   const modalOpenTranslateY = Math.max(insets.top + 56, screenHeight * 0.22);
@@ -94,6 +106,16 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   });
   const [isSharing, setIsSharing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showRefineModal, setShowRefineModal] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [refinementInput, setRefinementInput] = useState('');
+  const [refinementMessages, setRefinementMessages] = useState<RefinementMessage[]>([
+    {
+      id: 'assistant-welcome',
+      role: 'assistant',
+      text: 'Tell me what to change. I will create a new iteration from this design.',
+    },
+  ]);
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
@@ -114,6 +136,19 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const onHide = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const resolveCollectionName = async () => {
@@ -176,6 +211,39 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     modalTranslateY.value = withTiming(screenHeight, { duration: 300 });
     backdropOpacity.value = withTiming(0, { duration: 300 });
     setTimeout(() => setShowInfoModal(false), 300);
+  };
+
+  const openRefineModal = () => {
+    setShowRefineModal(true);
+  };
+
+  const closeRefineModal = () => {
+    setShowRefineModal(false);
+  };
+
+  const submitRefinement = () => {
+    const prompt = refinementInput.trim();
+    if (!prompt) {
+      Alert.alert('Add a refinement', 'Describe what you want to change before generating a new version.');
+      return;
+    }
+
+    const userMessage: RefinementMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      text: prompt,
+    };
+    const assistantMessage: RefinementMessage = {
+      id: `assistant-${Date.now()}`,
+      role: 'assistant',
+      text: 'Generating a new iteration with your latest refinement.',
+    };
+
+    setRefinementMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setRefinementInput('');
+    setShowRefineModal(false);
+    showToast('Starting refinement', 'info');
+    onRefineDesign(design, prompt);
   };
 
   const toggleFavorite = async () => {
@@ -499,6 +567,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   </Text>
                 </View>
               )}
+
+              <TouchableOpacity
+                onPress={openRefineModal}
+                style={styles.aiRefineTrigger}
+                activeOpacity={0.9}
+              >
+                <View style={styles.aiRefineOuterGlow}>
+                  <View style={styles.aiRefineInnerRing}>
+                    <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
+                  </View>
+                </View>
+              </TouchableOpacity>
             </Animated.View>
           </GestureDetector>
         </View>
@@ -625,6 +705,66 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           </>
         )}
 
+        {showRefineModal && (
+          <KeyboardAvoidingView
+            style={[styles.refineOverlay, isKeyboardVisible && styles.refineOverlayKeyboard]}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={insets.top + 14}
+          >
+            <View style={[styles.refinePanel, isKeyboardVisible && styles.refinePanelKeyboard]}>
+              <View style={styles.refineHeader}>
+                <Text style={styles.refineTitle}>Refine Design</Text>
+                <TouchableOpacity onPress={closeRefineModal} style={styles.refineCloseButton}>
+                  <AppIcon name="X" size={18} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={[styles.refineMessages, isKeyboardVisible && styles.refineMessagesKeyboard]}
+                contentContainerStyle={styles.refineMessagesContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {refinementMessages.map((message) => (
+                  <View
+                    key={message.id}
+                    style={[
+                      styles.refineMessageBubble,
+                      message.role === 'user' ? styles.refineUserBubble : styles.refineAssistantBubble,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.refineMessageText,
+                        message.role === 'user' ? styles.refineUserText : styles.refineAssistantText,
+                      ]}
+                    >
+                      {message.text}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <View style={styles.refineComposer}>
+                <TextInput
+                  value={refinementInput}
+                  onChangeText={setRefinementInput}
+                  placeholder="Try: make plants larger and move one near the window"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  style={[styles.refineInput, isKeyboardVisible && styles.refineInputKeyboard]}
+                  multiline
+                  maxLength={280}
+                />
+              </View>
+
+              <TouchableOpacity style={styles.refineSubmitButton} onPress={submitRefinement}>
+                <AppIcon name="ArrowUpRight" size={18} color={theme.colors.surface} />
+                <Text style={styles.refineSubmitText}>Generate Iteration</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        )}
+
         <CollectionPickerModal
           visible={showCollectionsModal}
           collections={collections}
@@ -734,9 +874,39 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  aiRefineTrigger: {
+    position: 'absolute',
+    right: 16,
+    bottom: 26,
+  },
+  aiRefineOuterGlow: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(67,255,162,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(169,255,214,0.8)',
+    shadowColor: '#8effc4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  aiRefineInnerRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(194,255,225,0.8)',
+    backgroundColor: 'rgba(16,55,35,0.9)',
+  },
   collectionBadge: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 88,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -860,5 +1030,122 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSecondary,
     lineHeight: 18,
+  },
+  refineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1200,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    justifyContent: 'flex-end',
+    padding: 12,
+  },
+  refineOverlayKeyboard: {
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  },
+  refinePanel: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    maxHeight: screenHeight * 0.72,
+  },
+  refinePanelKeyboard: {
+    maxHeight: screenHeight * 0.45,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  refineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  refineTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  refineCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refineMessages: {
+    maxHeight: screenHeight * 0.34,
+  },
+  refineMessagesKeyboard: {
+    maxHeight: screenHeight * 0.14,
+  },
+  refineMessagesContent: {
+    gap: 8,
+    paddingBottom: 12,
+  },
+  refineMessageBubble: {
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+  },
+  refineAssistantBubble: {
+    alignSelf: 'flex-start',
+    maxWidth: '92%',
+    backgroundColor: theme.colors.borderLight,
+    borderColor: theme.colors.border,
+  },
+  refineUserBubble: {
+    alignSelf: 'flex-end',
+    maxWidth: '92%',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primaryDark,
+  },
+  refineMessageText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  refineAssistantText: {
+    color: theme.colors.text,
+  },
+  refineUserText: {
+    color: theme.colors.surface,
+  },
+  refineComposer: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
+    minHeight: 90,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  refineInput: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 19,
+    textAlignVertical: 'top',
+    minHeight: 72,
+  },
+  refineInputKeyboard: {
+    minHeight: 52,
+    maxHeight: 84,
+  },
+  refineSubmitButton: {
+    marginTop: 10,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  refineSubmitText: {
+    color: theme.colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

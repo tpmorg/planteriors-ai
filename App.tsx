@@ -462,6 +462,92 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
     navigation.navigate("MainApp");
   };
 
+  const handleRefineDesign = (currentDesign: SavedDesign, refinementPrompt: string) => {
+    const imageUri = currentDesign.localImagePath || currentDesign.generatedImageUri;
+    const normalizedPrompt = refinementPrompt.trim();
+
+    if (!imageUri || !normalizedPrompt) {
+      return;
+    }
+
+    const basePromptPrefix =
+      "Refine this existing generated design while preserving room layout, architecture, and all non-plant objects.";
+    const prompt = `${basePromptPrefix} ${normalizedPrompt}`;
+
+    if (currentDesign.mode === "individual") {
+      if (!currentDesign.individualPlant) {
+        return;
+      }
+
+      const selection = currentDesign.individualPlant;
+      const suitablePlacements =
+        selection.placement === "auto"
+          ? ["floor", "shelf", "hanging"]
+          : [selection.placement];
+
+      const request: GenerationRequest = {
+        imageUri,
+        mode: "individual",
+        individualPlant: {
+          plant: {
+            id: `refine-${selection.scientificName.toLowerCase().replace(/\s+/g, "-")}`,
+            name: selection.name,
+            scientificName: selection.scientificName,
+            description: `Indoor ${selection.name} arrangement refinement`,
+            icon: "Leaf",
+            category: "tropical",
+            lightRequirement: "bright-indirect",
+            waterRequirement: "moderate",
+            availableSizes: [selection.size],
+            suitablePlacements: suitablePlacements as ("floor" | "shelf" | "hanging" | "auto")[],
+            careLevel: "moderate",
+            growthRate: "moderate",
+            petSafe: false,
+          },
+          size: selection.size,
+          placement: selection.placement,
+        },
+        prompt,
+      };
+
+      navigation.navigate("Generation", { request });
+      return;
+    }
+
+    if (!currentDesign.plantType || !currentDesign.plantStyle) {
+      return;
+    }
+
+    const styleId = currentDesign.plantStyle.name.toLowerCase().replace(/\s+/g, "-");
+    const request: GenerationRequest = {
+      imageUri,
+      mode: "multi-plant",
+      plantType: {
+        id: currentDesign.plantType.name.toLowerCase().replace(/\s+/g, "-"),
+        name: currentDesign.plantType.name,
+        description: currentDesign.plantType.description,
+        icon: "Leaf",
+        styles: [
+          {
+            id: styleId,
+            name: currentDesign.plantStyle.name,
+            description: currentDesign.plantStyle.description,
+            icon: "Palette",
+          },
+        ],
+      },
+      plantStyle: {
+        id: styleId,
+        name: currentDesign.plantStyle.name,
+        description: currentDesign.plantStyle.description,
+        icon: "Palette",
+      },
+      prompt,
+    };
+
+    navigation.navigate("Generation", { request });
+  };
+
   return (
     <DesignDetailScreen
       design={design}
@@ -469,6 +555,7 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
       initialIndex={initialIndex}
       onBack={handleBack}
       onDesignDeleted={handleDesignDeleted}
+      onRefineDesign={handleRefineDesign}
     />
   );
 }
