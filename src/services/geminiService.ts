@@ -170,6 +170,9 @@ ${location ? '4. Place the plant EXACTLY in the user-specified location marked a
 6. Keep ALL original room elements, furniture, and architecture EXACTLY as shown
 7. The plant should enhance the space as a single accent piece without overwhelming it
 8. Match the perspective, angle, and lighting of the original photo precisely
+9. Do NOT add, remove, move, or redesign any non-plant physical objects (including tables, chairs, sofas, lamps, rugs, art, shelves, appliances, fixtures, or decor)
+10. The only allowed additions are the plant and its required pot/planter (and hanging support only if hanging placement is requested)
+11. Ignore any non-plant modifications unless the user explicitly and directly requests that specific object change
 
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
 
@@ -222,6 +225,12 @@ ${careDescription}
 Keep the original room's architecture, furniture placement, lighting, and color scheme exactly the same. Only add plants that would realistically thrive in this lighting environment. Place ${plantType.name.toLowerCase()} in strategic locations following ${plantStyle.description.toLowerCase()} design principles.
 
 Make the plants look naturally integrated into the space - not artificially placed. Ensure realistic shadows, reflections, and proportions. The plants should enhance the room's existing aesthetic while maintaining the same viewing angle and perspective as the original photo.
+
+Hard Constraints:
+- Preserve all existing non-plant physical objects exactly as they are.
+- Do NOT add, remove, move, or alter furniture or decor (tables, chairs, sofas, lamps, rugs, art, shelves, appliances, fixtures, etc.).
+- The only new objects allowed are plants and their necessary containers/planters.
+- Ignore non-plant object changes unless the user explicitly asks for that exact object change.
 
 ${request.prompt ? `Additional requirements: ${request.prompt}` : ""}
 
