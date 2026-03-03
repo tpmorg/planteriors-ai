@@ -11,7 +11,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { Collection, SavedDesign } from '../types';
@@ -47,6 +47,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { subscription, freeGenerationsRemaining, refreshStatus } = useSubscription();
   const { user } = useAuth();
@@ -204,12 +205,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.backdropBlobA} />
         <View style={styles.backdropBlobB} />
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Gallery</Text>
-          <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
-            <AppIcon name="Plus" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={onNewDesign}
+          style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
+          accessibilityLabel="New design"
+        >
+          <AppIcon name="Plus" size={24} color="white" />
+        </TouchableOpacity>
 
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading your images...</Text>
@@ -222,14 +224,15 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Spaces</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton} accessibilityLabel="New design">
-            <AppIcon name="Plus" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <TouchableOpacity
+        onPress={onNewDesign}
+        style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
+        accessibilityLabel="New design"
+      >
+        <AppIcon name="Plus" size={24} color="white" />
+      </TouchableOpacity>
+
+      <View style={styles.floatingButtonOffset} />
 
       {/* Usage Indicator */}
       <UsageIndicator
@@ -399,28 +402,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     bottom: -120,
     right: -80,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 10,
-    backgroundColor: 'transparent',
-  },
-  headerTitle: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: theme.colors.text,
-    flex: 1,
-    letterSpacing: 0.2,
-    fontFamily: 'serif',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
   newDesignButton: {
     backgroundColor: theme.colors.primary,
     borderRadius: 22,
@@ -433,6 +414,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 6,
+  },
+  floatingButtonOffset: {
+    height: 34,
   },
   placeholder: {
     width: 40,

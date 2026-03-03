@@ -29,19 +29,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   const showPaidLayout = isSubscribed || suppressFreePlanWarnings;
 
   if (showPaidLayout) {
-    return (
-      <View style={[styles.container, variant === 'compact' && styles.containerCompact]}>
-        <View style={styles.premiumBadge}>
-          <AppIcon name="StarFour" size={16} color={theme.colors.primary} />
-          <Text style={styles.premiumText}>
-            {isSubscribed ? 'Premium Member' : 'Premium Preview'}
-          </Text>
-        </View>
-        {variant === 'full' && (
-          <Text style={styles.subtitleText}>Unlimited generations</Text>
-        )}
-      </View>
-    );
+    return null;
   }
 
   if (variant === 'compact') {
