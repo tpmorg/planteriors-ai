@@ -10,27 +10,15 @@ const COMPRESSION_QUALITY = 0.75;
  */
 export async function compressImageForAI(uri: string): Promise<string> {
   try {
-    // First, get the image dimensions to calculate resize ratio
-    const image = await ImageManipulator.manipulateAsync(
-      uri,
-      [],
-      { format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    // Calculate resize dimensions maintaining aspect ratio
-    const actions: ImageManipulator.Action[] = [];
-
-    // We need to resize if either dimension exceeds MAX_DIMENSION
-    // Since we don't have dimensions from the initial call, resize with max constraint
-    actions.push({
-      resize: {
-        width: MAX_DIMENSION,
-      },
-    });
-
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      actions,
+      [
+        {
+          resize: {
+            width: MAX_DIMENSION,
+          },
+        },
+      ],
       {
         compress: COMPRESSION_QUALITY,
         format: ImageManipulator.SaveFormat.JPEG,

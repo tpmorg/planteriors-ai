@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
+import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface UsageIndicatorProps {
   freeRemaining: number;
@@ -11,6 +12,8 @@ interface UsageIndicatorProps {
   onUpgradePress?: () => void;
 }
 
+let isUpgradeCtaDismissedForSession = false;
+
 export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   freeRemaining,
   isSubscribed,
@@ -18,14 +21,21 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   onUpgradePress,
 }) => {
   const { theme } = useTheme();
+  const { suppressFreePlanWarnings } = useDebugPreferences();
+  const [isUpgradeCtaDismissed, setIsUpgradeCtaDismissed] = useState(
+    isUpgradeCtaDismissedForSession
+  );
   const styles = createStyles(theme);
+  const showPaidLayout = isSubscribed || suppressFreePlanWarnings;
 
-  if (isSubscribed) {
+  if (showPaidLayout) {
     return (
       <View style={[styles.container, variant === 'compact' && styles.containerCompact]}>
         <View style={styles.premiumBadge}>
           <AppIcon name="StarFour" size={16} color={theme.colors.primary} />
-          <Text style={styles.premiumText}>Premium Member</Text>
+          <Text style={styles.premiumText}>
+            {isSubscribed ? 'Premium Member' : 'Premium Preview'}
+          </Text>
         </View>
         {variant === 'full' && (
           <Text style={styles.subtitleText}>Unlimited generations</Text>
@@ -74,11 +84,19 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
         </Text>
       </View>
 
-      {onUpgradePress && (
-        <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
-          <AppIcon name="ArrowCircleUp" size={18} color={theme.colors.surface} />
-          <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
-        </TouchableOpacity>
+      {onUpgradePress && !isUpgradeCtaDismissed && (
+        <View style={styles.upgradeCtaWrap}>
+          <TouchableOpacity style={styles.dismissButton} onPress={() => {
+            isUpgradeCtaDismissedForSession = true;
+            setIsUpgradeCtaDismissed(true);
+          }}>
+            <AppIcon name="X" size={14} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
+            <AppIcon name="ArrowCircleUp" size={18} color={theme.colors.surface} />
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {freeRemaining === 0 && !onUpgradePress && (
@@ -186,7 +204,22 @@ const createStyles = (theme: any) =>
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: 8,
-      marginTop: 12,
+      marginTop: 6,
+    },
+    upgradeCtaWrap: {
+      marginTop: 6,
+    },
+    dismissButton: {
+      alignSelf: 'flex-end',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: 6,
     },
     upgradeButtonText: {
       fontSize: 15,

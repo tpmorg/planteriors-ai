@@ -86,6 +86,7 @@ export interface SavedDesign {
   generatedImageUri: string;
   localImagePath?: string | null;
   mode: PlantSelectionMode;
+  collectionId?: string | null;
   // Multi-plant mode data
   plantType?: {
     name: string;
@@ -105,6 +106,12 @@ export interface SavedDesign {
   customPrompt?: string;
   createdAt: Date;
   isFavorite: boolean;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  createdAt: Date;
 }
 
 export interface AuthState {

@@ -13,6 +13,8 @@ import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { TabBarProvider, useTabBar } from "./src/contexts/TabBarContext";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { SubscriptionProvider } from "./src/contexts/SubscriptionContext";
+import { DebugPreferencesProvider } from "./src/contexts/DebugPreferencesContext";
+import { ToastProvider } from "./src/contexts/ToastContext";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { CameraScreen } from "./src/screens/CameraScreen";
 import { PlantSelectionScreen } from "./src/screens/PlantSelectionScreen";
@@ -475,9 +477,13 @@ export default function App() {
       <ErrorBoundary>
         <EnvValidator>
           <ThemeProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
+            <ToastProvider>
+              <DebugPreferencesProvider>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </DebugPreferencesProvider>
+            </ToastProvider>
           </ThemeProvider>
         </EnvValidator>
       </ErrorBoundary>

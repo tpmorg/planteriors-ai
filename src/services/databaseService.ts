@@ -6,14 +6,29 @@ import {
   PlantSize,
   PlacementType,
   SubscriptionData,
-  FreeTrialUsage
+  FreeTrialUsage,
+  Collection
 } from '../types';
 
-const DB_VERSION = 3; // Current database version
+const DB_VERSION = 4; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private isInitializing: boolean = false;
+
+  private async resolveInsertRowId(result: { lastInsertRowId?: number | null }): Promise<number> {
+    if (typeof result.lastInsertRowId === 'number' && Number.isFinite(result.lastInsertRowId)) {
+      return result.lastInsertRowId;
+    }
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    const fallback = await this.db.getFirstAsync<{ id: number }>('SELECT last_insert_rowid() as id');
+    if (!fallback || typeof fallback.id !== 'number' || !Number.isFinite(fallback.id)) {
+      throw new Error('Failed to resolve inserted row id');
+    }
+    return fallback.id;
+  }
 
   async initialize(): Promise<void> {
     // Prevent concurrent initialization attempts
@@ -80,6 +95,7 @@ export class DatabaseService {
         local_image_path TEXT,
         user_id TEXT,
         mode TEXT DEFAULT 'multi-plant',
+        collection_id INTEGER,
         plant_type_name TEXT,
         plant_type_description TEXT,
         plant_style_name TEXT,
@@ -94,6 +110,16 @@ export class DatabaseService {
       );
     `;
     await this.db.execAsync(createDesignsTable);
+
+    const createCollectionsTable = `
+      CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+    `;
+    await this.db.execAsync(createCollectionsTable);
 
     // Create usage_tracking table
     const createUsageTrackingTable = `
@@ -297,6 +323,13 @@ export class DatabaseService {
       await this.setDbVersion(3);
     }
 
+    // Migration from v3 to v4: Add collections support
+    if (currentVersion < 4) {
+      console.log('Running migration to v4: Adding collections support');
+      await this.migrateToV4();
+      await this.setDbVersion(4);
+    }
+
     console.log('Migrations complete. Database at version:', DB_VERSION);
   }
 
@@ -489,6 +522,45 @@ export class DatabaseService {
     }
   }
 
+  private async migrateToV4(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN collection_id INTEGER;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS collections (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT,
+          name TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        );
+      `);
+    } catch (error) {
+      console.warn('Failed to create collections table:', error);
+    }
+
+    try {
+      await this.db.execAsync(
+        `CREATE INDEX IF NOT EXISTS idx_saved_designs_collection_id ON saved_designs(collection_id);`
+      );
+      await this.db.execAsync(
+        `CREATE INDEX IF NOT EXISTS idx_collections_user_id ON collections(user_id);`
+      );
+      await this.db.execAsync(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_user_name ON collections(user_id, name);`
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   // ============================================
   // Plant Codex Methods
   // ============================================
@@ -562,7 +634,7 @@ export class DatabaseService {
         [limit]
       );
 
-      return rows.map(row => ({
+      return rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         scientificName: row.scientific_name,
@@ -655,7 +727,7 @@ export class DatabaseService {
 
       const rows = await this.db.getAllAsync(sql, params);
 
-      return rows.map(row => ({
+      return rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         scientificName: row.scientific_name,
@@ -724,7 +796,7 @@ export class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const row = await this.db.getFirstAsync(
+      const row = await this.db.getFirstAsync<any>(
         `SELECT p.*, 
           pi.local_path as local_image_path,
           pi.image_url as primary_image_url
@@ -886,8 +958,10 @@ export class DatabaseService {
         ]
       );
 
+      const insertedId = await this.resolveInsertRowId(result);
+
       const savedDesign: SavedDesign = {
-        id: result.lastInsertRowId.toString(),
+        id: insertedId.toString(),
         originalImageUri: design.originalImageUri,
         generatedImageUri: design.generatedImageUri,
         localImagePath,
@@ -911,7 +985,7 @@ export class DatabaseService {
         isFavorite: false,
       };
 
-      console.log('Design saved to database with ID:', result.lastInsertRowId);
+      console.log('Design saved to database with ID:', insertedId);
       return savedDesign;
     } catch (error) {
       console.error('Failed to save design:', error);
@@ -1020,13 +1094,18 @@ export class DatabaseService {
 
   private mapRowToSavedDesign(row: any): SavedDesign {
     const mode: PlantSelectionMode = row.mode || 'multi-plant';
+    const rowId = row?.id ?? 0;
+    const resolvedId = typeof rowId === 'number' || typeof rowId === 'string'
+      ? String(rowId)
+      : '0';
 
     return {
-      id: row.id.toString(),
+      id: resolvedId,
       originalImageUri: row.original_image_uri,
       generatedImageUri: row.generated_image_uri,
       localImagePath: row.local_image_path,
       mode,
+      collectionId: row.collection_id !== undefined && row.collection_id !== null ? row.collection_id.toString() : null,
       plantType: row.plant_type_name ? {
         name: row.plant_type_name,
         description: row.plant_type_description || '',
@@ -1045,6 +1124,81 @@ export class DatabaseService {
       createdAt: new Date(row.created_at),
       isFavorite: Boolean(row.is_favorite),
     };
+  }
+
+  // ============================================
+  // Collections Methods
+  // ============================================
+
+  async getCollections(userId?: string): Promise<Collection[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const rows = userId
+        ? await this.db.getAllAsync(`
+            SELECT * FROM collections
+            WHERE user_id = ? OR user_id IS NULL
+            ORDER BY name COLLATE NOCASE ASC
+          `, [userId])
+        : await this.db.getAllAsync(`
+            SELECT * FROM collections
+            ORDER BY name COLLATE NOCASE ASC
+          `);
+
+      return rows.map((r: any) => ({
+        id: r.id.toString(),
+        name: r.name,
+        createdAt: new Date(r.created_at),
+      }));
+    } catch (error) {
+      console.error('Failed to get collections:', error);
+      return [];
+    }
+  }
+
+  async createCollection(name: string, userId?: string): Promise<Collection> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Collection name is required');
+    }
+
+    const now = Date.now();
+    try {
+      const result = await this.db.runAsync(
+        `INSERT INTO collections (user_id, name, created_at) VALUES (?, ?, ?)`
+        , [userId ?? null, trimmed, now]
+      );
+
+      const insertedId = await this.resolveInsertRowId(result);
+      return {
+        id: insertedId.toString(),
+        name: trimmed,
+        createdAt: new Date(now),
+      };
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+      throw error;
+    }
+  }
+
+  async setDesignCollection(designId: string, collectionId: string | null): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const value = collectionId ? Number(collectionId) : null;
+    try {
+      await this.db.runAsync(
+        'UPDATE saved_designs SET collection_id = ? WHERE id = ?'
+        , [value, Number(designId)]
+      );
+    } catch (error) {
+      console.error('Failed to set design collection:', error);
+      throw error;
+    }
   }
 
   // ============================================

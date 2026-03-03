@@ -9,15 +9,20 @@ import {
   Dimensions,
   Alert,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
-import { SavedDesign } from '../types';
+import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { UsageIndicator } from '../components/UsageIndicator';
+import { CollectionPickerModal } from '../components/CollectionPickerModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
@@ -35,11 +40,17 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onUpgradePress,
 }) => {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [showCollectionsModal, setShowCollectionsModal] = useState(false);
+  const [activeDesignId, setActiveDesignId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
   const { subscription, freeGenerationsRemaining, refreshStatus } = useSubscription();
+  const { user } = useAuth();
+  const { showToast } = useToast();
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -53,15 +64,36 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     }
   }, []);
 
+  const loadCollections = useCallback(async () => {
+    try {
+      const result = await databaseService.getCollections(user?.id);
+      setCollections(result);
+    } catch (error) {
+      console.error('Failed to load collections:', error);
+    }
+  }, [user?.id]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadDesigns(), refreshStatus()]);
+    await Promise.all([loadDesigns(), loadCollections(), refreshStatus()]);
     setRefreshing(false);
-  }, [loadDesigns, refreshStatus]);
+  }, [loadDesigns, loadCollections, refreshStatus]);
 
   useEffect(() => {
     loadDesigns();
-  }, [loadDesigns]);
+    loadCollections();
+  }, [loadDesigns, loadCollections]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDesigns();
+      loadCollections();
+    }, [loadDesigns, loadCollections])
+  );
+
+  const filteredDesigns = selectedCollectionId
+    ? designs.filter((d) => d.collectionId === selectedCollectionId)
+    : designs;
 
   const handleDesignPress = (design: SavedDesign, index: number) => {
     onDesignSelect(design, designs, index);
@@ -70,17 +102,19 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const toggleFavorite = async (design: SavedDesign) => {
     try {
       await databaseService.toggleFavorite(design.id);
+      const nextFavorite = !design.isFavorite;
       // Update local state
       setDesigns(prev =>
         prev.map(d =>
           d.id === design.id
-            ? { ...d, isFavorite: !d.isFavorite }
+            ? { ...d, isFavorite: nextFavorite }
             : d
         )
       );
+      showToast(nextFavorite ? 'Added to favorites' : 'Removed from favorites', 'success');
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
-      Alert.alert('Error', 'Failed to update favorite');
+      showToast('Could not update favorite', 'error');
     }
   };
 
@@ -101,6 +135,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     <TouchableOpacity
       style={styles.designItem}
       onPress={() => handleDesignPress(item, index)}
+      onLongPress={() => {
+        setActiveDesignId(item.id);
+        setShowCollectionsModal(true);
+      }}
       activeOpacity={0.8}
     >
       <View style={styles.imageContainer}>
@@ -186,9 +224,11 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <View style={styles.backdropBlobB} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Spaces</Text>
-        <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton}>
-          <AppIcon name="Plus" size={24} color="white" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={onNewDesign} style={styles.newDesignButton} accessibilityLabel="New design">
+            <AppIcon name="Plus" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Usage Indicator */}
@@ -199,8 +239,63 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         onUpgradePress={onUpgradePress}
       />
 
+      <View style={styles.collectionsSection}>
+        <View style={styles.collectionsHeader}>
+          <Text style={styles.collectionsTitle}>Collections</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setActiveDesignId(null);
+              setShowCollectionsModal(true);
+            }}
+            style={styles.manageCollectionsButton}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="FolderPlus" size={16} color={theme.colors.primary} />
+            <Text style={styles.manageCollectionsText}>Manage</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.collectionRail}
+        >
+          <TouchableOpacity
+            onPress={() => setSelectedCollectionId(null)}
+            style={[styles.collectionCard, !selectedCollectionId && styles.collectionCardActive]}
+            activeOpacity={0.9}
+          >
+            <Text
+              style={[styles.collectionCardTitle, !selectedCollectionId && styles.collectionCardTitleActive]}
+              numberOfLines={1}
+            >
+              All
+            </Text>
+          </TouchableOpacity>
+
+          {collections.map((c) => {
+            const isActive = selectedCollectionId === c.id;
+            return (
+              <TouchableOpacity
+                key={c.id}
+                onPress={() => setSelectedCollectionId(c.id)}
+                style={[styles.collectionCard, isActive && styles.collectionCardActive]}
+                activeOpacity={0.9}
+              >
+                <Text
+                  style={[styles.collectionCardTitle, isActive && styles.collectionCardTitleActive]}
+                  numberOfLines={1}
+                >
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <FlatList
-        data={designs}
+        data={filteredDesigns}
         renderItem={renderDesignItem}
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
@@ -213,6 +308,69 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={renderEmptyState}
+      />
+
+      <CollectionPickerModal
+        visible={showCollectionsModal}
+        collections={collections}
+        selectedCollectionId={
+          activeDesignId
+            ? designs.find((d) => d.id === activeDesignId)?.collectionId ?? null
+            : selectedCollectionId
+        }
+        title={activeDesignId ? 'Move to Collection' : 'Collections'}
+        allowNone
+        noneLabel={activeDesignId ? 'No Collection' : 'All Collections'}
+        noneIcon={activeDesignId ? 'Prohibit' : 'GridFour'}
+        onDismiss={() => {
+          setShowCollectionsModal(false);
+          setActiveDesignId(null);
+        }}
+        onCreate={async (name) => {
+          try {
+            const created = await databaseService.createCollection(name, user?.id);
+            setCollections((prev) => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+            if (activeDesignId) {
+              await databaseService.setDesignCollection(activeDesignId, created.id);
+              setDesigns((prev) => prev.map((d) => (d.id === activeDesignId ? { ...d, collectionId: created.id } : d)));
+              setShowCollectionsModal(false);
+              setActiveDesignId(null);
+              showToast(`Added to ${created.name}`, 'success');
+            } else {
+              setSelectedCollectionId(created.id);
+              setShowCollectionsModal(false);
+              showToast(`Created ${created.name}`, 'success');
+            }
+          } catch (error) {
+            console.error('Failed to create collection:', error);
+            showToast('Could not create collection', 'error');
+          }
+        }}
+        onSelect={async (collectionId) => {
+          try {
+            if (!activeDesignId) {
+              setSelectedCollectionId(collectionId);
+              setShowCollectionsModal(false);
+              setActiveDesignId(null);
+              showToast(collectionId ? 'Collection filter applied' : 'Showing all designs', 'info');
+              return;
+            }
+            await databaseService.setDesignCollection(activeDesignId, collectionId);
+            const selectedCollection = collections.find((c) => c.id === collectionId);
+            setDesigns((prev) => prev.map((d) => (d.id === activeDesignId ? { ...d, collectionId } : d)));
+            setShowCollectionsModal(false);
+            setActiveDesignId(null);
+            showToast(
+              collectionId
+                ? `Moved to ${selectedCollection?.name || 'collection'}`
+                : 'Removed from collection',
+              'success'
+            );
+          } catch (error) {
+            console.error('Failed to set collection:', error);
+            showToast('Could not update collection', 'error');
+          }
+        }}
       />
     </SafeAreaView>
   );
@@ -258,6 +416,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     letterSpacing: 0.2,
     fontFamily: 'serif',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   newDesignButton: {
     backgroundColor: theme.colors.primary,
     borderRadius: 22,
@@ -287,6 +450,72 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     flexGrow: 1,
+  },
+  collectionsSection: {
+    marginTop: 10,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.65)',
+  },
+  collectionsHeader: {
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  collectionsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  manageCollectionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  manageCollectionsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  collectionRail: {
+    paddingHorizontal: 12,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  collectionCard: {
+    width: 116,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  collectionCardActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  collectionCardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 1,
+  },
+  collectionCardTitleActive: {
+    color: theme.colors.surface,
   },
   row: {
     justifyContent: 'space-between',

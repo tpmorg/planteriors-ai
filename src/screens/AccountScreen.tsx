@@ -15,6 +15,7 @@ import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
+import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface AccountScreenProps {
   onUpgradePress?: () => void;
@@ -31,7 +32,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
     restorePurchases,
     resetUsageForTesting,
   } = useSubscription();
+  const { suppressFreePlanWarnings } = useDebugPreferences();
   const styles = createStyles(theme);
+  const showPaidLayout = subscription?.isActive || suppressFreePlanWarnings;
 
   const [isRestoring, setRestoring] = React.useState(false);
 
@@ -140,31 +143,41 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
             <Text style={styles.sectionTitle}>Subscription</Text>
           </View>
 
-          {subscription?.isActive ? (
+          {showPaidLayout ? (
             <View style={styles.subscriptionCard}>
               <View style={styles.premiumBadge}>
                 <AppIcon name="CheckCircle" size={20} color={theme.colors.primary} />
-                <Text style={styles.premiumBadgeText}>Premium Member</Text>
+                <Text style={styles.premiumBadgeText}>
+                  {subscription?.isActive ? 'Premium Member' : 'Premium Preview'}
+                </Text>
               </View>
               <Text style={styles.subscriptionType}>
-                {subscription.type === 'annual' ? 'Annual Plan' : 'Monthly Plan'}
+                {subscription?.isActive
+                  ? (subscription.type === 'annual' ? 'Annual Plan' : 'Monthly Plan')
+                  : 'Debug Layout Preview'}
               </Text>
-              {subscription.expiryDate && (
+              {subscription?.isActive && subscription.expiryDate && (
                 <Text style={styles.expiryText}>
                   Renews: {formatDate(subscription.expiryDate)}
                 </Text>
               )}
-              {subscription.isMock && __DEV__ && (
+              {subscription?.isMock && __DEV__ && (
                 <View style={styles.mockBadge}>
                   <Text style={styles.mockBadgeText}>MOCK SUBSCRIPTION</Text>
                 </View>
               )}
-              <TouchableOpacity
-                style={styles.manageButton}
-                onPress={handleManageSubscription}
-              >
-                <Text style={styles.manageButtonText}>Manage Subscription</Text>
-              </TouchableOpacity>
+              {subscription?.isActive ? (
+                <TouchableOpacity
+                  style={styles.manageButton}
+                  onPress={handleManageSubscription}
+                >
+                  <Text style={styles.manageButtonText}>Manage Subscription</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.expiryText}>
+                  Free-plan warnings are hidden in debug mode.
+                </Text>
+              )}
             </View>
           ) : (
             <View style={styles.subscriptionCard}>

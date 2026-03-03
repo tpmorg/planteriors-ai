@@ -13,6 +13,7 @@ import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camer
 import * as ImagePicker from 'expo-image-picker';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
+import { compressImageForAI } from '../utils/imageUtils';
 
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
@@ -90,6 +91,10 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     if (!previewImage) return;
     setIsCropping(true);
     try {
+      const optimizedImageUri = await compressImageForAI(previewImage);
+      onImageTaken(optimizedImageUri);
+    } catch (error) {
+      console.error('Error preparing image for next screen:', error);
       onImageTaken(previewImage);
     } finally {
       setIsCropping(false);

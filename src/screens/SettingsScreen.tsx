@@ -15,6 +15,7 @@ import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 import { onboardingService } from '../services/onboardingService';
+import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface SettingsScreenProps {
   onOpenOnboarding?: () => void;
@@ -25,6 +26,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
+  const { suppressFreePlanWarnings, setSuppressFreePlanWarnings } = useDebugPreferences();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -177,23 +179,43 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
           </TouchableOpacity>
 
           {__DEV__ && (
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
-                <View style={styles.settingText}>
-                  <Text style={styles.settingLabel}>Mark Onboarding Complete (Debug)</Text>
-                  <Text style={styles.settingDescription}>
-                    Turn off to reset onboarding and show it on next app launch.
-                  </Text>
+            <>
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
+                  <View style={styles.settingText}>
+                    <Text style={styles.settingLabel}>Mark Onboarding Complete (Debug)</Text>
+                    <Text style={styles.settingDescription}>
+                      Turn off to reset onboarding and show it on next app launch.
+                    </Text>
+                  </View>
                 </View>
+                <Switch
+                  value={onboardingCompleted}
+                  onValueChange={handleDebugOnboardingToggle}
+                  trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+                  thumbColor={theme.colors.switchThumb}
+                />
               </View>
-              <Switch
-                value={onboardingCompleted}
-                onValueChange={handleDebugOnboardingToggle}
-                trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
-                thumbColor={theme.colors.switchThumb}
-              />
-            </View>
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <AppIcon name="Crown" size={24} color={theme.colors.text} />
+                  <View style={styles.settingText}>
+                    <Text style={styles.settingLabel}>Hide Free Plan Warnings (Debug)</Text>
+                    <Text style={styles.settingDescription}>
+                      Show paid layout preview without free-tier warning UI.
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={suppressFreePlanWarnings}
+                  onValueChange={setSuppressFreePlanWarnings}
+                  trackColor={{ false: theme.colors.switchTrackFalse, true: theme.colors.switchTrackTrue }}
+                  thumbColor={theme.colors.switchThumb}
+                />
+              </View>
+            </>
           )}
         </View>
 

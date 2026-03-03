@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -26,9 +26,12 @@ import Animated, {
   runOnJS,
   withTiming,
 } from 'react-native-reanimated';
-import { SavedDesign } from '../types';
+import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTheme } from '../contexts/ThemeContext';
+import { CollectionPickerModal } from '../components/CollectionPickerModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -91,6 +94,11 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   });
   const [isSharing, setIsSharing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showCollectionsModal, setShowCollectionsModal] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Animated values for image zoom and pan
   const scale = useSharedValue(1);
@@ -106,6 +114,42 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+
+  useEffect(() => {
+    const resolveCollectionName = async () => {
+      if (!design.collectionId) {
+        setActiveCollectionName(null);
+        return;
+      }
+
+      const localMatch = collections.find((c) => c.id === design.collectionId);
+      if (localMatch) {
+        setActiveCollectionName(localMatch.name);
+        return;
+      }
+
+      try {
+        const result = await databaseService.getCollections(user?.id);
+        const matched = result.find((c) => c.id === design.collectionId);
+        setActiveCollectionName(matched?.name ?? null);
+      } catch {
+        setActiveCollectionName(null);
+      }
+    };
+
+    resolveCollectionName();
+  }, [collections, design.collectionId, user?.id]);
+
+  const openCollections = async () => {
+    try {
+      const result = await databaseService.getCollections(user?.id);
+      setCollections(result);
+      setShowCollectionsModal(true);
+    } catch (error) {
+      console.error('Failed to load collections:', error);
+      setShowCollectionsModal(true);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -138,18 +182,20 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     try {
       await databaseService.toggleFavorite(design.id);
       setDesign(prev => {
+        const nextFavorite = !prev.isFavorite;
         const updated = {
           ...prev,
-          isFavorite: !prev.isFavorite,
+          isFavorite: nextFavorite,
         };
         setDesignList((prevList) =>
           prevList.map((item) => (item.id === updated.id ? updated : item))
         );
+        showToast(nextFavorite ? 'Added to favorites' : 'Removed from favorites', 'success');
         return updated;
       });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
-      Alert.alert('Error', 'Failed to update favorite');
+      showToast('Could not update favorite', 'error');
     }
   };
 
@@ -165,10 +211,11 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           onPress: async () => {
             try {
               await databaseService.deleteDesign(design.id);
+              showToast('Design deleted', 'success');
               onDesignDeleted();
             } catch (error) {
               console.error('Failed to delete design:', error);
-              Alert.alert('Error', 'Failed to delete design');
+              showToast('Could not delete design', 'error');
             }
           },
         },
@@ -220,9 +267,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           title: 'Planterior Design',
         });
       }
+      showToast('Share sheet opened', 'info');
     } catch (error) {
       console.error('Failed to share design:', error);
-      Alert.alert('Error', 'Failed to share design');
+      showToast('Could not share design', 'error');
     } finally {
       setIsSharing(false);
     }
@@ -385,6 +433,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
               <AppIcon name="Info" size={24} color="white" />
             </TouchableOpacity>
 
+            <TouchableOpacity onPress={openCollections} style={styles.headerButton}>
+              <AppIcon name="FolderPlus" size={24} color="white" />
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={toggleFavorite}
               style={styles.headerButton}
@@ -433,6 +485,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 style={[styles.image, imageStyle]}
                 resizeMode="contain"
               />
+              {design.collectionId && (
+                <View style={styles.collectionBadge}>
+                  <Text style={styles.collectionBadgeText} numberOfLines={1}>
+                    {activeCollectionName || 'Collection'}
+                  </Text>
+                </View>
+              )}
               {designList.length > 1 && (
                 <View style={styles.imageCounter}>
                   <Text style={styles.imageCounterText}>
@@ -467,14 +526,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                     activeOpacity={0.7}
                   >
                     <View style={styles.modalHandle} />
-                    <Text style={styles.modalTitle}>Design Details</Text>
                   </TouchableOpacity>
                 </Animated.View>
 
                 {/* Modal Content */}
                 <ScrollView
                   style={styles.modalContent}
-                  contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+                  contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
                   showsVerticalScrollIndicator={false}
                 >
                   {(() => {
@@ -576,6 +634,57 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             </GestureDetector>
           </>
         )}
+
+        <CollectionPickerModal
+          visible={showCollectionsModal}
+          collections={collections}
+          selectedCollectionId={design.collectionId ?? null}
+          title="Add to Collection"
+          allowNone
+          onDismiss={() => setShowCollectionsModal(false)}
+          onCreate={async (name) => {
+            try {
+              const created = await databaseService.createCollection(name, user?.id);
+              setCollections((prev) => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+              await databaseService.setDesignCollection(design.id, created.id);
+              setDesign((prev) => {
+                const updated = { ...prev, collectionId: created.id };
+                setDesignList((prevList) =>
+                  prevList.map((item) => (item.id === updated.id ? updated : item))
+                );
+                return updated;
+              });
+              setShowCollectionsModal(false);
+              showToast(`Added to ${created.name}`, 'success');
+            } catch (error) {
+              console.error('Failed to create/select collection:', error);
+              showToast('Could not add to collection', 'error');
+            }
+          }}
+          onSelect={async (collectionId) => {
+            try {
+              await databaseService.setDesignCollection(design.id, collectionId);
+              const selectedCollection = collections.find((c) => c.id === collectionId);
+              setDesign((prev) => {
+                const updated = { ...prev, collectionId };
+                setDesignList((prevList) =>
+                  prevList.map((item) => (item.id === updated.id ? updated : item))
+                );
+                return updated;
+              });
+              setShowCollectionsModal(false);
+              showToast(
+                collectionId
+                  ? `Moved to ${selectedCollection?.name || 'collection'}`
+                  : 'Removed from collection',
+                'success'
+              );
+            } catch (error) {
+              console.error('Failed to set collection:', error);
+              showToast('Could not update collection', 'error');
+            }
+          }}
+        />
       </View>
     </GestureHandlerRootView>
   );
@@ -631,6 +740,26 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
   },
   imageCounterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  collectionBadge: {
+    position: 'absolute',
+    bottom: 30,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: screenWidth * 0.6,
+    backgroundColor: 'rgba(16,16,16,0.55)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  collectionBadgeText: {
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
@@ -701,7 +830,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   modalContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 14,
   },
   titleSection: {
     alignItems: 'center',

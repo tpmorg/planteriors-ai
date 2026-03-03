@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   Animated,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
@@ -19,6 +18,7 @@ import { usageTrackingService } from "../services/usageTrackingService";
 import { subscriptionService } from "../services/subscriptionService";
 import { PaywallModal } from "../components/PaywallModal";
 import { useTheme } from "../contexts/ThemeContext";
+import { useToast } from "../contexts/ToastContext";
 
 interface GenerationScreenProps {
   request: GenerationRequest;
@@ -38,6 +38,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const { user } = useAuth();
   const { refreshStatus } = useSubscription();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const styles = createStyles(theme);
 
   const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
@@ -265,10 +266,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         };
 
         console.log("Design saved successfully with ID:", savedDesign.id);
+        showToast("Design saved", "success");
         onGenerationComplete(result);
       } catch (error) {
         console.error("Failed to save design:", error);
-        Alert.alert("Error", "Failed to save design. Please try again.");
+        showToast("Failed to save design", "error");
       }
     }
   };
