@@ -568,17 +568,20 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 </View>
               )}
 
-              <TouchableOpacity
-                onPress={openRefineModal}
-                style={styles.aiRefineTrigger}
-                activeOpacity={0.9}
-              >
-                <View style={styles.aiRefineOuterGlow}>
-                  <View style={styles.aiRefineInnerRing}>
-                    <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
+              {/* Refinement trigger temporarily disabled */}
+              {false && (
+                <TouchableOpacity
+                  onPress={openRefineModal}
+                  style={styles.aiRefineTrigger}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.aiRefineOuterGlow}>
+                    <View style={styles.aiRefineInnerRing}>
+                      <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
             </Animated.View>
           </GestureDetector>
         </View>
@@ -705,7 +708,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           </>
         )}
 
-        {showRefineModal && (
+        {/* Refinement modal temporarily disabled */}
+        {false && showRefineModal && (
           <KeyboardAvoidingView
             style={[styles.refineOverlay, isKeyboardVisible && styles.refineOverlayKeyboard]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

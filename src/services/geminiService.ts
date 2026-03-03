@@ -13,7 +13,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { compressImageForAI } from "../utils/imageUtils";
 
 // Image generation/editing model - takes input image + prompt to create modified version
-const MODEL_NAME = "gemini-2.5-flash-image";
+const MODEL_NAME = "gemini-3.1-flash-image-preview"  //"gemini-2.5-flash-image";
 
 export class GeminiService {
   private client: GoogleGenAI;

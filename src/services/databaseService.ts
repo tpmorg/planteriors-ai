@@ -1010,6 +1010,40 @@ export class DatabaseService {
     }
   }
 
+  async getRecentSourceImageUris(userId?: string, limit: number = 24): Promise<string[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const params: (string | number)[] = [];
+      let sql = `
+        SELECT original_image_uri
+        FROM saved_designs
+        WHERE original_image_uri IS NOT NULL
+      `;
+
+      if (userId) {
+        sql += ` AND user_id = ?`;
+        params.push(userId);
+      }
+
+      sql += `
+        GROUP BY original_image_uri
+        ORDER BY MAX(created_at) DESC
+        LIMIT ?
+      `;
+      params.push(limit);
+
+      const rows = await this.db.getAllAsync<{ original_image_uri: string }>(sql, params);
+      return rows
+        .map((row) => row.original_image_uri)
+        .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0);
+    } catch (error) {
+      console.error('Failed to get recent source images:', error);
+      return [];
+    }
+  }
+
   async getDesignById(id: string): Promise<SavedDesign | null> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');

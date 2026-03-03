@@ -335,6 +335,28 @@ function OnboardingScreenWrapper({ route, navigation }: any) {
 }
 
 function CameraScreenWrapper({ navigation }: any) {
+  const { user } = useAuth();
+  const [recentSourceImages, setRecentSourceImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadRecentImages = async () => {
+      try {
+        const images = await databaseService.getRecentSourceImageUris(user?.id, 24);
+        if (mounted) {
+          setRecentSourceImages(images);
+        }
+      } catch (error) {
+        console.error("Failed to load recent source images:", error);
+      }
+    };
+
+    loadRecentImages();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
   const handleImageTaken = (imageUri: string) => {
     navigation.navigate("PlantSelection", { imageUri });
   };
@@ -343,7 +365,13 @@ function CameraScreenWrapper({ navigation }: any) {
     navigation.navigate("MainApp");
   };
 
-  return <CameraScreen onImageTaken={handleImageTaken} onClose={handleClose} />;
+  return (
+    <CameraScreen
+      onImageTaken={handleImageTaken}
+      onClose={handleClose}
+      recentSourceImages={recentSourceImages}
+    />
+  );
 }
 
 function PlantSelectionScreenWrapper({ route, navigation }: any) {

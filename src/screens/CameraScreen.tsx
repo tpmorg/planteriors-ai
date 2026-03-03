@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -18,11 +19,13 @@ import { compressImageForAI } from '../utils/imageUtils';
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
   onClose: () => void;
+  recentSourceImages?: string[];
 }
 
 export const CameraScreen: React.FC<CameraScreenProps> = ({
   onImageTaken,
   onClose,
+  recentSourceImages = [],
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -162,6 +165,32 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
               <Text style={styles.optionTitle}>Import from Gallery</Text>
               <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
             </TouchableOpacity>
+
+            {recentSourceImages.length > 0 && (
+              <View style={styles.recentSection}>
+                <View style={styles.recentHeader}>
+                  <AppIcon name="ClockCounterClockwise" size={16} color={theme.colors.primary} />
+                  <Text style={styles.recentTitle}>Reuse Recent Room Photos</Text>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.recentScrollContent}
+                >
+                  {recentSourceImages.map((uri, index) => (
+                    <TouchableOpacity
+                      key={`${uri}-${index}`}
+                      style={styles.recentThumbButton}
+                      onPress={() => setPreviewImage(uri)}
+                      activeOpacity={0.82}
+                    >
+                      <Image source={{ uri }} style={styles.recentThumbImage} />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -512,5 +541,39 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  recentSection: {
+    width: '100%',
+    marginTop: 8,
+  },
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  recentTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  recentScrollContent: {
+    gap: 10,
+    paddingRight: 4,
+    paddingBottom: 4,
+  },
+  recentThumbButton: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.borderLight,
+  },
+  recentThumbImage: {
+    width: '100%',
+    height: '100%',
   },
 });
