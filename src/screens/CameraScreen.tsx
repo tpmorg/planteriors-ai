@@ -48,7 +48,8 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
           skipProcessing: true,
           shutterSound: false,
         });
-        setPreviewImage(photo.uri);
+        const optimizedUri = await compressImageForAI(photo.uri);
+        setPreviewImage(optimizedUri);
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to take picture');
@@ -72,7 +73,8 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       });
 
       if (!result.canceled && result.assets[0]) {
-        setPreviewImage(result.assets[0].uri);
+        const optimizedUri = await compressImageForAI(result.assets[0].uri);
+        setPreviewImage(optimizedUri);
         setShowOptions(false);
       }
       setIsSystemCropping(false);
@@ -91,11 +93,9 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     if (!previewImage) return;
     setIsCropping(true);
     try {
-      const optimizedImageUri = await compressImageForAI(previewImage);
-      onImageTaken(optimizedImageUri);
-    } catch (error) {
-      console.error('Error preparing image for next screen:', error);
-      onImageTaken(previewImage);
+      const imageToUse = previewImage;
+      setPreviewImage(null);
+      onImageTaken(imageToUse);
     } finally {
       setIsCropping(false);
     }

@@ -9,7 +9,7 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -518,118 +518,108 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             {/* Modal Panel */}
             <GestureDetector gesture={modalPanGesture}>
               <Animated.View style={[styles.modalPanel, modalStyle, { height: modalHeight }]}>
-                {/* Draggable Header */}
-                <Animated.View style={styles.modalHeader}>
-                  <TouchableOpacity
-                    onPress={hideModal}
-                    style={styles.modalHeaderTouchable}
-                    activeOpacity={0.7}
+                <SafeAreaView edges={['bottom']} style={styles.modalSafeArea}>
+                  {/* Draggable Header */}
+                  <Animated.View style={styles.modalHeader}>
+                    <TouchableOpacity
+                      onPress={hideModal}
+                      style={styles.modalHeaderTouchable}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.modalHandle} />
+                    </TouchableOpacity>
+                  </Animated.View>
+
+                  {/* Modal Content */}
+                  <ScrollView
+                    style={styles.modalContent}
+                    contentContainerStyle={{ paddingBottom: 24 }}
+                    showsVerticalScrollIndicator={false}
                   >
-                    <View style={styles.modalHandle} />
-                  </TouchableOpacity>
-                </Animated.View>
+                    <View style={styles.infoGrid}>
+                      {/* Individual plant mode info */}
+                      {design.mode === 'individual' && design.individualPlant && (
+                        <>
+                          <View style={styles.infoItem}>
+                            <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
+                            <View style={styles.infoContent}>
+                              <Text style={styles.infoLabel}>Plant</Text>
+                              <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
+                              <Text style={styles.infoDescription}>
+                                {design.individualPlant.scientificName}
+                              </Text>
+                            </View>
+                          </View>
 
-                {/* Modal Content */}
-                <ScrollView
-                  style={styles.modalContent}
-                  contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {(() => {
-                    const displayText = getDesignDisplayText(design);
-                    return (
-                      <View style={styles.titleSection}>
-                        <Text style={styles.plantTypeTitle}>{displayText.title}</Text>
-                        <Text style={styles.plantStyleSubtitle}>
-                          {displayText.subtitle}
-                        </Text>
-                      </View>
-                    );
-                  })()}
+                          <View style={styles.infoItem}>
+                            <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
+                            <View style={styles.infoContent}>
+                              <Text style={styles.infoLabel}>Size</Text>
+                              <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
+                            </View>
+                          </View>
 
-                  <View style={styles.infoGrid}>
-                    {/* Individual plant mode info */}
-                    {design.mode === 'individual' && design.individualPlant && (
-                      <>
+                          <View style={styles.infoItem}>
+                            <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
+                            <View style={styles.infoContent}>
+                              <Text style={styles.infoLabel}>Placement</Text>
+                              <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                            </View>
+                          </View>
+                        </>
+                      )}
+
+                      {/* Multi-plant mode info */}
+                      {design.mode !== 'individual' && design.plantType && (
                         <View style={styles.infoItem}>
                           <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Plant</Text>
-                            <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
+                            <Text style={styles.infoLabel}>Plant Type</Text>
+                            <Text style={styles.infoValue}>{design.plantType.name}</Text>
                             <Text style={styles.infoDescription}>
-                              {design.individualPlant.scientificName}
+                              {design.plantType.description}
                             </Text>
                           </View>
                         </View>
+                      )}
 
+                      {design.mode !== 'individual' && design.plantStyle && (
                         <View style={styles.infoItem}>
-                          <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
+                          <AppIcon name="Palette" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Size</Text>
-                            <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
+                            <Text style={styles.infoLabel}>Style</Text>
+                            <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                            <Text style={styles.infoDescription}>
+                              {design.plantStyle.description}
+                            </Text>
                           </View>
                         </View>
+                      )}
 
+                      {design.customPrompt && (
                         <View style={styles.infoItem}>
-                          <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
+                          <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Placement</Text>
-                            <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                            <Text style={styles.infoLabel}>Custom Requirements</Text>
+                            <Text style={styles.infoDescription}>
+                              {design.customPrompt}
+                            </Text>
                           </View>
                         </View>
-                      </>
-                    )}
+                      )}
 
-                    {/* Multi-plant mode info */}
-                    {design.mode !== 'individual' && design.plantType && (
                       <View style={styles.infoItem}>
-                        <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
+                        <AppIcon name="Clock" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Plant Type</Text>
-                          <Text style={styles.infoValue}>{design.plantType.name}</Text>
-                          <Text style={styles.infoDescription}>
-                            {design.plantType.description}
+                          <Text style={styles.infoLabel}>Created</Text>
+                          <Text style={styles.infoValue}>
+                            {formatDate(design.createdAt)}
                           </Text>
                         </View>
-                      </View>
-                    )}
-
-                    {design.mode !== 'individual' && design.plantStyle && (
-                      <View style={styles.infoItem}>
-                        <AppIcon name="Palette" size={20} color={theme.colors.primary} />
-                        <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Style</Text>
-                          <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                          <Text style={styles.infoDescription}>
-                            {design.plantStyle.description}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-
-                    {design.customPrompt && (
-                      <View style={styles.infoItem}>
-                        <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
-                        <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Custom Requirements</Text>
-                          <Text style={styles.infoDescription}>
-                            {design.customPrompt}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-
-                    <View style={styles.infoItem}>
-                      <AppIcon name="Clock" size={20} color={theme.colors.primary} />
-                      <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>Created</Text>
-                        <Text style={styles.infoValue}>
-                          {formatDate(design.createdAt)}
-                        </Text>
                       </View>
                     </View>
-                  </View>
-                </ScrollView>
+                  </ScrollView>
+                </SafeAreaView>
               </Animated.View>
             </GestureDetector>
           </>
@@ -798,6 +788,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 14,
     elevation: 10,
   },
+  modalSafeArea: {
+    flex: 1,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -830,29 +823,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   modalContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 14,
-  },
-  titleSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-    backgroundColor: theme.colors.borderLight,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-  },
-  plantTypeTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.colors.primary,
-    textAlign: 'center',
-    fontFamily: 'serif',
-  },
-  plantStyleSubtitle: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    marginTop: 6,
+    paddingTop: 10,
   },
   infoGrid: {
     gap: 12,
