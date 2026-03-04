@@ -7,11 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: '161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com',
-  offlineAccess: true,
-});
+// Configure Google Sign-In only on Android.
+// iOS uses Apple Sign-In exclusively in this app.
+if (Platform.OS === 'android') {
+  GoogleSignin.configure({
+    webClientId: '161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com',
+    offlineAccess: true,
+  });
+}
 
 interface AuthContextType extends AuthState {
   signInWithGoogle: () => Promise<void>;
@@ -80,6 +83,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       console.log('Starting native Google Sign-In...');
+
+      if (Platform.OS !== 'android') {
+        console.log('Google Sign-In disabled on non-Android platform');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
 
       // Check if Google Play Services are available
       await GoogleSignin.hasPlayServices();
@@ -224,8 +233,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Starting complete sign out...');
 
-      // Sign out from Google
-      await GoogleSignin.signOut();
+      // Sign out from Google only on Android, where it's used.
+      if (Platform.OS === 'android') {
+        await GoogleSignin.signOut();
+      }
 
       // Clear Firebase auth
       await FirebaseAuthService.signOut();
