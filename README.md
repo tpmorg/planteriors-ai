@@ -132,6 +132,7 @@ For detailed architecture and technical docs, see [CLAUDE.md](CLAUDE.md).
 
 - [Firebase Console](https://console.firebase.google.com/project/house-plant-ai/settings/general/android:com.plantai.interior)
 - [Google Cloud Auth](https://console.cloud.google.com/auth/clients?project=house-plant-ai)
+- [Google AI Studio Project](https://aistudio.google.com/projects?project=house-plant-ai)
 - [Expo Dashboard](https://expo.dev/accounts/morgish/projects/plant-interior-ai/)
 - [Trefle API Docs](https://docs.trefle.io/reference/)
 - [GCP Billing](https://console.cloud.google.com/billing/01855B-D7E298-5E2882?project=house-plant-ai)
