@@ -57,7 +57,7 @@ npx tsc --noEmit       # Type check
 - React Native 0.81 + Expo SDK 54 (Dev Client)
 - Firebase Auth (Google)
 - SQLite via expo-sqlite
-- Gemini 2.5 Flash Image Preview (image generation)
+- Gemini 2.5 Flash Image Preview -- trying Gemini 3.1 (image generation)
 - RevenueCat (react-native-purchases) for subscriptions
 
 ## Common Commands
