@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -30,7 +30,36 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "extraPods": [
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "FirebaseCore",
+                "modular_headers": true
+              },
+              {
+                "name": "FirebaseCoreExtension",
+                "modular_headers": true
+              },
+              {
+                "name": "FirebaseCoreInternal",
+                "modular_headers": true
+              },
+              {
+                "name": "FirebaseAuthInterop",
+                "modular_headers": true
+              },
+              {
+                "name": "FirebaseAppCheckInterop",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              }
+            ]
           }
         }
       ],
