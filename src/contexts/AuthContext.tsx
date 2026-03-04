@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Alert, Platform } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
@@ -30,6 +33,15 @@ export const useAuth = () => {
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+const generateNonce = (length: number = 32): string => {
+  const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return result;
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -94,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: firebaseUser.id,
         email: firebaseUser.email,
         name: firebaseUser.name || userInfo.data.user.name || '',
-        avatar: firebaseUser.avatar || userInfo.data.user.photo || undefined,
+        picture: firebaseUser.picture || userInfo.data.user.photo || undefined,
         provider: 'google',
       };
 
@@ -124,10 +136,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithApple = async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
-      // Apple Sign In implementation would go here
-      // For now, we'll show a placeholder
-      console.log('Apple Sign In not implemented yet');
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+
+      if (Platform.OS !== 'ios') {
+        Alert.alert('Apple Sign-In unavailable', 'Apple Sign-In is only available on iOS devices.');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      const rawNonce = generateNonce();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple Sign-In');
+      }
+
+      const firebaseUser = await FirebaseAuthService.signInWithAppleIdentityToken(
+        credential.identityToken,
+        rawNonce
+      );
+
+      if (!firebaseUser) {
+        throw new Error('Failed to sign in to Firebase');
+      }
+
+      const appleName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      const user: User = {
+        id: firebaseUser.id,
+        email: firebaseUser.email || credential.email || '',
+        name: firebaseUser.name || appleName || 'Apple User',
+        picture: firebaseUser.picture,
+        provider: 'apple',
+      };
+
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      setAuthState({
+        isAuthenticated: true,
+        user,
+        isLoading: false,
+      });
     } catch (error) {
       console.error('Error signing in with Apple:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));

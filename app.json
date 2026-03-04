@@ -26,6 +26,7 @@
           "photosPermission": "Allow Planterior AI to access your photos to select room images."
         }
       ],
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
@@ -73,6 +74,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bcs.planterior",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleURLTypes": [
           {

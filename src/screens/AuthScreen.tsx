@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
@@ -58,29 +59,33 @@ export const AuthScreen: React.FC = () => {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.googleButton]}
-            onPress={signInWithGoogle}
-            disabled={isLoading}
-          >
-            <AppIcon name="GoogleLogo" size={20} color="#4285F4" />
-            <Text style={styles.buttonText}>Continue with Google</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'android' && (
+            <TouchableOpacity
+              style={[styles.button, styles.googleButton]}
+              onPress={signInWithGoogle}
+              disabled={isLoading}
+            >
+              <AppIcon name="GoogleLogo" size={20} color="#4285F4" />
+              <Text style={styles.buttonText}>Continue with Google</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={[styles.button, styles.appleButton]}
-            onPress={signInWithApple}
-            disabled={isLoading}
-          >
-            <AppIcon
-              name="AppleLogo"
-              size={20}
-              color={theme.isDark ? '#000000' : '#ffffff'}
-            />
-            <Text style={[styles.buttonText, styles.appleButtonText]}>
-              Continue with Apple
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.button, styles.appleButton]}
+              onPress={signInWithApple}
+              disabled={isLoading}
+            >
+              <AppIcon
+                name="AppleLogo"
+                size={20}
+                color={theme.isDark ? '#000000' : '#ffffff'}
+              />
+              <Text style={[styles.buttonText, styles.appleButtonText]}>
+                Continue with Apple
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* {showBypass && (
             <TouchableOpacity

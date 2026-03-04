@@ -1,4 +1,4 @@
-import { signInWithCredential, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
+import { signInWithCredential, GoogleAuthProvider, OAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { User } from '../types';
 
@@ -31,12 +31,33 @@ export class FirebaseAuthService {
     }
   }
 
+  static async signInWithAppleIdentityToken(identityToken: string, rawNonce: string): Promise<User | null> {
+    try {
+      console.log('Creating Apple credential with identity token...');
+      const provider = new OAuthProvider('apple.com');
+      const appleCredential = provider.credential({
+        idToken: identityToken,
+        rawNonce,
+      });
+
+      console.log('Signing in with Firebase via Apple credential...');
+      const userCredential = await signInWithCredential(auth, appleCredential);
+
+      console.log('Firebase Apple sign-in successful, mapping user...');
+      return this.mapFirebaseUserToUser(userCredential.user);
+    } catch (error) {
+      console.error('Firebase Apple Sign-In Error:', error);
+      throw error;
+    }
+  }
+
   static mapFirebaseUserToUser(firebaseUser: FirebaseUser): User {
     return {
       id: firebaseUser.uid,
       email: firebaseUser.email || '',
       name: firebaseUser.displayName || '',
-      avatar: firebaseUser.photoURL || undefined,
+      picture: firebaseUser.photoURL || undefined,
+      provider: 'google',
     };
   }
 

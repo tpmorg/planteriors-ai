@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>571611112597-lalai4hft68fb2h4q5ubpalfbmpnqpm0.apps.googleusercontent.com</string>
+	<string>161202796930-sf9e6lk5kv9434dgnb6o470998gkl0vl.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.571611112597-lalai4hft68fb2h4q5ubpalfbmpnqpm0</string>
+	<string>com.googleusercontent.apps.161202796930-sf9e6lk5kv9434dgnb6o470998gkl0vl</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>571611112597-9k9e3c2pc01rfe35k3eo9i8na97ir92l.apps.googleusercontent.com</string>
+	<string>161202796930-csdveqnl39i6b7uscm5b9l4m6f8bspl1.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyDT67rbmWlZ4WwRB1rVP0cM9Jw35-qGDK4</string>
+	<string>AIzaSyD0AcTPnbsj1y8HM0rwkfxNKfsePnKlsvI</string>
 	<key>GCM_SENDER_ID</key>
-	<string>571611112597</string>
+	<string>161202796930</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.bcs.planterior</string>
 	<key>PROJECT_ID</key>
-	<string>house-plant-ai</string>
+	<string>planterior-7c289</string>
 	<key>STORAGE_BUCKET</key>
-	<string>house-plant-ai.firebasestorage.app</string>
+	<string>planterior-7c289.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:571611112597:ios:6444373a219f6d6496279c</string>
+	<string>1:161202796930:ios:062361dd6d5bce2260f79b</string>
 </dict>
 </plist>
