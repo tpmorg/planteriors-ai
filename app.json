@@ -26,6 +26,14 @@
           "photosPermission": "Allow Planterior AI to access your photos to select room images."
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       "@react-native-firebase/app",
       [
         "@react-native-google-signin/google-signin",

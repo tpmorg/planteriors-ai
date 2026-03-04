@@ -45,7 +45,7 @@ yarn-error.*
 firebase-adminsdk-*.json
 
 # Firebase private config (keep google-services.json for public config)
-GoogleService-Info.plist
+# NOTE: GoogleService-Info.plist is intentionally tracked for EAS iOS cloud builds.
 
 # EAS credentials
 credentials.json

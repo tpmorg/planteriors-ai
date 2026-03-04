@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>571611112597-lalai4hft68fb2h4q5ubpalfbmpnqpm0.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.571611112597-lalai4hft68fb2h4q5ubpalfbmpnqpm0</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>571611112597-9k9e3c2pc01rfe35k3eo9i8na97ir92l.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDT67rbmWlZ4WwRB1rVP0cM9Jw35-qGDK4</string>
+	<key>GCM_SENDER_ID</key>
+	<string>571611112597</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.bcs.planterior</string>
+	<key>PROJECT_ID</key>
+	<string>house-plant-ai</string>
+	<key>STORAGE_BUCKET</key>
+	<string>house-plant-ai.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:571611112597:ios:6444373a219f6d6496279c</string>
+</dict>
+</plist>
