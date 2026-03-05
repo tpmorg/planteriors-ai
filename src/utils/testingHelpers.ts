@@ -60,7 +60,19 @@ export const SubscriptionTestingHelpers = {
     try {
       // With RevenueCat, test subscriptions must be granted through
       // the RevenueCat dashboard or platform sandbox testing.
-      console.log(`⚠️ grantSubscription: Use RevenueCat dashboard or sandbox testing to grant ${type} subscription for user: ${userId}`);
+      const expiryDate = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days from now
+      await databaseService.saveSubscription({
+        userId,
+        subscriptionStatus: 'active',
+        subscriptionType: type,
+        expiryDate,
+        isMock: true,
+        platform: 'ios',
+        purchaseDate: Date.now(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      console.log(`✅ Granted test ${type} subscription for user: ${userId}`);
     } catch (error) {
       console.error('❌ Failed to grant subscription:', error);
       throw error;
@@ -78,11 +90,20 @@ export const SubscriptionTestingHelpers = {
 
     try {
       // Set expiry date to the past
-      await databaseService.updateSubscriptionStatus(
+      const sub = await databaseService.getSubscription(userId);
+      await databaseService.saveSubscription({
         userId,
-        'expired',
-        Date.now() - 1000
-      );
+        subscriptionStatus: 'expired',
+        subscriptionType: sub?.subscriptionType || 'monthly',
+        expiryDate: Date.now() - 1000, // 1 second in the past
+        isMock: true,
+        createdAt: sub?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        platform: sub?.platform || 'ios',
+        purchaseDate: sub?.purchaseDate || Date.now(),
+        purchaseToken: sub?.purchaseToken,
+        originalTransactionId: sub?.originalTransactionId,
+      });
       console.log(`✅ Expired subscription for user: ${userId}`);
     } catch (error) {
       console.error('❌ Failed to expire subscription:', error);
