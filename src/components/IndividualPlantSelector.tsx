@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
 } from 'react-native';
 import { AppIcon } from './AppIcon';
 import {
@@ -53,6 +56,10 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   // Filter plants based on search
   const [filteredPlants, setFilteredPlants] = useState<IndividualPlant[]>(INDIVIDUAL_PLANTS);
   const [isListLoading, setIsListLoading] = useState(true);
+  const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
+  const listRef = useRef<FlatList<IndividualPlant>>(null);
+  const scrollOffsetRef = useRef(0);
+  const searchContainerTopRef = useRef(0);
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -134,6 +141,33 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     updateSelection(null, null, null);
   };
 
+  const handleListScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  };
+
+  const handleSearchContainerLayout = (event: LayoutChangeEvent) => {
+    searchContainerTopRef.current = event.nativeEvent.layout.y;
+  };
+
+  const toggleViewMode = () => {
+    setShouldRestoreScroll(true);
+    setViewMode(viewMode === 'grid' ? 'list' : 'grid');
+  };
+
+  useEffect(() => {
+    if (!shouldRestoreScroll || selectedPlant) {
+      return;
+    }
+
+    const restoreTarget = Math.max(scrollOffsetRef.current, searchContainerTopRef.current);
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: restoreTarget, animated: false });
+      setShouldRestoreScroll(false);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [viewMode, shouldRestoreScroll, selectedPlant, filteredPlants.length]);
+
   const getCareIconName = (level: string) => {
     switch (level) {
       case 'easy':
@@ -209,6 +243,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}
     >
       <FlatList
+        ref={listRef}
         data={selectedPlant ? [] : filteredPlants}
         renderItem={renderPlantItem}
         keyExtractor={(item) => item.id}
@@ -229,11 +264,13 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <>
             {listHeader}
             {/* Search Bar */}
-            <View style={styles.searchContainer}>
+            <View style={styles.searchContainer} onLayout={handleSearchContainerLayout}>
               <View style={styles.searchInputWrapper}>
                 <AppIcon
                   name="MagnifyingGlass"
@@ -259,7 +296,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
               </View>
               <TouchableOpacity
                 style={styles.viewToggleButton}
-                onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                onPress={toggleViewMode}
                 accessibilityLabel="Toggle plant list view"
                 accessibilityRole="button"
               >
