@@ -5,10 +5,11 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TouchableOpacity, View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 
+import { AppIcon } from "./src/components/AppIcon";
+import { NetworkProvider } from "./src/contexts/NetworkContext";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { TabBarProvider, useTabBar } from "./src/contexts/TabBarContext";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
@@ -101,15 +102,19 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
 
-        let iconName: keyof typeof Ionicons.glyphMap;
+        let iconName: string;
+        let iconWeight: "regular" | "fill" = "regular";
         if (route.name === "Gallery") {
-          iconName = isFocused ? "images" : "images-outline";
+          iconName = "Images";
+          iconWeight = isFocused ? "fill" : "regular";
         } else if (route.name === "Account") {
-          iconName = isFocused ? "person" : "person-outline";
+          iconName = "User";
+          iconWeight = isFocused ? "fill" : "regular";
         } else if (route.name === "Settings") {
-          iconName = isFocused ? "settings" : "settings-outline";
+          iconName = "Gear";
+          iconWeight = isFocused ? "fill" : "regular";
         } else {
-          iconName = "help-outline";
+          iconName = "Question";
         }
 
         const onPress = () => {
@@ -134,7 +139,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
               paddingVertical: 4,
             }}
           >
-            <Ionicons
+            <AppIcon
               name={iconName}
               size={24}
               color={
@@ -142,6 +147,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                   ? theme.colors.tabBarActive
                   : theme.colors.tabBarInactive
               }
+              weight={iconWeight}
             />
             <Text
               style={{
@@ -595,11 +601,13 @@ export default function App() {
         <EnvValidator>
           <ThemeProvider>
             <ToastProvider>
-              <DebugPreferencesProvider>
-                <AuthProvider>
-                  <AppContent />
-                </AuthProvider>
-              </DebugPreferencesProvider>
+              <NetworkProvider>
+                <DebugPreferencesProvider>
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
+                </DebugPreferencesProvider>
+              </NetworkProvider>
             </ToastProvider>
           </ThemeProvider>
         </EnvValidator>

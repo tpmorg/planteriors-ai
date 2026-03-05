@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
+import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 import { onboardingService } from '../services/onboardingService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
@@ -26,6 +27,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
+  const requireNetwork = useNetworkGuard();
   const { suppressFreePlanWarnings, setSuppressFreePlanWarnings } = useDebugPreferences();
 
   useFocusEffect(
@@ -71,6 +73,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   };
 
   const openExternalLink = async (url: string) => {
+    if (!requireNetwork('Please connect to the internet to view this link.')) {
+      return;
+    }
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {

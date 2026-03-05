@@ -45,6 +45,13 @@
             {
               "client_id": "161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "161202796930-sf9e6lk5kv9434dgnb6o470998gkl0vl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.bcs.planterior"
+              }
             }
           ]
         }

@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { useNavigation } from '@react-navigation/native';
+import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { subscriptionService } from '../services/subscriptionService';
@@ -19,6 +20,7 @@ import { SubscriptionProduct } from '../types';
 export const SubscriptionScreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const requireNetwork = useNetworkGuard();
   const { purchaseSubscription, restorePurchases, subscription } = useSubscription();
   const styles = createStyles(theme);
 
@@ -32,6 +34,10 @@ export const SubscriptionScreen: React.FC = () => {
   }, []);
 
   const loadProducts = async () => {
+    if (!requireNetwork('Please connect to the internet to load subscription plans.')) {
+      return;
+    }
+
     const availableProducts = await subscriptionService.getAvailableProducts();
     setProducts(availableProducts);
     // Pre-select annual plan (better value)
@@ -41,6 +47,10 @@ export const SubscriptionScreen: React.FC = () => {
   };
 
   const handlePurchase = async () => {
+    if (!requireNetwork('Please connect to the internet to make a purchase.')) {
+      return;
+    }
+
     if (!selectedProductId) {
       Alert.alert('Error', 'Please select a plan');
       return;
@@ -74,6 +84,10 @@ export const SubscriptionScreen: React.FC = () => {
   };
 
   const handleRestorePurchases = async () => {
+    if (!requireNetwork('Please connect to the internet to restore purchases.')) {
+      return;
+    }
+
     setRestoring(true);
 
     try {
@@ -154,7 +168,10 @@ export const SubscriptionScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.purchaseButton, isPurchasing && styles.purchaseButtonDisabled]}
+          style={[
+            styles.purchaseButton,
+            (isPurchasing || !selectedProductId) && styles.purchaseButtonDisabled
+          ]}
           onPress={handlePurchase}
           disabled={isPurchasing || !selectedProductId}
           activeOpacity={0.8}
@@ -164,9 +181,7 @@ export const SubscriptionScreen: React.FC = () => {
           ) : (
             <>
               <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
-              <Text style={styles.purchaseButtonText}>
-                Subscribe Now
-              </Text>
+              <Text style={styles.purchaseButtonText}>Subscribe Now</Text>
             </>
           )}
         </TouchableOpacity>

@@ -10,17 +10,23 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AppIcon } from '../components/AppIcon';
 
 export const AuthScreen: React.FC = () => {
   const { signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const requireNetwork = useNetworkGuard();
   const { theme } = useTheme();
   // const showBypass = env.isDebugMode() || __DEV__;
   const styles = createStyles(theme);
 
   const openExternalLink = async (url: string) => {
+    if (!requireNetwork('Please connect to the internet to view this link.')) {
+      return;
+    }
+
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {
@@ -61,8 +67,12 @@ export const AuthScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           {Platform.OS === 'android' && (
             <TouchableOpacity
-              style={[styles.button, styles.googleButton]}
-              onPress={signInWithGoogle}
+              style={[styles.button, styles.googleButton, isLoading && { opacity: 0.6 }]}
+              onPress={() => {
+                if (requireNetwork()) {
+                  signInWithGoogle();
+                }
+              }}
               disabled={isLoading}
             >
               <AppIcon name="GoogleLogo" size={20} color="#4285F4" />
@@ -72,8 +82,12 @@ export const AuthScreen: React.FC = () => {
 
           {Platform.OS === 'ios' && (
             <TouchableOpacity
-              style={[styles.button, styles.appleButton]}
-              onPress={signInWithApple}
+              style={[styles.button, styles.appleButton, isLoading && { opacity: 0.6 }]}
+              onPress={() => {
+                if (requireNetwork()) {
+                  signInWithApple();
+                }
+              }}
               disabled={isLoading}
             >
               <AppIcon

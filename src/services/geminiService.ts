@@ -10,6 +10,7 @@ import {
 } from "../types";
 import { env } from "../utils/env";
 import * as FileSystem from "expo-file-system/legacy";
+import NetInfo from '@react-native-community/netinfo';
 import { compressImageForAI } from "../utils/imageUtils";
 
 // Image generation/editing model - takes input image + prompt to create modified version
@@ -28,6 +29,12 @@ export class GeminiService {
     request: GenerationRequest,
   ): Promise<{ imageUri: string; isGenerated: boolean }> {
     try {
+      // Safety check for network availability
+      const network = await NetInfo.fetch();
+      if (!network.isConnected) {
+        throw new Error("No internet connection. Please check your network and try again.");
+      }
+
       const promptText = this.buildPrompt(request);
 
       console.log("Using Gemini SDK directly...");

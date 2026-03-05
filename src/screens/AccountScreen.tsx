@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
+import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -23,6 +24,7 @@ interface AccountScreenProps {
 
 export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) => {
   const { user, signOut } = useAuth();
+  const requireNetwork = useNetworkGuard();
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
   const {
@@ -64,6 +66,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
   };
 
   const handleRestorePurchases = async () => {
+    if (!requireNetwork('Please connect to the internet to restore purchases.')) {
+      return;
+    }
     setRestoring(true);
     try {
       const result = await restorePurchases();

@@ -17,6 +17,7 @@ import { useSubscription } from "../contexts/SubscriptionContext";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { subscriptionService } from "../services/subscriptionService";
 import { PaywallModal } from "../components/PaywallModal";
+import { useNetworkGuard } from "../contexts/NetworkContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 
@@ -38,6 +39,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const { user } = useAuth();
   const { refreshStatus } = useSubscription();
   const { theme } = useTheme();
+  const requireNetwork = useNetworkGuard();
   const { showToast } = useToast();
   const styles = createStyles(theme);
 
@@ -85,6 +87,12 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
     try {
       setIsCheckingUsage(true);
+
+      if (!requireNetwork()) {
+        setError("No internet connection. Please check your network and try again.");
+        setIsCheckingUsage(false);
+        return;
+      }
 
       // Check if user can generate
       const { canGenerate, reason } = await usageTrackingService.canGenerateImage(user.id);

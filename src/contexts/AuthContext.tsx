@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Google Sign-In successful:', userInfo);
 
       // Get the ID token for Firebase
-      const { idToken } = userInfo.data;
+      const idToken = userInfo.data?.idToken;
       if (!idToken) {
         throw new Error('No ID token received from Google Sign-In');
       }
@@ -114,8 +114,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user: User = {
         id: firebaseUser.id,
         email: firebaseUser.email,
-        name: firebaseUser.name || userInfo.data.user.name || '',
-        picture: firebaseUser.picture || userInfo.data.user.photo || undefined,
+        name: firebaseUser.name || userInfo.data?.user.name || '',
+        picture: firebaseUser.picture || userInfo.data?.user.photo || undefined,
         provider: 'google',
       };
 

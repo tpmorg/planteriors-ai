@@ -92,6 +92,11 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     setShowOptions(false);
   };
 
+  const useRecentImage = (uri: string) => {
+    setPreviewImage(uri);
+    setShowOptions(false);
+  };
+
   const confirmImage = async () => {
     if (!previewImage) return;
     setIsCropping(true);
@@ -182,7 +187,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
                     <TouchableOpacity
                       key={`${uri}-${index}`}
                       style={styles.recentThumbButton}
-                      onPress={() => setPreviewImage(uri)}
+                      onPress={() => useRecentImage(uri)}
                       activeOpacity={0.82}
                     >
                       <Image source={{ uri }} style={styles.recentThumbImage} />
