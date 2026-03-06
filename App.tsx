@@ -44,6 +44,7 @@ type RootStackParamList = {
   Auth: undefined;
   MainApp: undefined;
   DesignFlow: { screen?: keyof DesignFlowStackParamList; params?: any } | undefined;
+  DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   Subscription: undefined;
   PlantIdentify: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;
@@ -54,7 +55,6 @@ type DesignFlowStackParamList = {
   PlantSelection: { imageUri: string };
   PlantLocation: { imageUri: string; request: Omit<GenerationRequest, 'imageUri' | 'location'> };
   Generation: { request: GenerationRequest };
-  DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
 };
 
 type TabParamList = {
@@ -310,6 +310,11 @@ function AppContent() {
               options={{ presentation: "modal", headerShown: false }}
             />
             <Stack.Screen
+              name="DesignDetail"
+              component={DesignDetailScreenWrapper}
+              options={{ presentation: "modal", headerShown: false }}
+            />
+            <Stack.Screen
               name="Subscription"
               component={SubscriptionScreen}
               options={{ presentation: "modal" }}
@@ -349,7 +354,6 @@ function DesignFlowNavigator() {
       <DesignFlowStack.Screen name="PlantSelection" component={PlantSelectionScreenWrapper} />
       <DesignFlowStack.Screen name="PlantLocation" component={PlantLocationScreenWrapper} />
       <DesignFlowStack.Screen name="Generation" component={GenerationScreenWrapper} />
-      <DesignFlowStack.Screen name="DesignDetail" component={DesignDetailScreenWrapper} />
     </DesignFlowStack.Navigator>
   );
 }
