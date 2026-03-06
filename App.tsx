@@ -43,14 +43,18 @@ import { onboardingService } from "./src/services/onboardingService";
 type RootStackParamList = {
   Auth: undefined;
   MainApp: undefined;
-  Camera: undefined;
+  DesignFlow: { screen?: keyof DesignFlowStackParamList; params?: any } | undefined;
+  Subscription: undefined;
+  PlantIdentify: undefined;
+  Onboarding: { fromSettings?: boolean } | undefined;
+};
+
+type DesignFlowStackParamList = {
+  Camera: { mode?: 'room' | 'plant-id' };
   PlantSelection: { imageUri: string };
   PlantLocation: { imageUri: string; request: Omit<GenerationRequest, 'imageUri' | 'location'> };
   Generation: { request: GenerationRequest };
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
-  Subscription: undefined;
-  PlantIdentify: undefined;
-  Onboarding: { fromSettings?: boolean } | undefined;
 };
 
 type TabParamList = {
@@ -60,6 +64,7 @@ type TabParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+const DesignFlowStack = createStackNavigator<DesignFlowStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 // Custom Tab Bar Component
@@ -299,19 +304,10 @@ function AppContent() {
           >
             <Stack.Screen name="Onboarding" component={OnboardingScreenWrapper} />
             <Stack.Screen name="MainApp" component={MainTabNavigator} />
-            <Stack.Screen name="Camera" component={CameraScreenWrapper} />
             <Stack.Screen
-              name="PlantSelection"
-              component={PlantSelectionScreenWrapper}
-            />
-            <Stack.Screen
-              name="PlantLocation"
-              component={PlantLocationScreenWrapper}
-            />
-            <Stack.Screen name="Generation" component={GenerationScreenWrapper} />
-            <Stack.Screen
-              name="DesignDetail"
-              component={DesignDetailScreenWrapper}
+              name="DesignFlow"
+              component={DesignFlowNavigator}
+              options={{ presentation: "modal", headerShown: false }}
             />
             <Stack.Screen
               name="Subscription"
@@ -346,8 +342,21 @@ function OnboardingScreenWrapper({ route, navigation }: any) {
   return <OnboardingScreen fromSettings={fromSettings} onComplete={handleComplete} />;
 }
 
-function CameraScreenWrapper({ navigation }: any) {
+function DesignFlowNavigator() {
+  return (
+    <DesignFlowStack.Navigator screenOptions={{ headerShown: false }}>
+      <DesignFlowStack.Screen name="Camera" component={CameraScreenWrapper} />
+      <DesignFlowStack.Screen name="PlantSelection" component={PlantSelectionScreenWrapper} />
+      <DesignFlowStack.Screen name="PlantLocation" component={PlantLocationScreenWrapper} />
+      <DesignFlowStack.Screen name="Generation" component={GenerationScreenWrapper} />
+      <DesignFlowStack.Screen name="DesignDetail" component={DesignDetailScreenWrapper} />
+    </DesignFlowStack.Navigator>
+  );
+}
+
+function CameraScreenWrapper({ navigation, route }: any) {
   const { user } = useAuth();
+  const { mode } = route.params || {};
   const [recentSourceImages, setRecentSourceImages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -374,7 +383,7 @@ function CameraScreenWrapper({ navigation }: any) {
   };
 
   const handleClose = () => {
-    navigation.navigate("MainApp");
+    navigation.getParent()?.goBack();
   };
 
   return (
@@ -382,6 +391,7 @@ function CameraScreenWrapper({ navigation }: any) {
       onImageTaken={handleImageTaken}
       onClose={handleClose}
       recentSourceImages={recentSourceImages}
+      mode={mode}
     />
   );
 }
@@ -444,7 +454,7 @@ function GenerationScreenWrapper({ route, navigation }: any) {
   const { request } = route.params;
 
   const handleGenerationComplete = (result: GeneratedImage) => {
-    navigation.navigate("MainApp");
+    navigation.getParent()?.navigate("MainApp");
   };
 
   const handleBack = () => {
@@ -467,7 +477,7 @@ function GenerationScreenWrapper({ route, navigation }: any) {
 
 function GalleryScreenWrapper({ navigation }: any) {
   const handleNewDesign = () => {
-    navigation.navigate("Camera");
+    navigation.navigate("DesignFlow", { screen: "Camera" });
   };
 
   const handleIdentifyPlant = () => {
@@ -512,7 +522,7 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
   };
 
   const handleDesignDeleted = () => {
-    navigation.navigate("MainApp");
+    navigation.getParent()?.navigate("MainApp");
   };
 
   const handleRefineDesign = (currentDesign: SavedDesign, refinementPrompt: string) => {
