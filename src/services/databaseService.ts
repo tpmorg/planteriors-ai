@@ -10,7 +10,7 @@ import {
   Collection
 } from '../types';
 
-const DB_VERSION = 4; // Current database version
+const DB_VERSION = 5; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -181,6 +181,7 @@ export class DatabaseService {
         suitable_placements TEXT,
         trefle_id TEXT,
         is_popular INTEGER DEFAULT 0,
+        user_added INTEGER DEFAULT 0,
         created_at INTEGER,
         updated_at INTEGER
       );
@@ -283,6 +284,9 @@ export class DatabaseService {
         CREATE INDEX IF NOT EXISTS idx_plants_popular ON plants(is_popular);
       `);
       await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_plants_user_added ON plants(user_added);
+      `);
+      await this.db.execAsync(`
         CREATE INDEX IF NOT EXISTS idx_plant_images_plant_id ON plant_images(plant_id);
       `);
       await this.db.execAsync(`
@@ -328,6 +332,13 @@ export class DatabaseService {
       console.log('Running migration to v4: Adding collections support');
       await this.migrateToV4();
       await this.setDbVersion(4);
+    }
+
+    // Migration from v4 to v5: Add user_added flag to plants
+    if (currentVersion < 5) {
+      console.log('Running migration to v5: Adding user_added flag to plants');
+      await this.migrateToV5();
+      await this.setDbVersion(5);
     }
 
     console.log('Migrations complete. Database at version:', DB_VERSION);
@@ -561,6 +572,26 @@ export class DatabaseService {
     }
   }
 
+  private async migrateToV5(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE plants ADD COLUMN user_added INTEGER DEFAULT 0;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.execAsync(
+        `CREATE INDEX IF NOT EXISTS idx_plants_user_added ON plants(user_added);`
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   // ============================================
   // Plant Codex Methods
   // ============================================
@@ -580,6 +611,7 @@ export class DatabaseService {
     suitablePlacements?: string[];
     trefleId?: string;
     isPopular?: boolean;
+    userAdded?: boolean;
   }): Promise<void> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
@@ -590,8 +622,8 @@ export class DatabaseService {
           id, name, scientific_name, description, category, icon,
           care_level, light_requirement, water_requirement, pet_safe,
           available_sizes, suitable_placements, trefle_id, is_popular,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          user_added, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           plant.id,
           plant.name,
@@ -607,6 +639,7 @@ export class DatabaseService {
           plant.suitablePlacements ? JSON.stringify(plant.suitablePlacements) : '[]',
           plant.trefleId || null,
           plant.isPopular ? 1 : 0,
+          plant.userAdded ? 1 : 0,
           Date.now(),
           Date.now()
         ]
@@ -649,7 +682,8 @@ export class DatabaseService {
         suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
         localImagePath: row.local_image_path,
         primaryImageUrl: row.primary_image_url,
-        isPopular: row.is_popular === 1
+        isPopular: row.is_popular === 1,
+        userAdded: row.user_added === 1
       }));
     } catch (error) {
       console.error('Failed to get popular plants:', error);
@@ -743,7 +777,8 @@ export class DatabaseService {
         localImagePath: row.local_image_path,
         primaryImageUrl: row.primary_image_url,
         searchRank: row.search_rank,
-        isPopular: row.is_popular === 1
+        isPopular: row.is_popular === 1,
+        userAdded: row.user_added === 1
       }));
     } catch (error) {
       console.error('Failed to search plants:', error);
@@ -823,7 +858,8 @@ export class DatabaseService {
         suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
         localImagePath: row.local_image_path,
         primaryImageUrl: row.primary_image_url,
-        isPopular: row.is_popular === 1
+        isPopular: row.is_popular === 1,
+        userAdded: row.user_added === 1
       };
     } catch (error) {
       console.error('Failed to get plant by ID:', error);

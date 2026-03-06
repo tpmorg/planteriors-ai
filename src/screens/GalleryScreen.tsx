@@ -26,6 +26,7 @@ import { useToast } from '../contexts/ToastContext';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
+  onIdentifyPlant: () => void;
   onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
   onUpgradePress?: () => void;
 }
@@ -36,6 +37,7 @@ const itemSize = (width - 60) / numColumns; // Account for padding and gap
 
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onNewDesign,
+  onIdentifyPlant,
   onDesignSelect,
   onUpgradePress,
 }) => {
@@ -212,6 +214,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         >
           <AppIcon name="Plus" size={24} color="white" />
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onIdentifyPlant}
+          style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
+          accessibilityLabel="Identify plant"
+        >
+          <AppIcon name="Plant" size={22} color="white" />
+        </TouchableOpacity>
 
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading your images...</Text>
@@ -230,6 +239,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         accessibilityLabel="New design"
       >
         <AppIcon name="Plus" size={24} color="white" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onIdentifyPlant}
+        style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
+        accessibilityLabel="Identify plant"
+      >
+        <AppIcon name="Plant" size={22} color="white" />
       </TouchableOpacity>
 
       <View style={styles.floatingButtonOffset} />
@@ -404,6 +420,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   newDesignButton: {
     backgroundColor: theme.colors.primary,
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  identifyPlantButton: {
+    backgroundColor: theme.isDark ? '#2e6a4f' : '#2f7a52',
     borderRadius: 22,
     width: 44,
     height: 44,

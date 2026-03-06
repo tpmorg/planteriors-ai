@@ -27,6 +27,7 @@ import { AccountScreen } from "./src/screens/AccountScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
+import { PlantIdentifyScreen } from "./src/screens/PlantIdentifyScreen";
 import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
@@ -48,6 +49,7 @@ type RootStackParamList = {
   Generation: { request: GenerationRequest };
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   Subscription: undefined;
+  PlantIdentify: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;
 };
 
@@ -316,6 +318,10 @@ function AppContent() {
               component={SubscriptionScreen}
               options={{ presentation: "modal" }}
             />
+            <Stack.Screen
+              name="PlantIdentify"
+              component={PlantIdentifyScreenWrapper}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </TabBarProvider>
@@ -464,6 +470,10 @@ function GalleryScreenWrapper({ navigation }: any) {
     navigation.navigate("Camera");
   };
 
+  const handleIdentifyPlant = () => {
+    navigation.navigate("PlantIdentify");
+  };
+
   const handleDesignSelect = (
     design: SavedDesign,
     designs: SavedDesign[],
@@ -479,10 +489,19 @@ function GalleryScreenWrapper({ navigation }: any) {
   return (
     <GalleryScreen
       onNewDesign={handleNewDesign}
+      onIdentifyPlant={handleIdentifyPlant}
       onDesignSelect={handleDesignSelect}
       onUpgradePress={handleUpgradePress}
     />
   );
+}
+
+function PlantIdentifyScreenWrapper({ navigation }: any) {
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return <PlantIdentifyScreen onBack={handleBack} />;
 }
 
 function DesignDetailScreenWrapper({ route, navigation }: any) {

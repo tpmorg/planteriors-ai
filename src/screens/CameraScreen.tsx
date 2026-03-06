@@ -20,12 +20,14 @@ interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
   onClose: () => void;
   recentSourceImages?: string[];
+  mode?: 'room' | 'plant-id';
 }
 
 export const CameraScreen: React.FC<CameraScreenProps> = ({
   onImageTaken,
   onClose,
   recentSourceImages = [],
+  mode = 'room',
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -37,6 +39,26 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const isPlantIdMode = mode === 'plant-id';
+
+  const copy = {
+    addTitle: isPlantIdMode ? 'Add Plant Photo' : 'Add Room Photo',
+    optionsTitle: isPlantIdMode
+      ? 'How would you like to add a plant photo?'
+      : 'How would you like to add a room photo?',
+    cameraSubtitle: isPlantIdMode
+      ? 'Use your camera to capture a plant'
+      : 'Use your camera to capture a room',
+    recentTitle: isPlantIdMode ? 'Reuse Recent Plant Photos' : 'Reuse Recent Room Photos',
+    takeTitle: isPlantIdMode ? 'Take Plant Photo' : 'Take Room Photo',
+    guideline: isPlantIdMode
+      ? 'Center the plant in frame with clear lighting'
+      : 'Position your room in the frame for best results',
+    previewSubtitle: isPlantIdMode
+      ? 'Looks good? Continue to identify this plant.'
+      : 'Looks good? Continue to start your design.',
+    processingLabel: isPlantIdMode ? 'Identifying…' : 'Processing…',
+  };
 
   const hasPermission = permission?.granted;
 
@@ -63,10 +85,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const pickImage = async () => {
     try {
       setIsSystemCropping(true);
-      const mediaTypes =
-        ImagePicker.MediaType?.Images
-          ? [ImagePicker.MediaType.Images]
-          : ImagePicker.MediaTypeOptions?.Images ?? ['images'];
+      const mediaTypes = ['images'];
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypes as any,
@@ -151,18 +170,18 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <AppIcon name="Images" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Room Photo</Text>
+          <Text style={styles.headerTitle}>{copy.addTitle}</Text>
           <View style={styles.placeholder} />
         </View>
 
         <View style={styles.optionsContainer}>
           <View style={styles.optionsContent}>
-            <Text style={styles.optionsTitle}>How would you like to add a room photo?</Text>
+            <Text style={styles.optionsTitle}>{copy.optionsTitle}</Text>
 
             <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
               <AppIcon name="Camera" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Take Photo</Text>
-              <Text style={styles.optionSubtitle}>Use your camera to capture a room</Text>
+              <Text style={styles.optionSubtitle}>{copy.cameraSubtitle}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
@@ -175,7 +194,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
               <View style={styles.recentSection}>
                 <View style={styles.recentHeader}>
                   <AppIcon name="ClockCounterClockwise" size={16} color={theme.colors.primary} />
-                  <Text style={styles.recentTitle}>Reuse Recent Room Photos</Text>
+                  <Text style={styles.recentTitle}>{copy.recentTitle}</Text>
                 </View>
 
                 <ScrollView
@@ -223,7 +242,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
           <View style={styles.previewCopy}>
             <Text style={styles.previewTitle}>Review Your Photo</Text>
             <Text style={styles.previewSubtitle}>
-              Looks good? Continue to start your design.
+              {copy.previewSubtitle}
             </Text>
           </View>
 
@@ -248,7 +267,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
                 <AppIcon name="Check" size={18} color="white" />
               )}
               <Text style={styles.primaryButtonText}>
-                {isCropping ? 'Processing…' : 'Continue'}
+                {isCropping ? copy.processingLabel : 'Continue'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -263,7 +282,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         <TouchableOpacity onPress={onClose} style={styles.headerButton}>
           <AppIcon name="Images" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Take Room Photo</Text>
+        <Text style={styles.headerTitle}>{copy.takeTitle}</Text>
         <TouchableOpacity
           onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
           style={styles.headerButton}
@@ -277,7 +296,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         <View style={styles.cameraOverlay}>
           <View style={styles.guideline}>
             <Text style={styles.guidelineText}>
-              Position your room in the frame for best results
+              {copy.guideline}
             </Text>
           </View>
         </View>

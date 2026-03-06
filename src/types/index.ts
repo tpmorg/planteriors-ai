@@ -186,6 +186,7 @@ export interface PlantSearchResult {
   localImagePath?: string;
   searchRank?: number;
   isPopular: boolean;
+  userAdded?: boolean;
 }
 
 export interface PlantCategory {
@@ -204,6 +205,23 @@ export interface PlantSearchOptions {
   limit?: number;
   offset?: number;
   source?: 'local' | 'api' | 'all';
+}
+
+// Plant Identification (image -> species + care guidance)
+export interface PlantIdentificationResult {
+  commonName: string;
+  scientificName: string;
+  confidence: number; // 0..1
+  description: string;
+  category: PlantCategoryType;
+  careLevel: CareLevel;
+  lightRequirement: LightRequirement;
+  waterRequirement: WaterRequirement;
+  petSafe: boolean;
+  availableSizes: PlantSize[];
+  suitablePlacements: PlacementType[];
+  healthAssessment?: string;
+  careTips: string[];
 }
 
 // Plant location selection for precise placement
