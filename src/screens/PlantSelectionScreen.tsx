@@ -684,7 +684,7 @@ const createStyles = (theme: any) => {
       elevation: 8,
     },
     imageContainer: {
-      height: 240,
+      height: 300,
       position: 'relative',
       backgroundColor: theme.colors.borderLight,
     },

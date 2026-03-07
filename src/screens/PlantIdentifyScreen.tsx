@@ -30,19 +30,59 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [isAlreadyInLibrary, setIsAlreadyInLibrary] = useState(false);
+
+  const normalizePlantName = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const checkCommonNameExists = async (commonName: string): Promise<boolean> => {
+    const normalizedCandidate = normalizePlantName(commonName);
+    if (!normalizedCandidate) return false;
+
+    const queryVariants = Array.from(
+      new Set(
+        [commonName.trim(), commonName.replace(/\(.*?\)/g, '').trim()].filter(
+          (value) => value.length > 0
+        )
+      )
+    );
+
+    const matchesById = new Map<string, any>();
+    for (const query of queryVariants) {
+      const results = await databaseService.searchPlants(query, { limit: 200 });
+      results.forEach((plant: any) => {
+        matchesById.set(String(plant.id), plant);
+      });
+    }
+
+    return Array.from(matchesById.values()).some(
+      (plant: any) => normalizePlantName(plant.name || '') === normalizedCandidate
+    );
+  };
 
   const identifyFromUri = async (uri: string) => {
     setImageUri(uri);
     setResult(null);
+    setIsAlreadyInLibrary(false);
     setIsIdentifying(true);
     try {
       const service = createPlantIdentificationService();
       const identified = await service.identifyPlantFromImage(uri);
       setResult(identified);
+      setIsCheckingDuplicate(true);
+      const exists = await checkCommonNameExists(identified.commonName);
+      setIsAlreadyInLibrary(exists);
     } catch (error: any) {
       console.error('Failed to identify plant:', error);
       Alert.alert('Identification failed', error?.message || 'Unable to identify this plant right now.');
     } finally {
+      setIsCheckingDuplicate(false);
       setIsIdentifying(false);
     }
   };
@@ -53,16 +93,18 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
 
   const saveToPlantDb = async () => {
     if (!result) return;
+    if (isAlreadyInLibrary) {
+      Alert.alert('Already in database', 'Plant already in database.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const existingPlants = await databaseService.searchPlants(result.commonName, { limit: 25 });
-      const normalizedCandidate = result.commonName.trim().toLowerCase();
-      const alreadyExists = existingPlants.some(
-        (plant: any) => (plant.name || '').trim().toLowerCase() === normalizedCandidate
-      );
+      const alreadyExists = await checkCommonNameExists(result.commonName);
 
       if (alreadyExists) {
-        Alert.alert('Already Added', `${result.commonName} is already in your plant library.`);
+        setIsAlreadyInLibrary(true);
+        Alert.alert('Already in database', 'Plant already in database.');
         return;
       }
 
@@ -81,6 +123,8 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
     setImageUri(null);
     setResult(null);
     setIsIdentifying(false);
+    setIsCheckingDuplicate(false);
+    setIsAlreadyInLibrary(false);
   };
 
   if (isCameraOpen) {
@@ -146,6 +190,12 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
             {result.careTips.map((tip, index) => (
               <Text key={`${tip}-${index}`} style={styles.tipItem}>• {tip}</Text>
             ))}
+            {isCheckingDuplicate && (
+              <Text style={styles.duplicateStatusText}>Checking library for duplicates...</Text>
+            )}
+            {isAlreadyInLibrary && !isCheckingDuplicate && (
+              <Text style={styles.duplicateWarningText}>Plant already in database.</Text>
+            )}
           </View>
         )}
       </ScrollView>
@@ -165,16 +215,25 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
               <Text style={styles.secondaryButtonText}>Try Another</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.primaryButton, isSaving && styles.disabledButton]}
+              style={[
+                styles.primaryButton,
+                (isSaving || isCheckingDuplicate || isAlreadyInLibrary) && styles.disabledButton,
+              ]}
               onPress={saveToPlantDb}
-              disabled={isSaving}
+              disabled={isSaving || isCheckingDuplicate || isAlreadyInLibrary}
             >
               {isSaving ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <AppIcon name="Check" size={18} color="white" />
+                <AppIcon
+                  name={isAlreadyInLibrary ? 'Prohibit' : 'Check'}
+                  size={18}
+                  color="white"
+                />
               )}
-              <Text style={styles.primaryButtonText}>Add To Library</Text>
+              <Text style={styles.primaryButtonText}>
+                {isAlreadyInLibrary ? 'Already In Library' : 'Add To Library'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -307,6 +366,18 @@ const createStyles = (theme: any) =>
       fontSize: 13,
       color: theme.colors.textSecondary,
       lineHeight: 18,
+    },
+    duplicateStatusText: {
+      marginTop: 12,
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+    duplicateWarningText: {
+      marginTop: 12,
+      fontSize: 13,
+      color: '#b91c1c',
+      fontWeight: '700',
     },
     footer: {
       paddingHorizontal: 16,
