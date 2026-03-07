@@ -31,6 +31,7 @@ interface IndividualPlantSelectorProps {
   onSearchActiveChange?: (isActive: boolean) => void;
   listHeader?: React.ReactNode;
   listFooterSpacerHeight?: number;
+  petSafeOnly?: boolean;
 }
 
 export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = ({
@@ -39,6 +40,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   onSearchActiveChange,
   listHeader,
   listFooterSpacerHeight = 0,
+  petSafeOnly = false,
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,9 +69,12 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   useEffect(() => {
     setIsListLoading(true);
     const lowerQuery = searchQuery.toLowerCase().trim();
+    const sourcePlants = petSafeOnly
+      ? INDIVIDUAL_PLANTS.filter((plant) => plant.petSafe)
+      : INDIVIDUAL_PLANTS;
     const filtered = !lowerQuery
-      ? INDIVIDUAL_PLANTS
-      : INDIVIDUAL_PLANTS.filter(
+      ? sourcePlants
+      : sourcePlants.filter(
           (plant) =>
             plant.name.toLowerCase().includes(lowerQuery) ||
             plant.scientificName.toLowerCase().includes(lowerQuery) ||
@@ -79,7 +84,14 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     setFilteredPlants(filtered);
     const timeout = setTimeout(() => setIsListLoading(false), 50);
     return () => clearTimeout(timeout);
-  }, [searchQuery]);
+  }, [searchQuery, petSafeOnly]);
+
+  useEffect(() => {
+    if (!petSafeOnly || !selectedPlant || selectedPlant.petSafe) {
+      return;
+    }
+    clearSelection();
+  }, [petSafeOnly, selectedPlant]);
 
   useEffect(() => {
     if (!onSearchActiveChange) {

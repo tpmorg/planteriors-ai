@@ -144,6 +144,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   const [usePlanterBox, setUsePlanterBox] = useState(false);
   const [maintenanceLevel, setMaintenanceLevel] = useState<MaintenanceLevel>(MAINTENANCE_LEVELS[0]);
   const [placementDensity, setPlacementDensity] = useState<PlacementDensity>(PLACEMENT_DENSITIES[1]);
+  const [showPetSafePlantsOnly, setShowPetSafePlantsOnly] = useState(false);
 
   // Expanded sections state
   const [expandedSection, setExpandedSection] = useState<string | null>('plants');
@@ -158,6 +159,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   useEffect(() => {
     if (mode !== 'individual') {
       setIsPlantSearchActive(false);
+      setShowPetSafePlantsOnly(false);
     }
   }, [mode]);
 
@@ -252,7 +254,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Design Your Space</Text>
+        <Text style={styles.headerTitle}>
+          {mode === 'individual' ? 'Choose Plant' : 'Choose Style'}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -275,7 +279,6 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                     <Image source={{ uri: imageUri }} style={styles.previewImage} />
                   </View>
                   <View style={styles.heroContent}>
-                    <Text style={styles.heroTitle}>Transform Your Room</Text>
                     <Text style={styles.heroDescription}>
                       Choose a specific plant to see how it would look in your space.
                     </Text>
@@ -285,8 +288,26 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
               {/* Mode Toggle */}
               <PlantModeToggle mode={mode} onModeChange={setMode} />
+
+              {/* Pet-safe toggle */}
+              <View style={styles.petSafeToggleRow}>
+                <View style={styles.petSafeToggleText}>
+                  <Text style={styles.petSafeToggleLabel}>Pet-safe only</Text>
+                  <Text style={styles.petSafeToggleDescription}>Hide plants that are unsafe for pets</Text>
+                </View>
+                <Switch
+                  value={showPetSafePlantsOnly}
+                  onValueChange={setShowPetSafePlantsOnly}
+                  trackColor={{
+                    false: theme.colors.switchTrackFalse,
+                    true: theme.colors.switchTrackTrue,
+                  }}
+                  thumbColor={theme.colors.switchThumb}
+                />
+              </View>
             </>
           }
+          petSafeOnly={showPetSafePlantsOnly}
         />
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -296,7 +317,6 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
               <Image source={{ uri: imageUri }} style={styles.previewImage} />
             </View>
             <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>Transform Your Room</Text>
               <Text style={styles.heroDescription}>
                 Customize your plant design by selecting the type of plants, pot styles, and
                 placement preferences.
@@ -675,6 +695,35 @@ const createStyles = (theme: any) => {
     },
     heroContent: {
       padding: 20,
+    },
+    petSafeToggleRow: {
+      marginHorizontal: 12,
+      marginTop: 10,
+      marginBottom: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    petSafeToggleText: {
+      flex: 1,
+    },
+    petSafeToggleLabel: {
+      color: theme.colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    petSafeToggleDescription: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
     },
     heroTitle: {
       fontSize: 30,
