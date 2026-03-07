@@ -614,6 +614,9 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
       }
 
       const selection = currentDesign.individualPlant;
+      const individualPlantId =
+        selection.id ||
+        `refine-${selection.scientificName.toLowerCase().replace(/\s+/g, "-")}`;
       const suitablePlacements =
         selection.placement === "auto"
           ? ["floor", "shelf", "hanging"]
@@ -624,7 +627,7 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
         mode: "individual",
         individualPlant: {
           plant: {
-            id: `refine-${selection.scientificName.toLowerCase().replace(/\s+/g, "-")}`,
+            id: individualPlantId,
             name: selection.name,
             scientificName: selection.scientificName,
             description: `Indoor ${selection.name} arrangement refinement`,

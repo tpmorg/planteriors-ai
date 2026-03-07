@@ -10,7 +10,7 @@ import {
   Collection
 } from '../types';
 
-const DB_VERSION = 5; // Current database version
+const DB_VERSION = 6; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -104,6 +104,7 @@ export class DatabaseService {
         individual_plant_scientific_name TEXT,
         individual_plant_size TEXT,
         individual_plant_placement TEXT,
+        individual_plant_id TEXT,
         custom_prompt TEXT,
         created_at INTEGER NOT NULL,
         is_favorite INTEGER DEFAULT 0
@@ -339,6 +340,13 @@ export class DatabaseService {
       console.log('Running migration to v5: Adding user_added flag to plants');
       await this.migrateToV5();
       await this.setDbVersion(5);
+    }
+
+    // Migration from v5 to v6: Add plant ID reference to individual plant designs
+    if (currentVersion < 6) {
+      console.log('Running migration to v6: Adding plant ID to individual design records');
+      await this.migrateToV6();
+      await this.setDbVersion(6);
     }
 
     console.log('Migrations complete. Database at version:', DB_VERSION);
@@ -589,6 +597,49 @@ export class DatabaseService {
       );
     } catch {
       // ignore
+    }
+  }
+
+  private async migrateToV6(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN individual_plant_id TEXT;
+      `);
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await this.db.runAsync(`
+        UPDATE saved_designs
+        SET individual_plant_id = (
+          SELECT p.id
+          FROM plants p
+          WHERE lower(p.name) = lower(saved_designs.individual_plant_name)
+          LIMIT 1
+        )
+        WHERE mode = 'individual'
+          AND individual_plant_id IS NULL
+          AND individual_plant_name IS NOT NULL
+          AND TRIM(individual_plant_name) <> '';
+      `);
+      await this.db.runAsync(`
+        UPDATE saved_designs
+        SET individual_plant_id = (
+          SELECT p.id
+          FROM plants p
+          WHERE lower(p.scientific_name) = lower(saved_designs.individual_plant_scientific_name)
+          LIMIT 1
+        )
+        WHERE mode = 'individual'
+          AND individual_plant_id IS NULL
+          AND individual_plant_scientific_name IS NOT NULL
+          AND TRIM(individual_plant_scientific_name) <> '';
+      `);
+    } catch {
+      // Ignore backfill failures; column may not exist yet on unexpected schema state.
     }
   }
 
@@ -983,6 +1034,7 @@ export class DatabaseService {
     individualPlantScientificName?: string;
     individualPlantSize?: PlantSize;
     individualPlantPlacement?: PlacementType;
+    individualPlantId?: string;
     customPrompt?: string;
   }): Promise<SavedDesign> {
     await this.ensureConnection();
@@ -1014,8 +1066,9 @@ export class DatabaseService {
           plant_style_name, plant_style_description,
           individual_plant_name, individual_plant_scientific_name,
           individual_plant_size, individual_plant_placement,
+          individual_plant_id,
           custom_prompt, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           design.originalImageUri,
           design.generatedImageUri,
@@ -1030,6 +1083,7 @@ export class DatabaseService {
           toDbValue(design.individualPlantScientificName),
           toDbValue(design.individualPlantSize),
           toDbValue(design.individualPlantPlacement),
+          toDbValue(design.individualPlantId),
           design.customPrompt ?? '',
           Date.now(),
         ]
@@ -1052,6 +1106,7 @@ export class DatabaseService {
           description: design.plantStyleDescription || '',
         } : undefined,
         individualPlant: design.mode === 'individual' && design.individualPlantName ? {
+          id: toDbValue(design.individualPlantId) as string | undefined,
           name: design.individualPlantName,
           scientificName: design.individualPlantScientificName || '',
           size: design.individualPlantSize!,
@@ -1226,6 +1281,7 @@ export class DatabaseService {
         description: row.plant_style_description || '',
       } : undefined,
       individualPlant: row.individual_plant_name ? {
+        id: row.individual_plant_id || undefined,
         name: row.individual_plant_name,
         scientificName: row.individual_plant_scientific_name || '',
         size: row.individual_plant_size as PlantSize,

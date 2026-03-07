@@ -252,6 +252,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           individualPlantScientificName: request.individualPlant?.plant.scientificName,
           individualPlantSize: request.individualPlant?.size,
           individualPlantPlacement: request.individualPlant?.placement,
+          individualPlantId: request.individualPlant?.plant.id,
           customPrompt: request.prompt,
         });
 

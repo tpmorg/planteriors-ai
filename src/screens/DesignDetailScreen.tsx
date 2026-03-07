@@ -39,6 +39,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { CollectionPickerModal } from '../components/CollectionPickerModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import {
+  getPlantById as getSeedPlantById,
+  searchPlants as searchSeedPlants,
+} from '../data/plantDatabase';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -70,6 +74,7 @@ interface PlantProfile {
   suitablePlacements?: string[];
   localImagePath?: string;
   primaryImageUrl?: string;
+  imageUrl?: number;
   userAdded?: boolean;
 }
 
@@ -94,6 +99,50 @@ const getDesignDisplayText = (design: SavedDesign): { title: string; subtitle: s
     subtitle: `${styleName} Style`,
     shareMessage: `Check out my plant design! Created with ${typeName} in ${styleName} style.`,
   };
+};
+
+const normalizePlantValue = (value?: string) =>
+  (value || '').trim().toLowerCase();
+
+const findSeedPlantByName = (name?: string) => {
+  if (!name) return undefined;
+  const normalizedName = normalizePlantValue(name);
+  return searchSeedPlants(name).find(
+    (plant) =>
+      normalizePlantValue(plant.name) === normalizedName ||
+      normalizePlantValue(plant.scientificName) === normalizedName ||
+      normalizePlantValue(plant.name).includes(normalizedName) ||
+      normalizePlantValue(plant.scientificName).includes(normalizedName)
+  );
+};
+
+const mapSeedPlantProfile = (seedPlant: ReturnType<typeof getSeedPlantById>) => {
+  if (!seedPlant) return null;
+  return {
+    id: seedPlant.id,
+    name: seedPlant.name,
+    scientificName: seedPlant.scientificName,
+    description: seedPlant.description,
+    category: seedPlant.category,
+    icon: seedPlant.icon,
+    careLevel: seedPlant.careLevel,
+    lightRequirement: seedPlant.lightRequirement,
+    waterRequirement: seedPlant.waterRequirement,
+    petSafe: seedPlant.petSafe,
+    availableSizes: seedPlant.availableSizes,
+    suitablePlacements: seedPlant.suitablePlacements,
+    imageUrl: seedPlant.imageUrl,
+    userAdded: false,
+  };
+};
+
+const getPlantProfileImageSource = (profile: PlantProfile | null) => {
+  if (!profile) return null;
+  if (profile.localImagePath) return { uri: profile.localImagePath };
+  if (profile.primaryImageUrl) return { uri: profile.primaryImageUrl };
+  if (typeof profile.imageUrl === 'number') return profile.imageUrl;
+  if (profile.imageUrl) return { uri: profile.imageUrl };
+  return null;
 };
 
 export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
@@ -174,8 +223,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     };
   }, []);
 
-  const resolvePlantProfile = async (plantName?: string, scientificName?: string) => {
-    if (!plantName && !scientificName) {
+  const resolvePlantProfile = async (plantId?: string, plantName?: string, scientificName?: string) => {
+    if (!plantId && !plantName && !scientificName) {
       setPlantProfile(null);
       setIsPlantProfileLoading(false);
       return;
@@ -183,6 +232,17 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
     setIsPlantProfileLoading(true);
     try {
+      if (plantId) {
+        const profile =
+          (await databaseService.getPlantById(plantId)) ||
+          getSeedPlantById(plantId);
+        if (profile) {
+          setPlantProfile(profile as PlantProfile);
+          setIsPlantProfileLoading(false);
+          return;
+        }
+      }
+
       const normalize = (value?: string) =>
         (value || '').trim().toLowerCase();
       const queries = Array.from(
@@ -215,6 +275,29 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         }
       }
 
+      if (!matchedPlant && plantId) {
+        const seedById = getSeedPlantById(plantId);
+        if (seedById) {
+          matchedPlant = mapSeedPlantProfile(seedById);
+        }
+      }
+
+      if (!matchedPlant) {
+        const staticNameMatch = plantName ? findSeedPlantByName(plantName) : undefined;
+        if (staticNameMatch) {
+          matchedPlant = mapSeedPlantProfile(staticNameMatch);
+        }
+      }
+
+      if (!matchedPlant) {
+        const staticScientificMatch = scientificName
+          ? findSeedPlantByName(scientificName)
+          : undefined;
+        if (staticScientificMatch) {
+          matchedPlant = mapSeedPlantProfile(staticScientificMatch);
+        }
+      }
+
       setPlantProfile(matchedPlant);
     } catch (error) {
       console.error('Failed to resolve plant profile:', error);
@@ -232,8 +315,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       return;
     }
 
-    resolvePlantProfile(individualPlant.name, individualPlant.scientificName);
-  }, [design.mode, design.individualPlant?.name, design.individualPlant?.scientificName]);
+    resolvePlantProfile(individualPlant.id, individualPlant.name, individualPlant.scientificName);
+  }, [design.mode, design.individualPlant?.id, design.individualPlant?.name, design.individualPlant?.scientificName]);
 
   const showPlantProfile = () => {
     if (design.mode !== 'individual' || !design.individualPlant) {
@@ -525,9 +608,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       }
     });
 
-  // Modal pan gesture for pull-to-close
-  const modalPanGesture = Gesture.Pan()
+  // Modal pan gesture for pull-to-close (header drag only, downward).
+  const modalHeaderPanGesture = Gesture.Pan()
+    .activeOffsetY([8, Number.POSITIVE_INFINITY])
     .onUpdate((event) => {
+      if (event.translationY < 0) {
+        return;
+      }
       const newY = modalOpenY + Math.max(0, event.translationY);
       modalTranslateY.value = newY;
 
@@ -708,10 +795,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             </Animated.View>
 
             {/* Modal Panel */}
-            <GestureDetector gesture={modalPanGesture}>
-              <Animated.View style={[styles.modalPanel, modalStyle, { height: modalHeight }]}>
-                <SafeAreaView edges={['bottom']} style={styles.modalSafeArea}>
-                  {/* Draggable Header */}
+            <Animated.View style={[styles.modalPanel, modalStyle, { height: modalHeight }]}>
+              <SafeAreaView edges={['bottom']} style={styles.modalSafeArea}>
+                {/* Draggable Header */}
+                <GestureDetector gesture={modalHeaderPanGesture}>
                   <Animated.View style={styles.modalHeader}>
                     <TouchableOpacity
                       onPress={hideModal}
@@ -721,105 +808,105 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       <View style={styles.modalHandle} />
                     </TouchableOpacity>
                   </Animated.View>
+                </GestureDetector>
 
-                  {/* Modal Content */}
-                  <ScrollView
-                    style={styles.modalContent}
-                    contentContainerStyle={{ paddingBottom: 24 }}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <View style={styles.infoGrid}>
-                      {/* Individual plant mode info */}
-                      {design.mode === 'individual' && design.individualPlant && (
-                        <>
-                          <TouchableOpacity
-                            style={styles.infoItem}
-                            onPress={showPlantProfile}
-                            activeOpacity={0.7}
-                          >
-                            <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
-                            <View style={styles.infoContent}>
-                              <Text style={styles.infoLabel}>Plant</Text>
-                              <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
-                              <Text style={styles.infoDescription}>
-                                {design.individualPlant.scientificName}
-                              </Text>
-                            </View>
-                            <AppIcon name="CaretRight" size={16} color={theme.colors.textSecondary} />
-                          </TouchableOpacity>
-
-                          <View style={styles.infoItem}>
-                            <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
-                            <View style={styles.infoContent}>
-                              <Text style={styles.infoLabel}>Size</Text>
-                              <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
-                            </View>
-                          </View>
-
-                          <View style={styles.infoItem}>
-                            <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
-                            <View style={styles.infoContent}>
-                              <Text style={styles.infoLabel}>Placement</Text>
-                              <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
-                            </View>
-                          </View>
-                        </>
-                      )}
-
-                      {/* Multi-plant mode info */}
-                      {design.mode !== 'individual' && design.plantType && (
-                        <View style={styles.infoItem}>
+                {/* Modal Content */}
+                <ScrollView
+                  style={styles.modalContent}
+                  contentContainerStyle={{ paddingBottom: 24 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.infoGrid}>
+                    {/* Individual plant mode info */}
+                    {design.mode === 'individual' && design.individualPlant && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.infoItem}
+                          onPress={showPlantProfile}
+                          activeOpacity={0.7}
+                        >
                           <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Plant Type</Text>
-                            <Text style={styles.infoValue}>{design.plantType.name}</Text>
+                            <Text style={styles.infoLabel}>Plant</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.name}</Text>
                             <Text style={styles.infoDescription}>
-                              {design.plantType.description}
+                              {design.individualPlant.scientificName}
                             </Text>
                           </View>
-                        </View>
-                      )}
+                          <AppIcon name="CaretRight" size={16} color={theme.colors.textSecondary} />
+                        </TouchableOpacity>
 
-                      {design.mode !== 'individual' && design.plantStyle && (
                         <View style={styles.infoItem}>
-                          <AppIcon name="Palette" size={20} color={theme.colors.primary} />
+                          <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Style</Text>
-                            <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
-                            <Text style={styles.infoDescription}>
-                              {design.plantStyle.description}
-                            </Text>
+                            <Text style={styles.infoLabel}>Size</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.size}</Text>
                           </View>
                         </View>
-                      )}
 
-                      {design.customPrompt && (
                         <View style={styles.infoItem}>
-                          <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
+                          <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Custom Requirements</Text>
-                            <Text style={styles.infoDescription}>
-                              {design.customPrompt}
-                            </Text>
+                            <Text style={styles.infoLabel}>Placement</Text>
+                            <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
                           </View>
                         </View>
-                      )}
+                      </>
+                    )}
 
+                    {/* Multi-plant mode info */}
+                    {design.mode !== 'individual' && design.plantType && (
                       <View style={styles.infoItem}>
-                        <AppIcon name="Clock" size={20} color={theme.colors.primary} />
+                        <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
-                          <Text style={styles.infoLabel}>Created</Text>
-                          <Text style={styles.infoValue}>
-                            {formatDate(design.createdAt)}
+                          <Text style={styles.infoLabel}>Plant Type</Text>
+                          <Text style={styles.infoValue}>{design.plantType.name}</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.plantType.description}
                           </Text>
                         </View>
                       </View>
-                    </View>
-                      </ScrollView>
+                    )}
 
-                </SafeAreaView>
-              </Animated.View>
-            </GestureDetector>
+                    {design.mode !== 'individual' && design.plantStyle && (
+                      <View style={styles.infoItem}>
+                        <AppIcon name="Palette" size={20} color={theme.colors.primary} />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Style</Text>
+                          <Text style={styles.infoValue}>{design.plantStyle.name}</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.plantStyle.description}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {design.customPrompt && (
+                      <View style={styles.infoItem}>
+                        <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Custom Requirements</Text>
+                          <Text style={styles.infoDescription}>
+                            {design.customPrompt}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <View style={styles.infoItem}>
+                      <AppIcon name="Clock" size={20} color={theme.colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Created</Text>
+                        <Text style={styles.infoValue}>
+                          {formatDate(design.createdAt)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </ScrollView>
+
+              </SafeAreaView>
+            </Animated.View>
           </>
         )}
 
@@ -838,140 +925,141 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
               onPress={hidePlantProfileModal}
               activeOpacity={1}
             />
-            <SafeAreaView
-              edges={['top', 'bottom']}
-              style={[styles.plantProfilePanel, { paddingBottom: insets.bottom }]}
-            >
-              <View style={styles.plantProfileHeader}>
-                <TouchableOpacity
-                  onPress={hidePlantProfileModal}
-                  style={styles.plantProfileClose}
-                  activeOpacity={0.7}
-                >
-                  <AppIcon name="X" size={20} color={theme.colors.text} />
-                </TouchableOpacity>
-                <Text style={styles.plantProfileTitle}>Plant Details</Text>
-                <View style={styles.plantProfileHeaderSpacer} />
-              </View>
-
-              <ScrollView
-                style={styles.plantProfileContent}
-                contentContainerStyle={styles.plantProfileScrollContent}
-                showsVerticalScrollIndicator={false}
+            <SafeAreaView edges={['top', 'bottom']} style={styles.plantProfileContainer}>
+              <SafeAreaView
+                edges={['left', 'right', 'bottom']}
+                style={[styles.plantProfilePanel, { paddingBottom: insets.bottom }]}
               >
-                {isPlantProfileLoading && (
-                  <View style={styles.plantProfileLoading}>
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={styles.plantProfileLoadingText}>
-                      Loading plant profile…
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.plantProfileHeader}>
+                  <TouchableOpacity
+                    onPress={hidePlantProfileModal}
+                    style={styles.plantProfileClose}
+                    activeOpacity={0.7}
+                  >
+                    <AppIcon name="X" size={20} color={theme.colors.text} />
+                  </TouchableOpacity>
+                  <Text style={styles.plantProfileTitle}>Plant Details</Text>
+                  <View style={styles.plantProfileHeaderSpacer} />
+                </View>
 
-                {!isPlantProfileLoading && !plantProfile && (
-                  <View style={styles.plantProfileEmpty}>
-                    <Text style={styles.plantProfileEmptyTitle}>No plant profile found</Text>
-                    <Text style={styles.plantProfileDescription}>
-                      We do not have this plant saved in your local library yet. The top card uses the
-                      saved design details.
-                    </Text>
-                  </View>
-                )}
-
-                {!isPlantProfileLoading && plantProfile && (
-                  <>
-                    <View style={styles.plantProfileHero}>
-                      {plantProfile.localImagePath || plantProfile.primaryImageUrl ? (
-                        <Image
-                          source={{
-                            uri: plantProfile.localImagePath || plantProfile.primaryImageUrl!,
-                          }}
-                          style={styles.plantProfileImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={styles.plantProfileIconWrap}>
-                          <AppIcon
-                            name={plantProfile.icon || 'Leaf'}
-                            size={36}
-                            color={theme.colors.primary}
-                          />
-                        </View>
-                      )}
-                      <View style={styles.plantProfileHeroText}>
-                        <Text style={styles.plantProfileHeroName}>{plantProfile.name}</Text>
-                        <Text style={styles.plantProfileHeroScientific}>
-                          {plantProfile.scientificName}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {!!plantProfile.category && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Category</Text>
-                        <Text style={styles.plantProfileValue}>{plantProfile.category}</Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.description && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Care Notes</Text>
-                        <Text style={styles.plantProfileDescription}>{plantProfile.description}</Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.careLevel && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Care Level</Text>
-                        <Text style={styles.plantProfileValue}>{plantProfile.careLevel}</Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.lightRequirement && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Light</Text>
-                        <Text style={styles.plantProfileValue}>
-                          {plantProfile.lightRequirement.replace(/-/g, ' ')}
-                        </Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.waterRequirement && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Water</Text>
-                        <Text style={styles.plantProfileValue}>{plantProfile.waterRequirement}</Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.availableSizes?.length && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Available Sizes</Text>
-                        <Text style={styles.plantProfileValue}>
-                          {plantProfile.availableSizes.join(', ')}
-                        </Text>
-                      </View>
-                    )}
-
-                    {!!plantProfile.suitablePlacements?.length && (
-                      <View style={styles.plantProfileItem}>
-                        <Text style={styles.plantProfileLabel}>Suitable Placements</Text>
-                        <Text style={styles.plantProfileValue}>
-                          {plantProfile.suitablePlacements
-                            .map((placement) => placement.replace(/-/g, ' '))
-                            .join(', ')}
-                        </Text>
-                      </View>
-                    )}
-
-                    <View style={styles.plantProfileItem}>
-                      <Text style={styles.plantProfileLabel}>Pet Safety</Text>
-                      <Text style={styles.plantProfileValue}>
-                        {plantProfile.petSafe ? 'Pet safe' : 'Not pet safe'}
+                <ScrollView
+                  style={styles.plantProfileContent}
+                  contentContainerStyle={styles.plantProfileScrollContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {isPlantProfileLoading && (
+                    <View style={styles.plantProfileLoading}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={styles.plantProfileLoadingText}>
+                        Loading plant profile…
                       </Text>
                     </View>
-                  </>
-                )}
-              </ScrollView>
+                  )}
+
+                  {!isPlantProfileLoading && !plantProfile && (
+                    <View style={styles.plantProfileEmpty}>
+                      <Text style={styles.plantProfileEmptyTitle}>No plant profile found</Text>
+                      <Text style={styles.plantProfileDescription}>
+                        We do not have this plant saved in your local library yet. The top card uses the
+                        saved design details.
+                      </Text>
+                    </View>
+                  )}
+
+                  {!isPlantProfileLoading && plantProfile && (
+                    <>
+                      <View style={styles.plantProfileHero}>
+                        {getPlantProfileImageSource(plantProfile) ? (
+                          <Image
+                            source={getPlantProfileImageSource(plantProfile) as any}
+                            style={styles.plantProfileImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.plantProfileIconWrap}>
+                            <AppIcon
+                              name={plantProfile.icon || 'Leaf'}
+                              size={36}
+                              color={theme.colors.primary}
+                            />
+                          </View>
+                        )}
+                        <View style={styles.plantProfileHeroText}>
+                          <Text style={styles.plantProfileHeroName}>{plantProfile.name}</Text>
+                          <Text style={styles.plantProfileHeroScientific}>
+                            {plantProfile.scientificName}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {!!plantProfile.category && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Category</Text>
+                          <Text style={styles.plantProfileValue}>{plantProfile.category}</Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.description && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Care Notes</Text>
+                          <Text style={styles.plantProfileDescription}>{plantProfile.description}</Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.careLevel && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Care Level</Text>
+                          <Text style={styles.plantProfileValue}>{plantProfile.careLevel}</Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.lightRequirement && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Light</Text>
+                          <Text style={styles.plantProfileValue}>
+                            {plantProfile.lightRequirement.replace(/-/g, ' ')}
+                          </Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.waterRequirement && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Water</Text>
+                          <Text style={styles.plantProfileValue}>{plantProfile.waterRequirement}</Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.availableSizes?.length && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Available Sizes</Text>
+                          <Text style={styles.plantProfileValue}>
+                            {plantProfile.availableSizes.join(', ')}
+                          </Text>
+                        </View>
+                      )}
+
+                      {!!plantProfile.suitablePlacements?.length && (
+                        <View style={styles.plantProfileItem}>
+                          <Text style={styles.plantProfileLabel}>Suitable Placements</Text>
+                          <Text style={styles.plantProfileValue}>
+                            {plantProfile.suitablePlacements
+                              .map((placement) => placement.replace(/-/g, ' '))
+                              .join(', ')}
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Pet Safety</Text>
+                        <Text style={styles.plantProfileValue}>
+                          {plantProfile.petSafe ? 'Pet safe' : 'Not pet safe'}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
+              </SafeAreaView>
             </SafeAreaView>
           </View>
         </Modal>
@@ -1306,7 +1394,15 @@ const createStyles = (theme: any) => StyleSheet.create({
   plantProfileBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.62)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  plantProfileContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
   plantProfileBackdropTouchable: {
     position: 'absolute',
@@ -1317,15 +1413,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     zIndex: 1,
   },
   plantProfilePanel: {
-    width: '100%',
+    width: '92%',
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    maxHeight: screenHeight * 0.82,
+    borderRadius: 22,
+    height: Math.round(screenHeight * 0.84),
+    maxHeight: screenHeight * 0.9,
     minHeight: screenHeight * 0.52,
     alignSelf: 'stretch',
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignSelf: 'center',
   },
   plantProfileHeader: {
     flexDirection: 'row',

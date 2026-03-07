@@ -64,6 +64,7 @@ export interface GenerationRequest {
   plantOptions?: PlantOptions;
   // Individual plant mode fields (new)
   individualPlant?: IndividualPlantSelection;
+  individualPlantId?: string;
   // Location for individual plant placement (optional)
   location?: PlantLocation;
   // Common
@@ -98,6 +99,7 @@ export interface SavedDesign {
   };
   // Individual plant mode data
   individualPlant?: {
+    id?: string;
     name: string;
     scientificName: string;
     size: PlantSize;
