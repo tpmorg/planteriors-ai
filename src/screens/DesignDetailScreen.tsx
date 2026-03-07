@@ -920,11 +920,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           statusBarTranslucent
         >
           <View style={styles.plantProfileBackdrop}>
-            <TouchableOpacity
-              style={styles.plantProfileBackdropTouchable}
-              onPress={hidePlantProfileModal}
-              activeOpacity={1}
-            />
             <SafeAreaView edges={['top', 'bottom']} style={styles.plantProfileContainer}>
               <SafeAreaView
                 edges={['left', 'right', 'bottom']}
@@ -1403,14 +1398,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-  },
-  plantProfileBackdropTouchable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
   },
   plantProfilePanel: {
     width: '92%',
