@@ -281,21 +281,20 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
             </Animated.View>
           </View>
         </GestureDetector>
-      </View>
 
-      {/* Selection Info (reserve space to keep image stable) */}
-      <View
-        style={[
-          styles.selectionInfo,
-          !(hasSelection && placementMode === 'choose') && styles.selectionInfoHidden,
-        ]}
-        pointerEvents={hasSelection && placementMode === 'choose' ? 'auto' : 'none'}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-          <AppIcon name={request.individualPlant?.plant.icon || 'Leaf'} size={16} color={theme.colors.primary} />
-          <Text style={styles.selectionInfoText}>
-            {plantName} will be placed in the selected area
-          </Text>
+        <View
+          style={[
+            styles.selectionInfo,
+            !(hasSelection && placementMode === 'choose') && styles.selectionInfoHidden,
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.selectionInfoRow}>
+            <AppIcon name={request.individualPlant?.plant.icon || 'Leaf'} size={14} color={theme.colors.primary} />
+            <Text style={styles.selectionInfoText}>
+              {plantName} will be placed in the selected area
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -319,16 +318,37 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               </Text>
             </View>
           )}
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              placementMode === 'choose' && !hasSelection && styles.continueButtonDisabled,
-            ]}
-            onPress={handleContinue}
-            disabled={placementMode === 'choose' && !hasSelection}
-          >
-            <Text style={styles.continueButtonText}>Generate Design</Text>
-          </TouchableOpacity>
+
+          {placementMode === 'choose' ? (
+            <View style={styles.placementActions}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleReset}
+                disabled={!hasSelection}
+              >
+                <Text style={[styles.retryButtonText, !hasSelection && styles.retryButtonTextDisabled]}>
+                  Retry
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.continueButton,
+                  !hasSelection && styles.continueButtonDisabled,
+                ]}
+                onPress={handleContinue}
+                disabled={!hasSelection}
+              >
+                <Text style={styles.continueButtonText}>Confirm Location</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={handleContinue}
+            >
+              <Text style={styles.continueButtonText}>Generate Design</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -345,8 +365,8 @@ const createStyles = (theme: any) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       backgroundColor: theme.colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
@@ -369,44 +389,44 @@ const createStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.surface,
-      padding: 16,
-      marginBottom: 8,
+      padding: 8,
+      marginBottom: 4,
     },
     instructionIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: 10,
     },
     instructionText: {
       flex: 1,
     },
     instructionTitle: {
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: '600',
       color: theme.colors.text,
       marginBottom: 2,
     },
     instructionSubtitle: {
-      fontSize: 13,
+      fontSize: 11,
       color: theme.colors.textSecondary,
     },
     modeToggle: {
       flexDirection: 'row',
       gap: 8,
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: 10,
+      paddingBottom: 6,
       backgroundColor: theme.colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
     modeButton: {
       flex: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
+      paddingVertical: 7,
+      paddingHorizontal: 8,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -418,7 +438,7 @@ const createStyles = (theme: any) =>
       borderColor: theme.colors.primary,
     },
     modeButtonText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: theme.colors.textSecondary,
       textAlign: 'center',
@@ -427,7 +447,8 @@ const createStyles = (theme: any) =>
       color: theme.colors.primary,
     },
     imageSection: {
-      flex: 1,
+      flex: 8,
+      position: 'relative',
       backgroundColor: theme.isDark ? '#1a1a1a' : '#f0f0f0',
     },
     imageContainer: {
@@ -494,15 +515,30 @@ const createStyles = (theme: any) =>
       fontSize: 24,
     },
     selectionInfo: {
+      position: 'absolute',
+      left: 12,
+      right: 12,
+      bottom: 12,
+      borderRadius: 10,
       backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginTop: 8,
-      minHeight: 44,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      minHeight: 36,
       justifyContent: 'center',
+      zIndex: 3,
     },
     selectionInfoHidden: {
+      height: 0,
+      minHeight: 0,
+      marginTop: 0,
+      paddingVertical: 0,
       opacity: 0,
+    },
+    selectionInfoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
     },
     selectionInfoText: {
       fontSize: 14,
@@ -514,16 +550,18 @@ const createStyles = (theme: any) =>
       backgroundColor: theme.colors.surface,
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
-      paddingBottom: 24,
+      paddingBottom: 6,
     },
     footerContent: {
-      padding: 16,
+      paddingHorizontal: 12,
+      paddingTop: 6,
+      paddingBottom: 6,
     },
     footerHint: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.colors.textSecondary,
       textAlign: 'center',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     selectionPreview: {
       marginBottom: 12,
@@ -536,8 +574,8 @@ const createStyles = (theme: any) =>
     },
     continueButton: {
       backgroundColor: theme.colors.primary,
-      paddingVertical: 16,
-      paddingHorizontal: 24,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
       borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
@@ -549,6 +587,28 @@ const createStyles = (theme: any) =>
       color: 'white',
       fontSize: 16,
       fontWeight: '600',
+    },
+    placementActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    retryButton: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.surface,
+    },
+    retryButtonText: {
+      color: theme.colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    retryButtonTextDisabled: {
+      color: theme.colors.textSecondary,
     },
   });
 

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Sentry from '@sentry/react-native';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useNetworkGuard } from '../contexts/NetworkContext';
@@ -70,6 +71,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const handleDebugOnboardingToggle = async (value: boolean) => {
     await onboardingService.setCompleted(value);
     setOnboardingCompleted(value);
+  };
+
+  const handleSendSentryTestEvent = async () => {
+    const sentryEventTime = new Date().toISOString();
+    const payload = {
+      source: 'planterior.settings.debug',
+      scenario: 'manual_test_event',
+      sentryEventTime,
+    };
+
+    Sentry.setContext('settings_test', payload);
+    Sentry.captureMessage('Planterior Sentry test event', 'info');
+    Sentry.captureException(new Error(`Planterior Sentry test exception (${sentryEventTime})`));
+
+    Alert.alert('Sentry Test', 'Sent test message + error to Sentry. Check your Sentry issue list.');
   };
 
   const openExternalLink = async (url: string) => {
@@ -220,6 +236,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
                   thumbColor={theme.colors.switchThumb}
                 />
               </View>
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleSendSentryTestEvent}>
+                <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
+                <Text style={styles.menuText}>Send Sentry Test Event</Text>
+                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </>
           )}
         </View>

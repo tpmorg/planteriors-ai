@@ -4,6 +4,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 import { AuthState, User } from '../types';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
 
@@ -46,6 +47,21 @@ const generateNonce = (length: number = 32): string => {
   return result;
 };
 
+const syncSentryUser = (user: User | null) => {
+  if (!user) {
+    Sentry.setUser(null);
+    Sentry.setTag('user_provider', 'none');
+    return;
+  }
+
+  Sentry.setUser({
+    id: user.id,
+    email: user.email,
+    username: user.name || undefined,
+  });
+  Sentry.setTag('user_provider', user.provider);
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
@@ -64,6 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedUser) {
         const user: User = JSON.parse(storedUser);
         console.log('Found stored user:', user.email);
+        syncSentryUser(user);
         setAuthState({
           isAuthenticated: true,
           user,
@@ -121,6 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('Storing user and updating auth state...');
       await AsyncStorage.setItem('user', JSON.stringify(user));
+      syncSentryUser(user);
       setAuthState({
         isAuthenticated: true,
         user,
@@ -193,6 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(user));
+      syncSentryUser(user);
       setAuthState({
         isAuthenticated: true,
         user,
@@ -218,6 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(user));
+      syncSentryUser(user);
       setAuthState({
         isAuthenticated: true,
         user,
@@ -245,6 +265,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await AsyncStorage.removeItem('user');
 
       // Reset auth state
+      syncSentryUser(null);
       setAuthState({
         isAuthenticated: false,
         user: null,

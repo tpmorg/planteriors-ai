@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
+import Constants from "expo-constants";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { TouchableOpacity, View, Text } from "react-native";
+import { Platform, TouchableOpacity, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
+import * as Sentry from "@sentry/react-native";
 
 import { AppIcon } from "./src/components/AppIcon";
 import { NetworkProvider } from "./src/contexts/NetworkContext";
@@ -39,6 +41,24 @@ import {
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
 import { onboardingService } from "./src/services/onboardingService";
+
+const sentryDsn =
+  Constants.expoConfig?.extra?.sentryDsn ||
+  process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+const hasValidSentryDsn =
+  typeof sentryDsn === "string" &&
+  /^https?:\/\/.+@.+\..+\/\d+/.test(sentryDsn);
+
+if (hasValidSentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    enableAutoSessionTracking: true,
+    debug: __DEV__,
+  });
+} else if (__DEV__) {
+  console.warn("Sentry DSN is missing or invalid; Sentry disabled.");
+}
 
 type RootStackParamList = {
   Auth: undefined;
@@ -219,13 +239,15 @@ function SettingsScreenWrapper({ navigation }: any) {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { theme } = useTheme();
   const [dbInitialized, setDbInitialized] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showOnboardingFirstRun, setShowOnboardingFirstRun] = useState(false);
   const [showAuthTransitionSplash, setShowAuthTransitionSplash] = useState(false);
   const previousAuthRef = useRef(isAuthenticated);
+  const navigationRef = useRef<any>(null);
+  const currentRouteRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const initializeDatabase = async () => {
@@ -269,6 +291,38 @@ function AppContent() {
     previousAuthRef.current = isAuthenticated;
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: user.id,
+        email: user.email,
+        username: user.name || undefined,
+      });
+      Sentry.setTag("user_provider", user.provider);
+    } else {
+      Sentry.setUser(null);
+      Sentry.setTag("user_provider", "none");
+    }
+
+    Sentry.setTag("auth_state", isAuthenticated ? "authenticated" : "anonymous");
+  }, [isAuthenticated, user?.id, user?.email, user?.name, user?.provider]);
+
+  const handleNavigationReady = () => {
+    const routeName = navigationRef.current?.getCurrentRoute?.()?.name;
+    if (routeName) {
+      currentRouteRef.current = routeName;
+      Sentry.setTag("navigation_route", routeName);
+    }
+  };
+
+  const handleNavigationStateChange = () => {
+    const routeName = navigationRef.current?.getCurrentRoute?.()?.name;
+    if (routeName && routeName !== currentRouteRef.current) {
+      currentRouteRef.current = routeName;
+      Sentry.setTag("navigation_route", routeName);
+    }
+  };
+
   if (
     isLoading ||
     !dbInitialized ||
@@ -282,7 +336,11 @@ function AppContent() {
     return (
       <>
         <StatusBar style={theme.isDark ? "light" : "dark"} />
-        <NavigationContainer>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={handleNavigationReady}
+          onStateChange={handleNavigationStateChange}
+        >
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Auth" component={AuthScreen} />
           </Stack.Navigator>
@@ -297,7 +355,11 @@ function AppContent() {
     <SubscriptionProvider>
       <TabBarProvider>
         <StatusBar style={theme.isDark ? "light" : "dark"} />
-        <NavigationContainer>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={handleNavigationReady}
+          onStateChange={handleNavigationStateChange}
+        >
           <Stack.Navigator
             screenOptions={{ headerShown: false }}
             initialRouteName={showOnboardingFirstRun ? "Onboarding" : "MainApp"}
@@ -312,7 +374,12 @@ function AppContent() {
             <Stack.Screen
               name="DesignDetail"
               component={DesignDetailScreenWrapper}
-              options={{ presentation: "modal", headerShown: false }}
+              options={{
+                presentation: "card",
+                headerShown: false,
+                animation: Platform.OS === "android" ? "fade" : "default",
+                cardStyle: { backgroundColor: "#000" },
+              }}
             />
             <Stack.Screen
               name="Subscription"

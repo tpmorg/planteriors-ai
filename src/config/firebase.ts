@@ -1,6 +1,12 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Auth,
+  getAuth,
+  GoogleAuthProvider,
+  initializeAuth,
+  getReactNativePersistence,
+} from 'firebase/auth';
 
 // Import the google-services.json data
 const googleServices = require('../../google-services.json');
@@ -15,20 +21,16 @@ const firebaseConfig = {
   appId: googleServices.client[0].client_info.mobilesdk_app_id
 };
 
-console.log('Firebase config:', firebaseConfig);
-
 // Initialize Firebase only if it hasn't been initialized already
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-console.log('Firebase app initialized:', app.name);
 
-// Initialize Firebase Auth with AsyncStorage persistence
-let auth;
+let auth: Auth;
 try {
   auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
+    persistence: getReactNativePersistence(AsyncStorage),
   });
 } catch (error) {
-  // If auth is already initialized, get the existing instance
+  // Auth may already be initialized after Fast Refresh
   auth = getAuth(app);
 }
 

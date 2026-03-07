@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -12,6 +13,8 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Platform,
+  Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -50,6 +53,24 @@ interface RefinementMessage {
   id: string;
   role: 'assistant' | 'user';
   text: string;
+}
+
+interface PlantProfile {
+  id: string;
+  name: string;
+  scientificName: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  careLevel?: string;
+  lightRequirement?: string;
+  waterRequirement?: string;
+  petSafe?: boolean;
+  availableSizes?: string[];
+  suitablePlacements?: string[];
+  localImagePath?: string;
+  primaryImageUrl?: string;
+  userAdded?: boolean;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -106,6 +127,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   });
   const [isSharing, setIsSharing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showPlantProfileModal, setShowPlantProfileModal] = useState(false);
   const [showRefineModal, setShowRefineModal] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [refinementInput, setRefinementInput] = useState('');
@@ -119,6 +141,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
+  const [plantProfile, setPlantProfile] = useState<PlantProfile | null>(null);
+  const [isPlantProfileLoading, setIsPlantProfileLoading] = useState(false);
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -149,6 +173,82 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       onHide.remove();
     };
   }, []);
+
+  const resolvePlantProfile = async (plantName?: string, scientificName?: string) => {
+    if (!plantName && !scientificName) {
+      setPlantProfile(null);
+      setIsPlantProfileLoading(false);
+      return;
+    }
+
+    setIsPlantProfileLoading(true);
+    try {
+      const normalize = (value?: string) =>
+        (value || '').trim().toLowerCase();
+      const queries = Array.from(
+        new Set(
+          [plantName, scientificName]
+            .filter((value): value is string => Boolean(value && value.trim().length > 0))
+            .map((value) => value.trim())
+        )
+      );
+
+      let matchedPlant: PlantProfile | null = null;
+
+      for (const query of queries) {
+        const results = await databaseService.searchPlants(query, {
+          limit: 8,
+        });
+        const match = results.find((candidate: any) => {
+          const candidateName = normalize(candidate.name);
+          const candidateScientific = normalize(candidate.scientificName);
+          return (
+            candidateName === normalize(plantName) ||
+            candidateScientific === normalize(scientificName) ||
+            (plantName && candidateName.includes(normalize(plantName))) ||
+            (scientificName && candidateScientific.includes(normalize(scientificName)))
+          );
+        });
+        if (match) {
+          matchedPlant = match as PlantProfile;
+          break;
+        }
+      }
+
+      setPlantProfile(matchedPlant);
+    } catch (error) {
+      console.error('Failed to resolve plant profile:', error);
+      setPlantProfile(null);
+    } finally {
+      setIsPlantProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const individualPlant = design.mode === 'individual' ? design.individualPlant : null;
+    if (!individualPlant?.name) {
+      setPlantProfile(null);
+      setShowPlantProfileModal(false);
+      return;
+    }
+
+    resolvePlantProfile(individualPlant.name, individualPlant.scientificName);
+  }, [design.mode, design.individualPlant?.name, design.individualPlant?.scientificName]);
+
+  const showPlantProfile = () => {
+    if (design.mode !== 'individual' || !design.individualPlant) {
+      return;
+    }
+    // Keep the main info panel closed while opening a dedicated plant profile sheet.
+    if (showInfoModal) {
+      hideModal();
+      setTimeout(() => {
+        setShowPlantProfileModal(true);
+      }, 120);
+      return;
+    }
+    setShowPlantProfileModal(true);
+  };
 
   useEffect(() => {
     const resolveCollectionName = async () => {
@@ -203,6 +303,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const showModal = () => {
     setShowInfoModal(true);
+    setShowPlantProfileModal(false);
     modalTranslateY.value = withTiming(modalOpenY, { duration: 300 });
     backdropOpacity.value = withTiming(0.5, { duration: 300 });
   };
@@ -210,7 +311,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const hideModal = () => {
     modalTranslateY.value = withTiming(screenHeight, { duration: 300 });
     backdropOpacity.value = withTiming(0, { duration: 300 });
+    setShowPlantProfileModal(false);
     setTimeout(() => setShowInfoModal(false), 300);
+  };
+
+  const hidePlantProfileModal = () => {
+    setShowPlantProfileModal(false);
   };
 
   const openRefineModal = () => {
@@ -359,6 +465,9 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     setDesign(designList[index]);
     if (showInfoModal) {
       hideModal();
+    }
+    if (showPlantProfileModal) {
+      setShowPlantProfileModal(false);
     }
     resetImageTransform();
   };
@@ -623,7 +732,11 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       {/* Individual plant mode info */}
                       {design.mode === 'individual' && design.individualPlant && (
                         <>
-                          <View style={styles.infoItem}>
+                          <TouchableOpacity
+                            style={styles.infoItem}
+                            onPress={showPlantProfile}
+                            activeOpacity={0.7}
+                          >
                             <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                             <View style={styles.infoContent}>
                               <Text style={styles.infoLabel}>Plant</Text>
@@ -632,7 +745,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                                 {design.individualPlant.scientificName}
                               </Text>
                             </View>
-                          </View>
+                            <AppIcon name="CaretRight" size={16} color={theme.colors.textSecondary} />
+                          </TouchableOpacity>
 
                           <View style={styles.infoItem}>
                             <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
@@ -701,12 +815,166 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                         </View>
                       </View>
                     </View>
-                  </ScrollView>
+                      </ScrollView>
+
                 </SafeAreaView>
               </Animated.View>
             </GestureDetector>
           </>
         )}
+
+        <Modal
+          visible={showPlantProfileModal}
+          transparent
+          animationType="fade"
+          presentationStyle="overFullScreen"
+          onRequestClose={hidePlantProfileModal}
+          hardwareAccelerated
+          statusBarTranslucent
+        >
+          <View style={styles.plantProfileBackdrop}>
+            <TouchableOpacity
+              style={styles.plantProfileBackdropTouchable}
+              onPress={hidePlantProfileModal}
+              activeOpacity={1}
+            />
+            <SafeAreaView
+              edges={['top', 'bottom']}
+              style={[styles.plantProfilePanel, { paddingBottom: insets.bottom }]}
+            >
+              <View style={styles.plantProfileHeader}>
+                <TouchableOpacity
+                  onPress={hidePlantProfileModal}
+                  style={styles.plantProfileClose}
+                  activeOpacity={0.7}
+                >
+                  <AppIcon name="X" size={20} color={theme.colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.plantProfileTitle}>Plant Details</Text>
+                <View style={styles.plantProfileHeaderSpacer} />
+              </View>
+
+              <ScrollView
+                style={styles.plantProfileContent}
+                contentContainerStyle={styles.plantProfileScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {isPlantProfileLoading && (
+                  <View style={styles.plantProfileLoading}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text style={styles.plantProfileLoadingText}>
+                      Loading plant profile…
+                    </Text>
+                  </View>
+                )}
+
+                {!isPlantProfileLoading && !plantProfile && (
+                  <View style={styles.plantProfileEmpty}>
+                    <Text style={styles.plantProfileEmptyTitle}>No plant profile found</Text>
+                    <Text style={styles.plantProfileDescription}>
+                      We do not have this plant saved in your local library yet. The top card uses the
+                      saved design details.
+                    </Text>
+                  </View>
+                )}
+
+                {!isPlantProfileLoading && plantProfile && (
+                  <>
+                    <View style={styles.plantProfileHero}>
+                      {plantProfile.localImagePath || plantProfile.primaryImageUrl ? (
+                        <Image
+                          source={{
+                            uri: plantProfile.localImagePath || plantProfile.primaryImageUrl!,
+                          }}
+                          style={styles.plantProfileImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.plantProfileIconWrap}>
+                          <AppIcon
+                            name={plantProfile.icon || 'Leaf'}
+                            size={36}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                      )}
+                      <View style={styles.plantProfileHeroText}>
+                        <Text style={styles.plantProfileHeroName}>{plantProfile.name}</Text>
+                        <Text style={styles.plantProfileHeroScientific}>
+                          {plantProfile.scientificName}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {!!plantProfile.category && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Category</Text>
+                        <Text style={styles.plantProfileValue}>{plantProfile.category}</Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.description && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Care Notes</Text>
+                        <Text style={styles.plantProfileDescription}>{plantProfile.description}</Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.careLevel && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Care Level</Text>
+                        <Text style={styles.plantProfileValue}>{plantProfile.careLevel}</Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.lightRequirement && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Light</Text>
+                        <Text style={styles.plantProfileValue}>
+                          {plantProfile.lightRequirement.replace(/-/g, ' ')}
+                        </Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.waterRequirement && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Water</Text>
+                        <Text style={styles.plantProfileValue}>{plantProfile.waterRequirement}</Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.availableSizes?.length && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Available Sizes</Text>
+                        <Text style={styles.plantProfileValue}>
+                          {plantProfile.availableSizes.join(', ')}
+                        </Text>
+                      </View>
+                    )}
+
+                    {!!plantProfile.suitablePlacements?.length && (
+                      <View style={styles.plantProfileItem}>
+                        <Text style={styles.plantProfileLabel}>Suitable Placements</Text>
+                        <Text style={styles.plantProfileValue}>
+                          {plantProfile.suitablePlacements
+                            .map((placement) => placement.replace(/-/g, ' '))
+                            .join(', ')}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.plantProfileItem}>
+                      <Text style={styles.plantProfileLabel}>Pet Safety</Text>
+                      <Text style={styles.plantProfileValue}>
+                        {plantProfile.petSafe ? 'Pet safe' : 'Not pet safe'}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </Modal>
 
         {/* Refinement modal temporarily disabled */}
         {false && showRefineModal && (
@@ -1034,6 +1302,155 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSecondary,
     lineHeight: 18,
+  },
+  plantProfileBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    justifyContent: 'flex-end',
+  },
+  plantProfileBackdropTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  plantProfilePanel: {
+    width: '100%',
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: screenHeight * 0.82,
+    minHeight: screenHeight * 0.52,
+    alignSelf: 'stretch',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  plantProfileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    minHeight: 56,
+  },
+  plantProfileClose: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.borderLight,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  plantProfileHeaderSpacer: {
+    width: 30,
+  },
+  plantProfileTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  plantProfileContent: {
+    flex: 1,
+  },
+  plantProfileScrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 28,
+    gap: 12,
+  },
+  plantProfileLoading: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  plantProfileLoadingText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+  },
+  plantProfileEmpty: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.colors.borderLight,
+    padding: 12,
+    gap: 8,
+  },
+  plantProfileEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  plantProfileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.borderLight,
+    gap: 12,
+  },
+  plantProfileImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.border,
+  },
+  plantProfileIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.borderLight,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  plantProfileHeroText: {
+    flex: 1,
+  },
+  plantProfileHeroName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  plantProfileHeroScientific: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+  },
+  plantProfileItem: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.borderLight,
+    padding: 12,
+    gap: 4,
+  },
+  plantProfileLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  plantProfileValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  plantProfileDescription: {
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 20,
   },
   refineOverlay: {
     ...StyleSheet.absoluteFillObject,

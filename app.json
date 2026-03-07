@@ -133,7 +133,8 @@
       "googleClientId": "${GOOGLE_CLIENT_ID}",
       "geminiApiKey": "${GEMINI_API_KEY}",
       "revenueCatAppleApiKey": "${REVENUECAT_APPLE_API_KEY}",
-      "revenueCatGoogleApiKey": "${REVENUECAT_GOOGLE_API_KEY}"
+      "revenueCatGoogleApiKey": "${REVENUECAT_GOOGLE_API_KEY}",
+      "sentryDsn": "${SENTRY_DSN}"
     },
     "owner": "morgish"
   }

@@ -14,7 +14,8 @@
         "buildConfiguration": "Debug"
       },
       "env": {
-        "APP_ENV": "development"
+        "APP_ENV": "development",
+        "SENTRY_DSN": "${SENTRY_DSN}"
       }
     },
     "preview": {
@@ -24,6 +25,9 @@
       },
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "env": {
+        "SENTRY_DSN": "${SENTRY_DSN}"
       }
     },
     "production": {
@@ -31,7 +35,8 @@
       "env": {
         "APP_ENV": "production",
         "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "SENTRY_DSN": "${SENTRY_DSN}"
       }
     }
   },

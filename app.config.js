@@ -12,6 +12,7 @@ module.exports = ({ config }) => ({
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
+    sentryDsn: process.env.SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || '',
     appName: process.env.APP_NAME || 'Planterior AI',
     appScheme: process.env.APP_SCHEME || 'planterior-ai',
     appDomain: process.env.APP_DOMAIN || 'planterior.app',

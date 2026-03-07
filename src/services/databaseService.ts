@@ -703,65 +703,31 @@ export class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const { category, careLevel, lightRequirement, petSafe, limit = 20, offset = 0 } = options;
+    const normalizedQuery = (query || '').trim();
 
     try {
-      let sql: string;
-      const params: any[] = [];
+      const normalizeLike = (value: string) => value.replace(/[%_]/g, "\\$&");
+      const baseFilterClause: string[] = [];
+      const baseFilterParams: any[] = [];
 
-      // Try FTS5 first, fall back to LIKE
-      const useFts = await this.checkFts5Available();
-
-      if (useFts && query.trim()) {
-        sql = `
-          SELECT p.*, 
-            pi.local_path as local_image_path,
-            pi.image_url as primary_image_url,
-            rank as search_rank
-          FROM plants p
-          JOIN plants_fts fts ON p.rowid = fts.rowid
-          LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
-          WHERE plants_fts MATCH ?
-        `;
-        params.push(query.split(' ').map(t => `${t}*`).join(' OR '));
-      } else {
-        sql = `
-          SELECT p.*, 
-            pi.local_path as local_image_path,
-            pi.image_url as primary_image_url
-          FROM plants p
-          LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
-          WHERE (p.name LIKE ? OR p.scientific_name LIKE ?)
-        `;
-        const likeQuery = `%${query}%`;
-        params.push(likeQuery, likeQuery);
-      }
-
-      // Add filters
       if (category) {
-        sql += ` AND p.category = ?`;
-        params.push(category);
+        baseFilterClause.push('p.category = ?');
+        baseFilterParams.push(category);
       }
       if (careLevel) {
-        sql += ` AND p.care_level = ?`;
-        params.push(careLevel);
+        baseFilterClause.push('p.care_level = ?');
+        baseFilterParams.push(careLevel);
       }
       if (lightRequirement) {
-        sql += ` AND p.light_requirement = ?`;
-        params.push(lightRequirement);
+        baseFilterClause.push('p.light_requirement = ?');
+        baseFilterParams.push(lightRequirement);
       }
       if (petSafe !== undefined) {
-        sql += ` AND p.pet_safe = ?`;
-        params.push(petSafe ? 1 : 0);
+        baseFilterClause.push('p.pet_safe = ?');
+        baseFilterParams.push(petSafe ? 1 : 0);
       }
 
-      // Order and limit
-      sql += useFts ? ` ORDER BY rank ASC` : ` ORDER BY p.name ASC`;
-      sql += ` LIMIT ? OFFSET ?`;
-      params.push(limit, offset);
-
-      const rows = await this.db.getAllAsync(sql, params);
-
-      return rows.map((row: any) => ({
+      const toPlantProfileRows = (rows: any[]) => rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         scientificName: row.scientific_name,
@@ -780,6 +746,81 @@ export class DatabaseService {
         isPopular: row.is_popular === 1,
         userAdded: row.user_added === 1
       }));
+
+      const runQuery = async (sql: string, params: any[]) => {
+        const rows = await this.db!.getAllAsync(sql, params);
+        return toPlantProfileRows(rows);
+      };
+
+      const appendFiltersAndPagination = (sql: string, params: any[], orderBySearchRank: boolean = false) => {
+        let nextSql = sql;
+        const nextParams = [...params];
+
+        if (baseFilterClause.length > 0) {
+          nextSql += ` AND ${baseFilterClause.join(' AND ')}`;
+        }
+
+        const orderBy = orderBySearchRank && normalizedQuery ? 'search_rank ASC' : 'p.name ASC';
+        nextSql += ` ORDER BY ${orderBy}`;
+        nextSql += ' LIMIT ? OFFSET ?';
+        nextParams.push(limit, offset);
+
+        return { nextSql, nextParams };
+      };
+
+      // Try FTS first for exact-ish matching, then fall back to LIKE.
+      if (normalizedQuery) {
+        const useFts = await this.checkFts5Available();
+        if (useFts) {
+          const sanitizedTokens = normalizedQuery
+            .toLowerCase()
+            .split(/\s+/)
+            .map((token) => token.replace(/[^a-z0-9]/g, ''))
+            .filter((token) => token.length > 0)
+            .slice(0, 8);
+          const ftsQuery = sanitizedTokens.map((token) => `${token}*`).join(' ');
+
+          if (ftsQuery.length > 0) {
+            const ftsBaseSql = `
+              SELECT p.*, 
+                pi.local_path as local_image_path,
+                pi.image_url as primary_image_url,
+                rank as search_rank
+              FROM plants p
+              JOIN plants_fts fts ON p.rowid = fts.rowid
+              LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+              WHERE plants_fts MATCH ?
+            `;
+            const ftsParams = [ftsQuery, ...baseFilterParams];
+            const { nextSql, nextParams } = appendFiltersAndPagination(ftsBaseSql, ftsParams, true);
+
+            try {
+              const ftsRows = await runQuery(nextSql, nextParams);
+              if (ftsRows.length > 0) {
+                return ftsRows;
+              }
+            } catch (ftsError) {
+              if (__DEV__) {
+                console.warn('FTS5 search failed, falling back to LIKE:', ftsError);
+              }
+            }
+          }
+        }
+      }
+
+      const likeQuery = `%${normalizeLike(normalizedQuery)}%`;
+      const likeBaseSql = `
+        SELECT p.*, 
+          pi.local_path as local_image_path,
+          pi.image_url as primary_image_url
+        FROM plants p
+        LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+        WHERE (p.name LIKE ? ESCAPE '\\\\' OR p.scientific_name LIKE ? ESCAPE '\\\\')
+      `;
+      const likeParams = [likeQuery, likeQuery, ...baseFilterParams];
+      const { nextSql, nextParams } = appendFiltersAndPagination(likeBaseSql, likeParams, false);
+
+      return runQuery(nextSql, nextParams);
     } catch (error) {
       console.error('Failed to search plants:', error);
       throw error;
