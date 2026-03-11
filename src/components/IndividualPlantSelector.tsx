@@ -14,6 +14,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
+  useWindowDimensions,
 } from 'react-native';
 import { AppIcon } from './AppIcon';
 import {
@@ -42,7 +43,9 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   listFooterSpacerHeight = 0,
   petSafeOnly = false,
 }) => {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const { width, height } = useWindowDimensions();
+  const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(isTablet ? 'grid' : 'list');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
@@ -64,7 +67,8 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   const searchContainerTopRef = useRef(0);
 
   const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const gridColumns = isTablet ? 2 : 2;
+  const styles = createStyles(theme, isTablet);
 
   useEffect(() => {
     setIsListLoading(true);
@@ -223,11 +227,15 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         activeOpacity={0.7}
       >
         {plant.imageUrl ? (
-          <Image
-            source={plant.imageUrl}
-            style={viewMode === 'grid' ? styles.plantCardImageGrid : styles.plantCardImage}
-            resizeMode="cover"
-          />
+          <View
+            style={
+              viewMode === 'grid'
+                ? styles.plantCardImageFrameGrid
+                : styles.plantCardImageFrame
+            }
+          >
+            <Image source={plant.imageUrl} style={styles.plantCardImageFill} resizeMode="cover" />
+          </View>
         ) : (
           <AppIcon
             name={plant.icon}
@@ -270,9 +278,9 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         removeClippedSubviews
-        numColumns={viewMode === 'grid' ? 2 : 1}
+        numColumns={viewMode === 'grid' ? gridColumns : 1}
         columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-        key={viewMode === 'grid' ? 'grid' : 'list'}
+        key={viewMode === 'grid' ? `grid-${gridColumns}` : 'list'}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
@@ -447,7 +455,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   );
 };
 
-const createStyles = (theme: any) => {
+const createStyles = (theme: any, isTablet: boolean) => {
   const selectedBg = theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5';
 
   return StyleSheet.create({
@@ -514,6 +522,8 @@ const createStyles = (theme: any) => {
     },
     plantCard: {
       width: '100%',
+      maxWidth: isTablet ? 420 : undefined,
+      alignSelf: 'center',
       backgroundColor: theme.colors.borderLight,
       borderRadius: 12,
       marginBottom: 12,
@@ -526,8 +536,12 @@ const createStyles = (theme: any) => {
     },
     plantCardGrid: {
       flex: 1,
+      maxWidth: undefined,
+      alignSelf: 'stretch',
       marginBottom: 0,
-      paddingHorizontal: 10,
+      paddingHorizontal: isTablet ? 12 : 10,
+      paddingTop: isTablet ? 10 : 12,
+      paddingBottom: isTablet ? 12 : 14,
     },
     plantCardSelected: {
       backgroundColor: selectedBg,
@@ -538,26 +552,34 @@ const createStyles = (theme: any) => {
       marginBottom: 8,
       marginTop: 8,
     },
-    plantCardImage: {
-      width: '100%',
-      height: 180,
+    plantCardImageFrame: {
+      width: isTablet ? 300 : '100%',
+      alignSelf: 'center',
+      aspectRatio: 1,
       borderRadius: 12,
+      overflow: 'hidden',
       marginBottom: 10,
       marginTop: 4,
     },
-    plantCardImageGrid: {
-      width: '100%',
-      height: 120,
+    plantCardImageFrameGrid: {
+      width: isTablet ? '70%' : '100%',
+      alignSelf: 'center',
+      aspectRatio: 1,
       borderRadius: 10,
+      overflow: 'hidden',
       marginBottom: 8,
       marginTop: 4,
     },
+    plantCardImageFill: {
+      width: '100%',
+      height: '100%',
+    },
     plantCardName: {
-      fontSize: 13,
+      fontSize: isTablet ? 12 : 13,
       fontWeight: '600',
       color: theme.colors.text,
       textAlign: 'center',
-      marginBottom: 4,
+      marginBottom: 2,
       width: '100%',
     },
     plantCardBadges: {

@@ -66,7 +66,8 @@ type RootStackParamList = {
   DesignFlow: { screen?: keyof DesignFlowStackParamList; params?: any } | undefined;
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   Subscription: undefined;
-  PlantIdentify: undefined;
+  PlantIdentify: { capturedImageUri?: string; capturedImageAt?: number } | undefined;
+  PlantCamera: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;
 };
 
@@ -369,7 +370,10 @@ function AppContent() {
             <Stack.Screen
               name="DesignFlow"
               component={DesignFlowNavigator}
-              options={{ presentation: "modal", headerShown: false }}
+              options={{
+                presentation: Platform.OS === "ios" ? "fullScreenModal" : "modal",
+                headerShown: false,
+              }}
             />
             <Stack.Screen
               name="DesignDetail"
@@ -389,6 +393,14 @@ function AppContent() {
             <Stack.Screen
               name="PlantIdentify"
               component={PlantIdentifyScreenWrapper}
+            />
+            <Stack.Screen
+              name="PlantCamera"
+              component={PlantCameraScreenWrapper}
+              options={{
+                presentation: Platform.OS === "ios" ? "fullScreenModal" : "modal",
+                headerShown: false,
+              }}
             />
           </Stack.Navigator>
         </NavigationContainer>
@@ -577,12 +589,47 @@ function GalleryScreenWrapper({ navigation }: any) {
   );
 }
 
-function PlantIdentifyScreenWrapper({ navigation }: any) {
+function PlantIdentifyScreenWrapper({ navigation, route }: any) {
   const handleBack = () => {
     navigation.goBack();
   };
 
-  return <PlantIdentifyScreen onBack={handleBack} />;
+  const handleOpenCamera = () => {
+    navigation.navigate("PlantCamera");
+  };
+
+  return (
+    <PlantIdentifyScreen
+      onBack={handleBack}
+      onOpenCamera={handleOpenCamera}
+      capturedImageUri={route.params?.capturedImageUri}
+      capturedImageAt={route.params?.capturedImageAt}
+    />
+  );
+}
+
+function PlantCameraScreenWrapper({ navigation }: any) {
+  const handleClose = () => {
+    navigation.goBack();
+  };
+
+  const handleImageTaken = (imageUri: string) => {
+    navigation.navigate({
+      name: "PlantIdentify",
+      params: { capturedImageUri: imageUri, capturedImageAt: Date.now() },
+      merge: true,
+    });
+    navigation.goBack();
+  };
+
+  return (
+    <CameraScreen
+      mode="plant-id"
+      onImageTaken={handleImageTaken}
+      onClose={handleClose}
+      recentSourceImages={[]}
+    />
+  );
 }
 
 function DesignDetailScreenWrapper({ route, navigation }: any) {

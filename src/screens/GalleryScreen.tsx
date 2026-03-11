@@ -6,10 +6,11 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  Dimensions,
   Alert,
   RefreshControl,
   ScrollView,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,10 +32,6 @@ interface GalleryScreenProps {
   onUpgradePress?: () => void;
 }
 
-const { width } = Dimensions.get('window');
-const numColumns = 2;
-const itemSize = (width - 60) / numColumns; // Account for padding and gap
-
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onNewDesign,
   onIdentifyPlant,
@@ -54,6 +51,15 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const { subscription, freeGenerationsRemaining, refreshStatus } = useSubscription();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { width, height } = useWindowDimensions();
+
+  const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
+  const numColumns = isTablet ? (width >= 1180 ? 4 : 3) : 2;
+  const listHorizontalPadding = isTablet ? 24 : 16;
+  const interItemGap = isTablet ? 14 : 12;
+  const itemSize = Math.floor(
+    (width - listHorizontalPadding * 2 - interItemGap * (numColumns - 1)) / numColumns
+  );
 
   const loadDesigns = useCallback(async () => {
     try {
@@ -136,7 +142,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => (
     <TouchableOpacity
-      style={styles.designItem}
+      style={[styles.designItem, { width: itemSize }]}
       onPress={() => handleDesignPress(item, index)}
       onLongPress={() => {
         setActiveDesignId(item.id);
@@ -184,7 +190,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     </TouchableOpacity>
   );
 
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, isTablet, listHorizontalPadding, interItemGap);
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -314,6 +320,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       </View>
 
       <FlatList
+        key={`gallery-${numColumns}`}
         data={filteredDesigns}
         renderItem={renderDesignItem}
         keyExtractor={(item) => item.id}
@@ -395,7 +402,12 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   );
 };
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (
+  theme: any,
+  isTablet: boolean,
+  listHorizontalPadding: number,
+  interItemGap: number
+) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -460,7 +472,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   listContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: listHorizontalPadding,
     paddingTop: 12,
     flexGrow: 1,
   },
@@ -531,10 +543,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.surface,
   },
   row: {
-    justifyContent: 'space-between',
+    gap: interItemGap,
+    justifyContent: 'flex-start',
   },
   designItem: {
-    width: itemSize,
     marginBottom: 24,
   },
   imageContainer: {
@@ -552,7 +564,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   designImage: {
     width: '100%',
-    height: itemSize,
+    aspectRatio: 1,
   },
   favoriteButton: {
     position: 'absolute',
@@ -576,12 +588,12 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   plantTypeText: {
     color: 'white',
-    fontSize: 13,
+    fontSize: isTablet ? 14 : 13,
     fontWeight: '600',
   },
   plantStyleText: {
     color: 'white',
-    fontSize: 11,
+    fontSize: isTablet ? 12 : 11,
     opacity: 0.9,
     marginTop: 2,
   },

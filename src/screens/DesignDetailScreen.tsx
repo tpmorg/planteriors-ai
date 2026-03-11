@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -192,6 +192,8 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
   const [plantProfile, setPlantProfile] = useState<PlantProfile | null>(null);
   const [isPlantProfileLoading, setIsPlantProfileLoading] = useState(false);
+  const plantProfileRequestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -223,22 +225,54 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const resolvePlantProfile = async (plantId?: string, plantName?: string, scientificName?: string) => {
+    const requestId = ++plantProfileRequestIdRef.current;
+    const isStale = () =>
+      !isMountedRef.current || requestId !== plantProfileRequestIdRef.current;
+    const commitPlantProfile = (profile: PlantProfile | null) => {
+      if (isStale()) return;
+      setPlantProfile(profile);
+    };
+    const commitLoading = (loading: boolean) => {
+      if (isStale()) return;
+      setIsPlantProfileLoading(loading);
+    };
+    const safeSearchPlants = async (query: string) => {
+      try {
+        return await databaseService.searchPlants(query, { limit: 8 });
+      } catch {
+        return [];
+      }
+    };
+    const safeGetPlantById = async (id: string) => {
+      try {
+        return await databaseService.getPlantById(id);
+      } catch {
+        return null;
+      }
+    };
+
     if (!plantId && !plantName && !scientificName) {
-      setPlantProfile(null);
-      setIsPlantProfileLoading(false);
+      commitPlantProfile(null);
+      commitLoading(false);
       return;
     }
 
-    setIsPlantProfileLoading(true);
+    commitLoading(true);
     try {
       if (plantId) {
         const profile =
-          (await databaseService.getPlantById(plantId)) ||
+          (await safeGetPlantById(plantId)) ||
           getSeedPlantById(plantId);
         if (profile) {
-          setPlantProfile(profile as PlantProfile);
-          setIsPlantProfileLoading(false);
+          commitPlantProfile(profile as PlantProfile);
+          commitLoading(false);
           return;
         }
       }
@@ -256,9 +290,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       let matchedPlant: PlantProfile | null = null;
 
       for (const query of queries) {
-        const results = await databaseService.searchPlants(query, {
-          limit: 8,
-        });
+        const results = await safeSearchPlants(query);
         const match = results.find((candidate: any) => {
           const candidateName = normalize(candidate.name);
           const candidateScientific = normalize(candidate.scientificName);
@@ -298,12 +330,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         }
       }
 
-      setPlantProfile(matchedPlant);
+      commitPlantProfile(matchedPlant);
     } catch (error) {
-      console.error('Failed to resolve plant profile:', error);
-      setPlantProfile(null);
+      if (__DEV__) {
+        console.warn('Plant profile lookup skipped:', error);
+      }
+      commitPlantProfile(null);
     } finally {
-      setIsPlantProfileLoading(false);
+      commitLoading(false);
     }
   };
 

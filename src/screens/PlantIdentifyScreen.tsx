@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
-import { CameraScreen } from './CameraScreen';
 import { useTheme } from '../contexts/ThemeContext';
 import { createPlantIdentificationService } from '../services/plantIdentificationService';
 import { databaseService } from '../services/databaseService';
@@ -19,9 +18,17 @@ import { PlantIdentificationResult } from '../types';
 
 interface PlantIdentifyScreenProps {
   onBack: () => void;
+  onOpenCamera: () => void;
+  capturedImageUri?: string;
+  capturedImageAt?: number;
 }
 
-export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack }) => {
+export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
+  onBack,
+  onOpenCamera,
+  capturedImageUri,
+  capturedImageAt,
+}) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -29,9 +36,9 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
   const [result, setResult] = useState<PlantIdentificationResult | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
   const [isAlreadyInLibrary, setIsAlreadyInLibrary] = useState(false);
+  const lastHandledCaptureRef = useRef<number | null>(null);
 
   const normalizePlantName = (value: string) =>
     value
@@ -88,7 +95,7 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
   };
 
   const openCameraFlow = () => {
-    setIsCameraOpen(true);
+    onOpenCamera();
   };
 
   const saveToPlantDb = async () => {
@@ -127,19 +134,16 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({ onBack
     setIsAlreadyInLibrary(false);
   };
 
-  if (isCameraOpen) {
-    return (
-      <CameraScreen
-        mode="plant-id"
-        onImageTaken={async (uri) => {
-          setIsCameraOpen(false);
-          await identifyFromUri(uri);
-        }}
-        onClose={() => setIsCameraOpen(false)}
-        recentSourceImages={[]}
-      />
-    );
-  }
+  useEffect(() => {
+    if (!capturedImageUri || !capturedImageAt) {
+      return;
+    }
+    if (lastHandledCaptureRef.current === capturedImageAt) {
+      return;
+    }
+    lastHandledCaptureRef.current = capturedImageAt;
+    identifyFromUri(capturedImageUri);
+  }, [capturedImageUri, capturedImageAt]);
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>

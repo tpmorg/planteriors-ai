@@ -6,6 +6,8 @@ import {
   Image,
   TouchableOpacity,
   Animated,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
@@ -41,7 +43,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const { theme } = useTheme();
   const requireNetwork = useNetworkGuard();
   const { showToast } = useToast();
-  const styles = createStyles(theme);
+  const { width, height } = useWindowDimensions();
+  const isTablet = Platform.OS === "ios" && Math.min(width, height) >= 768;
+  const styles = createStyles(theme, isTablet);
 
   const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
   const [isCheckingUsage, setIsCheckingUsage] = useState(true); // New state for usage check
@@ -400,6 +404,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           <Image
             source={{ uri: request.imageUri }}
             style={styles.originalImage}
+            resizeMode={isTablet ? "contain" : "cover"}
           />
           <View style={styles.imageLabel}>
             <Text style={styles.imageLabelText}>Original Room</Text>
@@ -465,7 +470,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   );
 };
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -519,15 +524,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   generationContainer: {
     flex: 1,
-    padding: 24,
+    padding: isTablet ? 28 : 24,
     justifyContent: "center",
   },
   originalImageContainer: {
-    height: 200,
+    width: "100%",
+    maxWidth: isTablet ? 980 : undefined,
+    alignSelf: "center",
+    height: isTablet ? 360 : 200,
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 32,
     position: "relative",
+    backgroundColor: theme.colors.borderLight,
     borderWidth: 1,
     borderColor: theme.colors.border,
     shadowColor: theme.colors.shadow,
@@ -539,7 +548,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   originalImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
   },
   imageLabel: {
     position: "absolute",

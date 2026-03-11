@@ -10,6 +10,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -126,6 +127,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
 
   // Mode state
   const [mode, setMode] = useState<PlantSelectionMode>('individual');
@@ -150,7 +153,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   const [expandedSection, setExpandedSection] = useState<string | null>('plants');
 
   const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, isTablet);
 
   useEffect(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -617,8 +620,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   );
 };
 
-const createStyles = (theme: any) => {
+const createStyles = (theme: any, isTablet: boolean) => {
   const selectedBg = theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5';
+  const tabletMaxWidth = isTablet ? 980 : undefined;
 
   return StyleSheet.create({
     container: {
@@ -670,10 +674,13 @@ const createStyles = (theme: any) => {
 
     // Hero Section
     heroSection: {
+      width: isTablet ? '100%' : undefined,
+      maxWidth: tabletMaxWidth,
+      alignSelf: isTablet ? 'center' : undefined,
       backgroundColor: theme.colors.surface,
       marginBottom: 12,
       borderRadius: 20,
-      marginHorizontal: 12,
+      marginHorizontal: isTablet ? 0 : 12,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -697,7 +704,10 @@ const createStyles = (theme: any) => {
       padding: 20,
     },
     petSafeToggleRow: {
-      marginHorizontal: 12,
+      width: isTablet ? '100%' : undefined,
+      maxWidth: tabletMaxWidth,
+      alignSelf: isTablet ? 'center' : undefined,
+      marginHorizontal: isTablet ? 0 : 12,
       marginTop: 10,
       marginBottom: 10,
       paddingHorizontal: 14,
@@ -741,9 +751,12 @@ const createStyles = (theme: any) => {
 
     // Sections
     section: {
+      width: isTablet ? '100%' : undefined,
+      maxWidth: tabletMaxWidth,
+      alignSelf: isTablet ? 'center' : undefined,
       backgroundColor: theme.colors.surface,
       marginBottom: 12,
-      marginHorizontal: 12,
+      marginHorizontal: isTablet ? 0 : 12,
       borderRadius: 18,
       borderWidth: 1,
       borderColor: theme.colors.border,

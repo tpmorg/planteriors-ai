@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -120,9 +121,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     if (!previewImage) return;
     setIsCropping(true);
     try {
-      const imageToUse = previewImage;
-      setPreviewImage(null);
-      onImageTaken(imageToUse);
+      onImageTaken(previewImage);
     } finally {
       setIsCropping(false);
     }
@@ -132,6 +131,27 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     setPreviewImage(null);
     setShowOptions(true);
   };
+
+  useEffect(() => {
+    const handleHardwareBack = () => {
+      if (isSystemCropping || isCropping) {
+        return true;
+      }
+      if (previewImage) {
+        retakePhoto();
+        return true;
+      }
+      if (!showOptions) {
+        setShowOptions(true);
+        return true;
+      }
+      onClose();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
+    return () => subscription.remove();
+  }, [isSystemCropping, isCropping, previewImage, showOptions, onClose]);
 
 
   if (!permission) {
