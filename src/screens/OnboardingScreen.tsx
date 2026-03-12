@@ -1,15 +1,16 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   ImageSourcePropType,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,12 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 interface OnboardingSlide {
   id: string;
-  title: string;
-  description: string;
-  image?: ImageSourcePropType;
-  imageResizeMode?: 'cover' | 'contain';
-  modeTitle?: string;
-  modeDescription?: string;
+  image: ImageSourcePropType;
 }
 
 interface OnboardingScreenProps {
@@ -31,14 +27,21 @@ interface OnboardingScreenProps {
   onComplete: () => Promise<void> | void;
 }
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 40;
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   fromSettings = false,
   onComplete,
 }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width, height } = useWindowDimensions();
+  const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
+  const pageWidth = width;
+  const contentWidth = isTablet ? Math.min(width - 56, 980) : width - 28;
+
+  const styles = useMemo(
+    () => createStyles(theme, isTablet, pageWidth, contentWidth, height),
+    [theme, isTablet, pageWidth, contentWidth, height]
+  );
+
   const listRef = useRef<FlatList<OnboardingSlide>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -46,65 +49,45 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const slides: OnboardingSlide[] = [
     {
       id: 'welcome',
-      title: 'Welcome to Planterior AI',
-      description:
-        'Turn real room photos into polished plant-forward interiors with guided AI layouts.',
-      image: require('../../assets/onboarding/onboarding-1.png'),
-      imageResizeMode: 'cover',
+      image: require('../../assets/onboarding/ob-1.png'),
     },
     {
-      id: 'before',
-      title: 'Before',
-      description:
-        'Start with your original room photo exactly as it is.',
-      image: require('../../assets/onboarding/planterior-before-1.png'),
-      imageResizeMode: 'contain',
+      id: 'capture',
+      image: require('../../assets/onboarding/ob-2.png'),
     },
     {
-      id: 'after',
-      title: 'After',
-      description:
-        'Generate a polished plant-forward transformation with realistic placement.',
-      image: require('../../assets/onboarding/planterior-after-1.png'),
-      imageResizeMode: 'contain',
+      id: 'select',
+      image: require('../../assets/onboarding/ob-3.png'),
     },
     {
-      id: 'single-mode',
-      title: 'Single Plant Mode',
-      description:
-        'Pick one exact plant, choose its size and placement, and preview it naturally in your space.',
-      modeTitle: 'Great for precision',
-      modeDescription: 'Perfect when you know the plant you want to test.',
+      id: 'generate',
+      image: require('../../assets/onboarding/ob-4.png'),
     },
     {
-      id: 'multi-mode',
-      title: 'Multi-Plant Mode',
-      description:
-        'Choose a style direction and let AI compose multiple plants for a cohesive interior look.',
-      modeTitle: 'Great for inspiration',
-      modeDescription: 'Best for discovering a complete look quickly.',
+      id: 'final',
+      image: require('../../assets/onboarding/ob-5.png'),
     },
   ];
 
   const isLast = currentIndex === slides.length - 1;
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const newIndex = Math.round(event.nativeEvent.contentOffset.x / CARD_WIDTH);
+    const newIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
     setCurrentIndex(Math.max(0, Math.min(slides.length - 1, newIndex)));
   };
 
   const handleBack = () => {
-    if (currentIndex === 0) {
-      return;
-    }
-    listRef.current?.scrollToIndex({ index: currentIndex - 1, animated: true });
-    setCurrentIndex((prev) => prev - 1);
+    if (currentIndex === 0) return;
+    const nextIndex = currentIndex - 1;
+    listRef.current?.scrollToOffset({ offset: nextIndex * pageWidth, animated: true });
+    setCurrentIndex(nextIndex);
   };
 
   const handleContinue = async () => {
     if (!isLast) {
-      listRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-      setCurrentIndex((prev) => prev + 1);
+      const nextIndex = currentIndex + 1;
+      listRef.current?.scrollToOffset({ offset: nextIndex * pageWidth, animated: true });
+      setCurrentIndex(nextIndex);
       return;
     }
 
@@ -117,41 +100,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   };
 
   const renderSlide = ({ item }: { item: OnboardingSlide }) => (
-    <View style={styles.slide}>
-      <View style={styles.card}>
-        <Text style={styles.slideTitle}>{item.title}</Text>
-        <Text style={styles.slideDescription}>{item.description}</Text>
-
-        {item.image && (
-          <Image
-            source={item.image}
-            style={styles.heroImage}
-            resizeMode={item.imageResizeMode ?? 'cover'}
-          />
-        )}
-
-        {item.modeTitle && item.modeDescription && (
-          <View style={styles.modeInfo}>
-            <View style={styles.modeRow}>
-              <AppIcon
-                name={item.id === 'single-mode' ? 'Plant' : 'SquaresFour'}
-                size={18}
-                color={theme.colors.primary}
-              />
-              <Text style={styles.modeTitle}>{item.modeTitle}</Text>
-            </View>
-            <Text style={styles.modeDescription}>{item.modeDescription}</Text>
-          </View>
-        )}
+    <View style={styles.page}>
+      <View style={styles.slideBody}>
+        <View style={styles.imageStage}>
+          <Image source={item.image} style={styles.heroImage} resizeMode="contain" />
+        </View>
       </View>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'right', 'bottom', 'left']}>
-      <View style={styles.backdropBlobA} />
-      <View style={styles.backdropBlobB} />
-
       <View style={styles.header}>
         <Text style={styles.headerText}>
           {fromSettings ? 'Onboarding Preview' : 'Getting Started'}
@@ -166,24 +125,18 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         horizontal
         pagingEnabled
         decelerationRate="fast"
+        bounces={false}
         showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH}
-        snapToAlignment="center"
-        contentContainerStyle={styles.slidesContainer}
+        snapToInterval={pageWidth}
         onMomentumScrollEnd={handleScrollEnd}
       />
 
       <View style={styles.footer}>
         <View style={styles.dotsRow}>
           {slides.map((slide, index) => (
-            <View
-              key={slide.id}
-              style={[styles.dot, index === currentIndex && styles.dotActive]}
-            />
+            <View key={slide.id} style={[styles.dot, index === currentIndex && styles.dotActive]} />
           ))}
         </View>
-
-        <Text style={styles.swipeHint}>Swipe to explore • use back/continue anytime</Text>
 
         <View style={styles.actionsRow}>
           <TouchableOpacity
@@ -220,118 +173,71 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   );
 };
 
-const createStyles = (theme: any) =>
-  StyleSheet.create({
+const createStyles = (
+  theme: any,
+  isTablet: boolean,
+  pageWidth: number,
+  contentWidth: number,
+  screenHeight: number
+) => {
+  const stageHeight = isTablet
+    ? Math.min(Math.round(screenHeight * 0.78), 980)
+    : Math.min(Math.round(screenHeight * 0.72), 760);
+
+  return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    backdropBlobA: {
-      position: 'absolute',
-      width: 280,
-      height: 280,
-      borderRadius: 140,
-      backgroundColor: theme.isDark ? 'rgba(143,179,154,0.12)' : 'rgba(78,107,87,0.11)',
-      top: -90,
-      left: -90,
-    },
-    backdropBlobB: {
-      position: 'absolute',
-      width: 300,
-      height: 300,
-      borderRadius: 150,
-      backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
-      bottom: -120,
-      right: -90,
-    },
     header: {
-      paddingHorizontal: 20,
-      paddingTop: 8,
-      paddingBottom: 10,
+      paddingHorizontal: isTablet ? 28 : 16,
+      paddingTop: 6,
+      paddingBottom: 8,
     },
     headerText: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.colors.textSecondary,
-      letterSpacing: 0.4,
+      letterSpacing: 0.35,
       textTransform: 'uppercase',
       fontWeight: '600',
     },
-    slidesContainer: {
-      paddingHorizontal: 20,
+    page: {
+      width: pageWidth,
+      alignItems: 'center',
+      paddingHorizontal: isTablet ? 20 : 14,
     },
-    slide: {
-      width: CARD_WIDTH,
-      paddingRight: 8,
-    },
-    card: {
+    slideBody: {
+      width: contentWidth,
       flex: 1,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 24,
+      justifyContent: 'center',
+    },
+    imageStage: {
+      height: stageHeight,
+      borderRadius: 22,
+      overflow: 'hidden',
       borderWidth: 1,
       borderColor: theme.colors.border,
-      padding: 22,
+      backgroundColor: theme.isDark ? theme.colors.card : '#f3f4f6',
       shadowColor: theme.colors.shadow,
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: theme.isDark ? 0.26 : 0.1,
-      shadowRadius: 18,
-      elevation: 5,
-    },
-    slideTitle: {
-      fontSize: 33,
-      lineHeight: 40,
-      fontWeight: '700',
-      color: theme.colors.text,
-      fontFamily: 'serif',
-    },
-    slideDescription: {
-      marginTop: 12,
-      fontSize: 16,
-      lineHeight: 24,
-      color: theme.colors.textSecondary,
+      shadowOpacity: theme.isDark ? 0.24 : 0.12,
+      shadowRadius: 14,
+      elevation: 6,
     },
     heroImage: {
-      marginTop: 20,
       width: '100%',
-      height: 250,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.isDark ? theme.colors.card : '#f5efe3',
-    },
-    modeInfo: {
-      marginTop: 22,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.isDark ? theme.colors.card : '#f9f6f0',
-      padding: 14,
-      gap: 6,
-    },
-    modeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    modeTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    modeDescription: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: theme.colors.textSecondary,
+      height: '100%',
     },
     footer: {
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: 20,
+      paddingHorizontal: isTablet ? 28 : 16,
+      paddingTop: 6,
+      paddingBottom: isTablet ? 24 : 18,
     },
     dotsRow: {
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 8,
-      marginBottom: 12,
+      marginBottom: 14,
     },
     dot: {
       width: 7,
@@ -340,14 +246,8 @@ const createStyles = (theme: any) =>
       backgroundColor: theme.colors.border,
     },
     dotActive: {
-      width: 22,
+      width: 24,
       backgroundColor: theme.colors.primary,
-    },
-    swipeHint: {
-      textAlign: 'center',
-      color: theme.colors.textSecondary,
-      fontSize: 13,
-      marginBottom: 16,
     },
     actionsRow: {
       flexDirection: 'row',
@@ -395,3 +295,4 @@ const createStyles = (theme: any) =>
       color: theme.colors.surface,
     },
   });
+};
