@@ -27,6 +27,11 @@
         "buildConfiguration": "Release"
       },
       "env": {
+        "APP_ENV": "preview",
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "REVENUECAT_APPLE_API_KEY": "${REVENUECAT_APPLE_API_KEY}",
+        "REVENUECAT_GOOGLE_API_KEY": "${REVENUECAT_GOOGLE_API_KEY}",
         "SENTRY_DSN": "${SENTRY_DSN}"
       }
     },
