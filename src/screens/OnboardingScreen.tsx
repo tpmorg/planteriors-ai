@@ -63,10 +63,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
       id: 'generate',
       image: require('../../assets/onboarding/ob-4.png'),
     },
-    {
-      id: 'final',
-      image: require('../../assets/onboarding/ob-5.png'),
-    },
   ];
 
   const isLast = currentIndex === slides.length - 1;
