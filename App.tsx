@@ -640,7 +640,7 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
   };
 
   const handleDesignDeleted = () => {
-    navigation.getParent()?.navigate("MainApp");
+    navigation.navigate("MainApp", { screen: "Gallery" });
   };
 
   const handleRefineDesign = (currentDesign: SavedDesign, refinementPrompt: string) => {
