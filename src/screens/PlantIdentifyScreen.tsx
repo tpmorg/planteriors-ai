@@ -19,6 +19,7 @@ import { PlantIdentificationResult } from '../types';
 interface PlantIdentifyScreenProps {
   onBack: () => void;
   onOpenCamera: () => void;
+  onCapturedImageHandled?: () => void;
   capturedImageUri?: string;
   capturedImageAt?: number;
 }
@@ -26,6 +27,7 @@ interface PlantIdentifyScreenProps {
 export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
   onBack,
   onOpenCamera,
+  onCapturedImageHandled,
   capturedImageUri,
   capturedImageAt,
 }) => {
@@ -143,7 +145,8 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
     }
     lastHandledCaptureRef.current = capturedImageAt;
     identifyFromUri(capturedImageUri);
-  }, [capturedImageUri, capturedImageAt]);
+    onCapturedImageHandled?.();
+  }, [capturedImageUri, capturedImageAt, onCapturedImageHandled]);
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>

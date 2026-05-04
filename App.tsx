@@ -598,10 +598,18 @@ function PlantIdentifyScreenWrapper({ navigation, route }: any) {
     navigation.navigate("PlantCamera");
   };
 
+  const handleCapturedImageHandled = React.useCallback(() => {
+    navigation.setParams({
+      capturedImageUri: undefined,
+      capturedImageAt: undefined,
+    });
+  }, [navigation]);
+
   return (
     <PlantIdentifyScreen
       onBack={handleBack}
       onOpenCamera={handleOpenCamera}
+      onCapturedImageHandled={handleCapturedImageHandled}
       capturedImageUri={route.params?.capturedImageUri}
       capturedImageAt={route.params?.capturedImageAt}
     />
@@ -614,12 +622,18 @@ function PlantCameraScreenWrapper({ navigation }: any) {
   };
 
   const handleImageTaken = (imageUri: string) => {
+    const params = { capturedImageUri: imageUri, capturedImageAt: Date.now() };
+
+    if (typeof navigation.popTo === "function") {
+      navigation.popTo("PlantIdentify", params);
+      return;
+    }
+
     navigation.navigate({
       name: "PlantIdentify",
-      params: { capturedImageUri: imageUri, capturedImageAt: Date.now() },
+      params,
       merge: true,
     });
-    navigation.goBack();
   };
 
   return (

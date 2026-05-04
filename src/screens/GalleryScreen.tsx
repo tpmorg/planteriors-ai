@@ -224,8 +224,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           onPress={onIdentifyPlant}
           style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
           accessibilityLabel="Identify plant"
+          accessibilityHint="Opens the plant identification flow"
         >
-          <AppIcon name="Plant" size={22} color="white" />
+          <AppIcon name="MagnifyingGlass" size={22} color="white" />
         </TouchableOpacity>
 
         <View style={styles.loadingContainer}>
@@ -250,8 +251,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         onPress={onIdentifyPlant}
         style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
         accessibilityLabel="Identify plant"
+        accessibilityHint="Opens the plant identification flow"
       >
-        <AppIcon name="Plant" size={22} color="white" />
+        <AppIcon name="MagnifyingGlass" size={22} color="white" />
       </TouchableOpacity>
 
       <View style={styles.floatingButtonOffset} />
