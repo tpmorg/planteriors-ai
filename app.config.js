@@ -5,6 +5,17 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+const appEnv = process.env.APP_ENV || 'development';
+const isProduction = appEnv === 'production';
+
+const revenueCatAppleApiKey = isProduction
+  ? process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || process.env.REVENUECAT_APPLE_API_KEY || ''
+  : process.env.REVENUECAT_APPLE_API_KEY_TEST || process.env.REVENUECAT_APPLE_API_KEY || '';
+
+const revenueCatGoogleApiKey = isProduction
+  ? process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || process.env.REVENUECAT_GOOGLE_API_KEY || ''
+  : process.env.REVENUECAT_GOOGLE_API_KEY_TEST || process.env.REVENUECAT_GOOGLE_API_KEY || '';
+
 module.exports = ({ config }) => ({
   ...config,
   extra: {
@@ -13,14 +24,19 @@ module.exports = ({ config }) => ({
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     sentryDsn: process.env.SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || '',
-    appEnv: process.env.APP_ENV || 'development',
+    appEnv,
     appName: process.env.APP_NAME || 'Planterior AI',
     appScheme: process.env.APP_SCHEME || 'planterior-ai',
     appDomain: process.env.APP_DOMAIN || 'planterior.app',
     appleClientId: process.env.APPLE_CLIENT_ID || '',
     debugMode: process.env.DEBUG_MODE === 'true',
     apiTimeout: parseInt(process.env.API_TIMEOUT || '30000', 10),
-    revenueCatAppleApiKey: process.env.REVENUECAT_APPLE_API_KEY || '',
-    revenueCatGoogleApiKey: process.env.REVENUECAT_GOOGLE_API_KEY || '',
+    revenueCatEntitlementId: process.env.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
+    revenueCatAppleApiKey,
+    revenueCatGoogleApiKey,
+    revenueCatAppleApiKeyTest: process.env.REVENUECAT_APPLE_API_KEY_TEST || '',
+    revenueCatGoogleApiKeyTest: process.env.REVENUECAT_GOOGLE_API_KEY_TEST || '',
+    revenueCatAppleApiKeyProduction: process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || '',
+    revenueCatGoogleApiKeyProduction: process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
   },
 });

@@ -26,6 +26,9 @@
           "photosPermission": "Allow Planterior AI to access your photos to select room images."
         }
       ],
+      "expo-font",
+      "expo-sqlite",
+      "expo-web-browser",
       "expo-apple-authentication",
       [
         "expo-build-properties",

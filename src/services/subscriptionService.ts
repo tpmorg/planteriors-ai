@@ -8,7 +8,10 @@ import Purchases, {
 import Constants from 'expo-constants';
 import { SubscriptionProduct, SubscriptionStatus } from '../types';
 
-const ENTITLEMENT_ID = 'premium';
+const ENTITLEMENT_ID =
+  Constants.expoConfig?.extra?.revenueCatEntitlementId ||
+  Constants.expoConfig?.extra?.REVENUECAT_ENTITLEMENT_ID ||
+  'Planterior Pro';
 
 class SubscriptionService {
   private isConfigured = false;
