@@ -30,6 +30,8 @@ import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { PlantIdentifyScreen } from "./src/screens/PlantIdentifyScreen";
+import { LibraryScreen } from "./src/screens/LibraryScreen";
+import { PlantDetailScreen } from "./src/screens/PlantDetailScreen";
 import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
@@ -38,6 +40,7 @@ import {
   GeneratedImage,
   SavedDesign,
   PlantLocation,
+  PlantSearchResult,
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
 import { onboardingService } from "./src/services/onboardingService";
@@ -65,6 +68,7 @@ type RootStackParamList = {
   MainApp: undefined;
   DesignFlow: { screen?: keyof DesignFlowStackParamList; params?: any } | undefined;
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
+  PlantDetail: { plant: PlantSearchResult };
   Subscription: undefined;
   PlantIdentify: { capturedImageUri?: string; capturedImageAt?: number } | undefined;
   PlantCamera: undefined;
@@ -80,6 +84,7 @@ type DesignFlowStackParamList = {
 
 type TabParamList = {
   Gallery: undefined;
+  Library: undefined;
   Account: undefined;
   Settings: undefined;
 };
@@ -134,6 +139,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         let iconWeight: "regular" | "fill" = "regular";
         if (route.name === "Gallery") {
           iconName = "Images";
+          iconWeight = isFocused ? "fill" : "regular";
+        } else if (route.name === "Library") {
+          iconName = "BookOpen";
           iconWeight = isFocused ? "fill" : "regular";
         } else if (route.name === "Account") {
           iconName = "User";
@@ -217,6 +225,7 @@ function MainTabNavigator() {
       }}
     >
       <Tab.Screen name="Gallery" component={GalleryScreenWrapper} />
+      <Tab.Screen name="Library" component={LibraryScreenWrapper} />
       <Tab.Screen name="Account" component={AccountScreenWrapper} />
       <Tab.Screen name="Settings" component={SettingsScreenWrapper} />
     </Tab.Navigator>
@@ -237,6 +246,14 @@ function SettingsScreenWrapper({ navigation }: any) {
   };
 
   return <SettingsScreen onOpenOnboarding={handleOpenOnboarding} />;
+}
+
+function LibraryScreenWrapper({ navigation }: any) {
+  const handlePlantSelect = (plant: PlantSearchResult) => {
+    navigation.navigate("PlantDetail", { plant });
+  };
+
+  return <LibraryScreen onPlantSelect={handlePlantSelect} />;
 }
 
 function AppContent() {
@@ -383,6 +400,14 @@ function AppContent() {
                 headerShown: false,
                 animation: Platform.OS === "android" ? "fade" : "default",
                 cardStyle: { backgroundColor: "#000" },
+              }}
+            />
+            <Stack.Screen
+              name="PlantDetail"
+              component={PlantDetailScreenWrapper}
+              options={{
+                presentation: "modal",
+                headerShown: false,
               }}
             />
             <Stack.Screen
@@ -754,6 +779,21 @@ function DesignDetailScreenWrapper({ route, navigation }: any) {
       onBack={handleBack}
       onDesignDeleted={handleDesignDeleted}
       onRefineDesign={handleRefineDesign}
+    />
+  );
+}
+
+function PlantDetailScreenWrapper({ route, navigation }: any) {
+  const { plant } = route.params;
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return (
+    <PlantDetailScreen
+      plant={plant}
+      onBack={handleBack}
     />
   );
 }

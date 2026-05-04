@@ -85,8 +85,13 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
       const identified = await service.identifyPlantFromImage(uri);
       setResult(identified);
       setIsCheckingDuplicate(true);
-      const exists = await checkCommonNameExists(identified.commonName);
-      setIsAlreadyInLibrary(exists);
+      try {
+        const exists = await checkCommonNameExists(identified.commonName);
+        setIsAlreadyInLibrary(exists);
+      } catch (duplicateError) {
+        console.warn('Failed to check plant duplicate status:', duplicateError);
+        setIsAlreadyInLibrary(false);
+      }
     } catch (error: any) {
       console.error('Failed to identify plant:', error);
       Alert.alert('Identification failed', error?.message || 'Unable to identify this plant right now.');
@@ -103,7 +108,7 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
   const saveToPlantDb = async () => {
     if (!result) return;
     if (isAlreadyInLibrary) {
-      Alert.alert('Already in database', 'Plant already in database.');
+      Alert.alert('Already in Plant Library', 'This plant already exists in the Plant Library.');
       return;
     }
 
@@ -113,16 +118,17 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
 
       if (alreadyExists) {
         setIsAlreadyInLibrary(true);
-        Alert.alert('Already in database', 'Plant already in database.');
+        Alert.alert('Already in Plant Library', 'This plant already exists in the Plant Library.');
         return;
       }
 
       const service = createPlantIdentificationService();
       await service.saveIdentificationToPlantDb(result, imageUri || undefined);
-      Alert.alert('Saved', `${result.commonName} was added to your plant library.`);
+      setIsAlreadyInLibrary(true);
+      Alert.alert('Saved', `${result.commonName} was added to the Plant Library.`);
     } catch (error) {
       console.error('Failed to save identified plant:', error);
-      Alert.alert('Save failed', 'Could not add this plant to your library.');
+      Alert.alert('Save failed', 'Could not add this plant to the Plant Library.');
     } finally {
       setIsSaving(false);
     }
@@ -201,7 +207,7 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
               <Text style={styles.duplicateStatusText}>Checking library for duplicates...</Text>
             )}
             {isAlreadyInLibrary && !isCheckingDuplicate && (
-              <Text style={styles.duplicateWarningText}>Plant already in database.</Text>
+              <Text style={styles.duplicateWarningText}>Already in Plant Library.</Text>
             )}
           </View>
         )}
@@ -228,6 +234,9 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
               ]}
               onPress={saveToPlantDb}
               disabled={isSaving || isCheckingDuplicate || isAlreadyInLibrary}
+              accessibilityLabel={
+                isAlreadyInLibrary ? 'Plant already in library' : 'Add identified plant to library'
+              }
             >
               {isSaving ? (
                 <ActivityIndicator color="white" />

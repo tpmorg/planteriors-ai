@@ -9,6 +9,7 @@ import {
   FreeTrialUsage,
   Collection
 } from '../types';
+import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 
 const DB_VERSION = 6; // Current database version
 
@@ -46,6 +47,7 @@ export class DatabaseService {
       this.db = await SQLite.openDatabaseAsync('plantai.db');
       await this.createTables();
       await this.runMigrations();
+      await this.seedStaticPlants();
       console.log('Database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize database:', error);
@@ -701,6 +703,47 @@ export class DatabaseService {
     }
   }
 
+  private async seedStaticPlants(): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = Date.now();
+    try {
+      for (const plant of INDIVIDUAL_PLANTS) {
+        await this.db.runAsync(
+          `INSERT OR IGNORE INTO plants (
+            id, name, scientific_name, description, category, icon,
+            care_level, light_requirement, water_requirement, pet_safe,
+            available_sizes, suitable_placements, trefle_id, is_popular,
+            user_added, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            plant.id,
+            plant.name,
+            plant.scientificName,
+            plant.description,
+            plant.category,
+            plant.icon,
+            plant.careLevel,
+            plant.lightRequirement,
+            plant.waterRequirement,
+            plant.petSafe ? 1 : 0,
+            JSON.stringify(plant.availableSizes),
+            JSON.stringify(plant.suitablePlacements),
+            null,
+            1,
+            0,
+            now,
+            now,
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to seed static plants:', error);
+      throw error;
+    }
+  }
+
   async getPopularPlants(limit: number = 50): Promise<any[]> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
@@ -742,6 +785,47 @@ export class DatabaseService {
     }
   }
 
+  async getPlantsByCategory(category: string, limit: number = 50): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const rows = await this.db.getAllAsync(
+        `SELECT p.*,
+          pi.local_path as local_image_path,
+          pi.image_url as primary_image_url
+         FROM plants p
+         LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+         WHERE p.category = ?
+         ORDER BY p.is_popular DESC, p.name ASC
+         LIMIT ?`,
+        [category, limit]
+      );
+
+      return rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        scientificName: row.scientific_name,
+        description: row.description,
+        category: row.category,
+        icon: row.icon,
+        careLevel: row.care_level,
+        lightRequirement: row.light_requirement,
+        waterRequirement: row.water_requirement,
+        petSafe: row.pet_safe === 1,
+        availableSizes: row.available_sizes ? JSON.parse(row.available_sizes) : [],
+        suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
+        localImagePath: row.local_image_path,
+        primaryImageUrl: row.primary_image_url,
+        isPopular: row.is_popular === 1,
+        userAdded: row.user_added === 1
+      }));
+    } catch (error) {
+      console.error('Failed to get plants by category:', error);
+      throw error;
+    }
+  }
+
   async searchPlants(query: string, options: {
     category?: string;
     careLevel?: string;
@@ -757,7 +841,7 @@ export class DatabaseService {
     const normalizedQuery = (query || '').trim();
 
     try {
-      const normalizeLike = (value: string) => value.replace(/[%_]/g, "\\$&");
+      const normalizeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
       const baseFilterClause: string[] = [];
       const baseFilterParams: any[] = [];
 
@@ -866,7 +950,7 @@ export class DatabaseService {
           pi.image_url as primary_image_url
         FROM plants p
         LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
-        WHERE (p.name LIKE ? ESCAPE '\\\\' OR p.scientific_name LIKE ? ESCAPE '\\\\')
+        WHERE (p.name LIKE ? ESCAPE '\\' OR p.scientific_name LIKE ? ESCAPE '\\')
       `;
       const likeParams = [likeQuery, likeQuery, ...baseFilterParams];
       const { nextSql, nextParams } = appendFiltersAndPagination(likeBaseSql, likeParams, false);
