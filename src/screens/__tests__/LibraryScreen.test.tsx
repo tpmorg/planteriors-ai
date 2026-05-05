@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { LibraryScreen } from '../LibraryScreen';
 import { databaseService } from '../../services/databaseService';
@@ -92,6 +92,31 @@ describe('LibraryScreen', () => {
 
     await waitFor(() => {
       expect(databaseService.searchPlants).toHaveBeenCalledWith('', { limit: 500 });
+    });
+  });
+
+  it('applies compact library filters to the plant search query', async () => {
+    const { findByText, getByLabelText } = render(<LibraryScreen onPlantSelect={jest.fn()} />);
+
+    expect(await findByText('Snake Plant')).toBeOnTheScreen();
+
+    fireEvent.press(getByLabelText('Show library filters'));
+    fireEvent.press(await findByText('Low tolerant'));
+    fireEvent.press(await findByText('Pet safe'));
+    fireEvent.press(await findByText('High moisture'));
+    fireEvent.press(await findByText('Hanging'));
+
+    await waitFor(() => {
+      expect(databaseService.searchPlants).toHaveBeenCalledWith(
+        '',
+        expect.objectContaining({
+          lightRequirements: ['low', 'low-to-bright'],
+          petSafe: true,
+          waterRequirement: 'high',
+          placement: 'hanging',
+          limit: 500,
+        })
+      );
     });
   });
 });

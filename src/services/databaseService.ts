@@ -830,14 +830,27 @@ export class DatabaseService {
     category?: string;
     careLevel?: string;
     lightRequirement?: string;
+    lightRequirements?: string[];
+    waterRequirement?: string;
     petSafe?: boolean;
+    placement?: string;
     limit?: number;
     offset?: number;
   } = {}): Promise<any[]> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
-    const { category, careLevel, lightRequirement, petSafe, limit = 20, offset = 0 } = options;
+    const {
+      category,
+      careLevel,
+      lightRequirement,
+      lightRequirements,
+      waterRequirement,
+      petSafe,
+      placement,
+      limit = 20,
+      offset = 0,
+    } = options;
     const normalizedQuery = (query || '').trim();
 
     try {
@@ -853,13 +866,24 @@ export class DatabaseService {
         baseFilterClause.push('p.care_level = ?');
         baseFilterParams.push(careLevel);
       }
-      if (lightRequirement) {
+      if (lightRequirements && lightRequirements.length > 0) {
+        baseFilterClause.push(`p.light_requirement IN (${lightRequirements.map(() => '?').join(', ')})`);
+        baseFilterParams.push(...lightRequirements);
+      } else if (lightRequirement) {
         baseFilterClause.push('p.light_requirement = ?');
         baseFilterParams.push(lightRequirement);
+      }
+      if (waterRequirement) {
+        baseFilterClause.push('p.water_requirement = ?');
+        baseFilterParams.push(waterRequirement);
       }
       if (petSafe !== undefined) {
         baseFilterClause.push('p.pet_safe = ?');
         baseFilterParams.push(petSafe ? 1 : 0);
+      }
+      if (placement) {
+        baseFilterClause.push('p.suitable_placements LIKE ?');
+        baseFilterParams.push(`%"${placement}"%`);
       }
 
       const toPlantProfileRows = (rows: any[]) => rows.map((row: any) => ({

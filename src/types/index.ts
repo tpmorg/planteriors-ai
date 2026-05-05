@@ -203,7 +203,10 @@ export interface PlantSearchOptions {
   category?: string;
   careLevel?: string;
   lightRequirement?: string;
+  lightRequirements?: string[];
+  waterRequirement?: string;
   petSafe?: boolean;
+  placement?: PlacementType;
   limit?: number;
   offset?: number;
   source?: 'local' | 'api' | 'all';
