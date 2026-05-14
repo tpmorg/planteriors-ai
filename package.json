@@ -10,6 +10,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
+    "check:revenuecat": "node scripts/checkRevenueCatSetup.js",
+    "check:revenuecat:prod": "node scripts/checkRevenueCatSetup.js --env=production",
     "build:dev:android": "eas build --platform android --profile development",
     "build:dev:ios": "eas build --platform ios --profile development",
     "build:preview:android": "eas build --platform android --profile preview",

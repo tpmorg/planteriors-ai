@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+  Image,
+  ImageSourcePropType,
   View,
   Text,
   StyleSheet,
@@ -11,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../components/AppIcon';
 import { PlantSearchResult } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
 
 interface PlantDetailScreenProps {
   plant: PlantSearchResult;
@@ -23,6 +26,7 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
 }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const imageSource = getPlantImageSource(plant);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -46,13 +50,14 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
       >
         {/* Hero Section */}
         <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-          <View style={[styles.iconContainer, { backgroundColor: theme.colors.borderLight }]}>
-            <AppIcon
-              name={plant.icon || 'Leaf'}
-              size={64}
-              color={theme.colors.primary}
-              weight="fill"
-            />
+          <View style={[styles.plantImageFrame, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            {imageSource ? (
+              <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
+            ) : (
+              <Text style={[styles.plantImageFallback, { color: theme.colors.textSecondary }]}>
+                No image
+              </Text>
+            )}
           </View>
           <View style={styles.heroText}>
             <Text style={[styles.plantName, { color: theme.colors.text }]}>
@@ -182,6 +187,15 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
   );
 };
 
+function getPlantImageSource(plant: PlantSearchResult): ImageSourcePropType | undefined {
+  if (plant.localImagePath || plant.primaryImageUrl) {
+    return { uri: plant.localImagePath || plant.primaryImageUrl };
+  }
+
+  const seedPlant = getSeedPlantById(plant.id);
+  return seedPlant?.imageUrl;
+}
+
 function CareItem({
   icon,
   label,
@@ -262,7 +276,7 @@ function formatLight(light: string): string {
   }
 }
 
-function getWaterIcon(water: string): string {
+function getWaterIcon(water?: string): string {
   switch (water?.toLowerCase()) {
     case 'low': return 'Drop';
     case 'moderate': return 'DropHalf';
@@ -271,7 +285,7 @@ function getWaterIcon(water: string): string {
   }
 }
 
-function formatWater(water: string): string {
+function formatWater(water?: string): string {
   switch (water?.toLowerCase()) {
     case 'low': return 'Low';
     case 'moderate': return 'Moderate';
@@ -332,17 +346,27 @@ const styles = StyleSheet.create({
   heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderRadius: 20,
     borderWidth: 1,
     gap: 16,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+  plantImageFrame: {
+    width: 112,
+    height: 112,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  plantImage: {
+    width: '100%',
+    height: '100%',
+  },
+  plantImageFallback: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   heroText: {
     flex: 1,

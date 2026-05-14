@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { useNavigation } from '@react-navigation/native';
+import * as Sentry from '@sentry/react-native';
 import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -35,23 +36,83 @@ export const SubscriptionScreen: React.FC = () => {
 
   const loadProducts = async () => {
     if (!requireNetwork('Please connect to the internet to load subscription plans.')) {
+      Sentry.addBreadcrumb({
+        category: 'subscription',
+        message: 'Subscription products not loaded; network unavailable',
+        level: 'warning',
+      });
       return;
     }
 
+    Sentry.addBreadcrumb({
+      category: 'subscription',
+      message: 'Subscription screen loading products',
+      level: 'info',
+    });
+
     const availableProducts = await subscriptionService.getAvailableProducts();
     setProducts(availableProducts);
+
+    Sentry.addBreadcrumb({
+      category: 'subscription',
+      message: 'Subscription screen products loaded',
+      level: availableProducts.length > 0 ? 'info' : 'warning',
+      data: {
+        productCount: availableProducts.length,
+        productIds: availableProducts.map((product) => product.id),
+      },
+    });
+
+    if (availableProducts.length === 0) {
+      Sentry.withScope((scope) => {
+        scope.setTag('area', 'subscription');
+        scope.setContext('subscription_screen', {
+          productCount: 0,
+          selectedProductId,
+        });
+        Sentry.captureMessage('Subscription screen loaded no products', 'warning');
+      });
+    }
+
     // Pre-select annual plan (better value)
     if (availableProducts.length > 0) {
-      setSelectedProductId(availableProducts[1]?.id || availableProducts[0].id);
+      const defaultProductId = availableProducts[1]?.id || availableProducts[0].id;
+      setSelectedProductId(defaultProductId);
+      Sentry.addBreadcrumb({
+        category: 'subscription',
+        message: 'Subscription screen selected default product',
+        level: 'info',
+        data: {
+          selectedProductId: defaultProductId,
+        },
+      });
     }
   };
 
   const handlePurchase = async () => {
     if (!requireNetwork('Please connect to the internet to make a purchase.')) {
+      Sentry.addBreadcrumb({
+        category: 'subscription',
+        message: 'Subscription purchase blocked; network unavailable',
+        level: 'warning',
+        data: {
+          productCount: products.length,
+          selectedProductId,
+        },
+      });
       return;
     }
 
     if (!selectedProductId) {
+      Sentry.withScope((scope) => {
+        scope.setTag('area', 'subscription');
+        scope.setContext('subscription_screen', {
+          productCount: products.length,
+          productIds: products.map((product) => product.id),
+          selectedProductId,
+        });
+        Sentry.captureMessage('Subscription purchase tapped without selected product', 'warning');
+      });
       Alert.alert('Error', 'Please select a plan');
       return;
     }
@@ -60,6 +121,16 @@ export const SubscriptionScreen: React.FC = () => {
     setPurchasing(true);
 
     try {
+      Sentry.addBreadcrumb({
+        category: 'subscription',
+        message: 'Subscription purchase submitted from screen',
+        level: 'info',
+        data: {
+          selectedProductId,
+          hasRevenueCatPackage: !!selectedProduct?.rcPackage,
+          productCount: products.length,
+        },
+      });
       const result = await purchaseSubscription(selectedProductId, selectedProduct?.rcPackage);
 
       if (result.success) {
@@ -74,9 +145,19 @@ export const SubscriptionScreen: React.FC = () => {
           ]
         );
       } else {
+        Sentry.addBreadcrumb({
+          category: 'subscription',
+          message: 'Subscription purchase failed from context',
+          level: 'warning',
+          data: {
+            selectedProductId,
+            error: result.error,
+          },
+        });
         Alert.alert('Purchase Failed', result.error || 'Something went wrong');
       }
     } catch (error) {
+      Sentry.captureException(error instanceof Error ? error : new Error('Subscription purchase screen error'));
       Alert.alert('Error', 'Failed to process purchase');
     } finally {
       setPurchasing(false);

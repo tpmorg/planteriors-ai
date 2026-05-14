@@ -6,6 +6,7 @@ import Purchases, {
   PACKAGE_TYPE,
 } from 'react-native-purchases';
 import Constants from 'expo-constants';
+import * as Sentry from '@sentry/react-native';
 import { SubscriptionProduct, SubscriptionStatus } from '../types';
 
 const ENTITLEMENT_ID =
@@ -17,26 +18,93 @@ class SubscriptionService {
   private isConfigured = false;
   private didWarnMissingKey = false;
 
+  private addRevenueCatBreadcrumb(
+    message: string,
+    data?: Record<string, unknown>,
+    level: 'info' | 'warning' | 'error' = 'info'
+  ) {
+    Sentry.addBreadcrumb({
+      category: 'revenuecat',
+      message,
+      level,
+      data: {
+        platform: Platform.OS,
+        entitlementId: ENTITLEMENT_ID,
+        ...data,
+      },
+    });
+  }
+
+  private captureRevenueCatMessage(
+    message: string,
+    level: 'info' | 'warning' | 'error',
+    data?: Record<string, unknown>
+  ) {
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setTag('platform', Platform.OS);
+      scope.setContext('revenuecat', {
+        entitlementId: ENTITLEMENT_ID,
+        ...data,
+      });
+      Sentry.captureMessage(message, level);
+    });
+  }
+
+  private captureRevenueCatException(
+    message: string,
+    error: unknown,
+    data?: Record<string, unknown>
+  ) {
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setTag('platform', Platform.OS);
+      scope.setContext('revenuecat', {
+        entitlementId: ENTITLEMENT_ID,
+        ...data,
+      });
+      Sentry.captureException(error instanceof Error ? error : new Error(message));
+    });
+  }
+
   /**
    * Initialize RevenueCat SDK. Call once at app startup after auth.
    */
   async configure(userId?: string): Promise<boolean> {
-    if (this.isConfigured) return true;
+    if (this.isConfigured) {
+      this.addRevenueCatBreadcrumb('RevenueCat configure skipped; already configured', {
+        hasUserId: !!userId,
+      });
+      return true;
+    }
 
     const apiKey = Platform.select({
       ios: Constants.expoConfig?.extra?.revenueCatAppleApiKey,
       android: Constants.expoConfig?.extra?.revenueCatGoogleApiKey,
     });
 
+    this.addRevenueCatBreadcrumb('RevenueCat configure requested', {
+      hasUserId: !!userId,
+      hasApiKey: !!apiKey,
+      appEnv: Constants.expoConfig?.extra?.appEnv,
+    });
+
     if (!apiKey) {
       if (!this.didWarnMissingKey) {
         this.didWarnMissingKey = true;
         console.warn('RevenueCat API key not found for platform:', Platform.OS);
+        this.captureRevenueCatMessage('RevenueCat API key missing', 'warning', {
+          hasUserId: !!userId,
+          appEnv: Constants.expoConfig?.extra?.appEnv,
+        });
       }
       return false;
     }
 
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      this.captureRevenueCatMessage('RevenueCat unsupported platform', 'warning', {
+        unsupportedPlatform: Platform.OS,
+      });
       return false;
     }
 
@@ -50,6 +118,10 @@ class SubscriptionService {
     });
 
     this.isConfigured = true;
+    this.addRevenueCatBreadcrumb('RevenueCat configured', {
+      hasUserId: !!userId,
+      appEnv: Constants.expoConfig?.extra?.appEnv,
+    });
     return true;
   }
 
@@ -68,8 +140,14 @@ class SubscriptionService {
     if (!ok) return;
     try {
       await Purchases.logIn(userId);
+      this.addRevenueCatBreadcrumb('RevenueCat user identified', {
+        hasUserId: !!userId,
+      });
     } catch (error) {
       console.error('RevenueCat identify error:', error);
+      this.captureRevenueCatException('RevenueCat identify failed', error, {
+        hasUserId: !!userId,
+      });
     }
   }
 
@@ -81,8 +159,10 @@ class SubscriptionService {
     if (!ok) return;
     try {
       await Purchases.logOut();
+      this.addRevenueCatBreadcrumb('RevenueCat user logged out');
     } catch (error) {
       console.error('RevenueCat logout error:', error);
+      this.captureRevenueCatException('RevenueCat logout failed', error);
     }
   }
 
@@ -91,13 +171,44 @@ class SubscriptionService {
    */
   async getAvailableProducts(): Promise<SubscriptionProduct[]> {
     const ok = await this.ensureConfigured();
-    if (!ok) return [];
+    if (!ok) {
+      this.captureRevenueCatMessage('RevenueCat products unavailable; SDK not configured', 'warning');
+      return [];
+    }
     try {
+      this.addRevenueCatBreadcrumb('RevenueCat fetching offerings');
       const offerings = await Purchases.getOfferings();
       const currentOffering = offerings.current;
+      const allOfferingIds = Object.keys(offerings.all || {});
 
       if (!currentOffering) {
         console.warn('No current RevenueCat offering found');
+        this.captureRevenueCatMessage('RevenueCat current offering missing', 'warning', {
+          offeringIds: allOfferingIds,
+        });
+        return [];
+      }
+
+      const packageSummaries = currentOffering.availablePackages.map((pkg) => ({
+        identifier: pkg.identifier,
+        packageType: pkg.packageType,
+        productIdentifier: pkg.product.identifier,
+        priceString: pkg.product.priceString,
+        currencyCode: pkg.product.currencyCode,
+      }));
+
+      this.addRevenueCatBreadcrumb('RevenueCat offering loaded', {
+        currentOfferingIdentifier: currentOffering.identifier,
+        offeringIds: allOfferingIds,
+        packageCount: currentOffering.availablePackages.length,
+        packages: packageSummaries,
+      });
+
+      if (currentOffering.availablePackages.length === 0) {
+        this.captureRevenueCatMessage('RevenueCat current offering has no packages', 'warning', {
+          currentOfferingIdentifier: currentOffering.identifier,
+          offeringIds: allOfferingIds,
+        });
         return [];
       }
 
@@ -106,6 +217,7 @@ class SubscriptionService {
       );
     } catch (error) {
       console.error('Error fetching products:', error);
+      this.captureRevenueCatException('RevenueCat product fetch failed', error);
       return [];
     }
   }
@@ -132,6 +244,9 @@ class SubscriptionService {
     }
     try {
       if (!rcPackage) {
+        this.addRevenueCatBreadcrumb('RevenueCat purchase package missing; refetching offerings', {
+          productId,
+        });
         const offerings = await Purchases.getOfferings();
         rcPackage = offerings.current?.availablePackages.find(
           (pkg) => pkg.product.identifier === productId
@@ -139,6 +254,9 @@ class SubscriptionService {
       }
 
       if (!rcPackage) {
+        this.captureRevenueCatMessage('RevenueCat purchase product not found', 'warning', {
+          productId,
+        });
         return {
           success: false,
           subscription: this.defaultStatus(),
@@ -146,12 +264,25 @@ class SubscriptionService {
         };
       }
 
+      this.addRevenueCatBreadcrumb('RevenueCat purchase started', {
+        productId,
+        packageIdentifier: rcPackage.identifier,
+        packageType: rcPackage.packageType,
+      });
       const { customerInfo } = await Purchases.purchasePackage(rcPackage);
       const status = this.mapCustomerInfoToStatus(customerInfo);
+      this.addRevenueCatBreadcrumb('RevenueCat purchase completed', {
+        productId,
+        isActive: status.isActive,
+        type: status.type,
+      });
 
       return { success: status.isActive, subscription: status };
     } catch (error: any) {
       if (error.userCancelled) {
+        this.addRevenueCatBreadcrumb('RevenueCat purchase cancelled', {
+          productId,
+        });
         return {
           success: false,
           subscription: this.defaultStatus(),
@@ -159,6 +290,9 @@ class SubscriptionService {
         };
       }
       console.error('Purchase error:', error);
+      this.captureRevenueCatException('RevenueCat purchase failed', error, {
+        productId,
+      });
       return {
         success: false,
         subscription: this.defaultStatus(),
@@ -172,12 +306,27 @@ class SubscriptionService {
    */
   async getSubscriptionStatus(_userId: string): Promise<SubscriptionStatus> {
     const ok = await this.ensureConfigured(_userId);
-    if (!ok) return this.defaultStatus();
+    if (!ok) {
+      this.captureRevenueCatMessage('RevenueCat status unavailable; SDK not configured', 'warning', {
+        hasUserId: !!_userId,
+      });
+      return this.defaultStatus();
+    }
     try {
       const customerInfo = await Purchases.getCustomerInfo();
-      return this.mapCustomerInfoToStatus(customerInfo);
+      const status = this.mapCustomerInfoToStatus(customerInfo);
+      this.addRevenueCatBreadcrumb('RevenueCat customer info loaded', {
+        activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
+        expectedEntitlementId: ENTITLEMENT_ID,
+        isActive: status.isActive,
+        type: status.type,
+      });
+      return status;
     } catch (error) {
       console.error('Error getting subscription status:', error);
+      this.captureRevenueCatException('RevenueCat customer info fetch failed', error, {
+        hasUserId: !!_userId,
+      });
       return this.defaultStatus();
     }
   }
@@ -201,11 +350,18 @@ class SubscriptionService {
     try {
       const customerInfo = await Purchases.restorePurchases();
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+      this.addRevenueCatBreadcrumb('RevenueCat restore completed', {
+        restored: !!entitlement,
+        activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
+      });
       return {
         success: true,
         restored: entitlement ? 1 : 0,
       };
     } catch (error: any) {
+      this.captureRevenueCatException('RevenueCat restore failed', error, {
+        hasUserId: !!_userId,
+      });
       return {
         success: false,
         restored: 0,
@@ -227,6 +383,14 @@ class SubscriptionService {
     const product = pkg.product;
     const isAnnual = pkg.packageType === PACKAGE_TYPE.ANNUAL;
 
+    this.addRevenueCatBreadcrumb('RevenueCat package mapped to subscription product', {
+      packageIdentifier: pkg.identifier,
+      packageType: pkg.packageType,
+      productIdentifier: product.identifier,
+      priceString: product.priceString,
+      currencyCode: product.currencyCode,
+    });
+
     return {
       id: product.identifier,
       name: isAnnual ? 'Premium Annual' : 'Premium Monthly',
@@ -246,6 +410,11 @@ class SubscriptionService {
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
 
     if (!entitlement) {
+      this.addRevenueCatBreadcrumb('RevenueCat expected entitlement inactive', {
+        expectedEntitlementId: ENTITLEMENT_ID,
+        activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
+        allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
+      }, 'warning');
       return this.defaultStatus();
     }
 
