@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -99,6 +100,22 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         },
         { text: 'Cancel', style: 'cancel' },
       ]);
+    }
+  };
+
+  const openExternalLink = async (url: string) => {
+    if (!requireNetwork('Please connect to the internet to view this link.')) {
+      return;
+    }
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        Alert.alert('Link Unavailable', 'Unable to open this link on your device.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Link Error', 'Something went wrong while opening the link.');
     }
   };
 
@@ -234,27 +251,21 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         )}
 
         <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem}>
-            <AppIcon name="Heart" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Favorites</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <AppIcon name="DownloadSimple" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Downloads</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <AppIcon name="ShareNetwork" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Share App</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => openExternalLink('https://planterior.app/support')}
+          >
             <AppIcon name="Question" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Help & Support</Text>
+            <Text style={styles.menuText}>Support</Text>
+            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemLast]}
+            onPress={() => openExternalLink('https://planterior.app/privacy')}
+          >
+            <AppIcon name="FileText" size={24} color={theme.colors.text} />
+            <Text style={styles.menuText}>Privacy Policy</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -375,6 +386,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
   },
   menuText: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
@@ -23,6 +24,15 @@ interface SettingsScreenProps {
   onOpenOnboarding?: () => void;
 }
 
+const getAppVersionDisplay = (): string => {
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const buildNumber =
+    Constants.platform?.ios?.buildNumber ??
+    Constants.platform?.android?.versionCode?.toString();
+
+  return buildNumber ? `${appVersion}(${buildNumber})` : appVersion;
+};
+
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
   const [notifications, setNotifications] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
@@ -30,6 +40,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const { theme, themeMode, setThemeMode } = useTheme();
   const requireNetwork = useNetworkGuard();
   const { suppressFreePlanWarnings, setSuppressFreePlanWarnings } = useDebugPreferences();
+  const appVersionDisplay = getAppVersionDisplay();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -251,7 +262,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
 
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Version</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
+            <Text style={styles.infoValue}>{appVersionDisplay}</Text>
           </View>
 
           <TouchableOpacity
