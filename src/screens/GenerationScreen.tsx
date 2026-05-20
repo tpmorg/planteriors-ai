@@ -443,11 +443,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           </Text>
         </View>
 
-        <View style={styles.loadingAnimation}>
-          <Animated.View style={styles.loadingDot} />
-          <Animated.View style={[styles.loadingDot, { opacity: 0.7 }]} />
-          <Animated.View style={[styles.loadingDot, { opacity: 0.4 }]} />
-        </View>
       </View>
 
       {/* Paywall Modal */}
@@ -653,18 +648,6 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: theme.colors.primary,
-  },
-  loadingAnimation: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-    marginHorizontal: 4,
   },
   errorContainer: {
     flex: 1,

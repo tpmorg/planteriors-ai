@@ -129,7 +129,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
       >
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Control quality, storage, and app behavior</Text>
+          <Text style={styles.subtitle}>Control quality and app behavior</Text>
         </View>
 
         <View style={styles.section}>
@@ -165,22 +165,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
               thumbColor={theme.colors.switchThumb}
             />
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Storage</Text>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <AppIcon name="Trash" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Clear Cache</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <AppIcon name="DownloadSimple" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Manage Downloads</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>

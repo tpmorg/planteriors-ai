@@ -45,7 +45,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
 }) => {
   const { width, height } = useWindowDimensions();
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(isTablet ? 'grid' : 'list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
