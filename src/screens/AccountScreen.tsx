@@ -253,7 +253,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
         <View style={styles.menuSection}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => openExternalLink('https://planterior.app/support')}
+            onPress={() => openExternalLink('https://planterior.app/contact')}
           >
             <AppIcon name="Question" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Support</Text>

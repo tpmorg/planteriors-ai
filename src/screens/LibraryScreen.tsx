@@ -15,7 +15,6 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -129,12 +128,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   useEffect(() => {
     loadPlants();
   }, [loadPlants]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadPlants();
-    }, [loadPlants])
-  );
 
   const setFilter = useCallback((key: FilterKey, value: string) => {
     setFilters((current) => ({

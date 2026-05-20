@@ -18,6 +18,49 @@ class SubscriptionService {
   private isConfigured = false;
   private didWarnMissingKey = false;
 
+  getDiagnostics(): Record<string, unknown> {
+    return this.getRuntimeDiagnostics();
+  }
+
+  private getRuntimeDiagnostics(): Record<string, unknown> {
+    const constants = Constants as any;
+    const extra = Constants.expoConfig?.extra || {};
+    const apiKey = Platform.select({
+      ios: extra.revenueCatAppleApiKey,
+      android: extra.revenueCatGoogleApiKey,
+    });
+
+    return {
+      platform: Platform.OS,
+      appEnv: extra.appEnv,
+      appVersion: Constants.expoConfig?.version,
+      runtimeVersion: Constants.expoConfig?.runtimeVersion,
+      nativeBuildVersion: constants.nativeBuildVersion,
+      applicationId: constants.applicationId,
+      appOwnership: constants.appOwnership,
+      executionEnvironment: constants.executionEnvironment,
+      hasRevenueCatApiKey: !!apiKey,
+      revenueCatApiKeyPrefix: typeof apiKey === 'string' ? apiKey.slice(0, 5) : undefined,
+      entitlementId: ENTITLEMENT_ID,
+    };
+  }
+
+  private serializeError(error: unknown): Record<string, unknown> {
+    if (!error || typeof error !== 'object') {
+      return { message: String(error) };
+    }
+
+    const errorRecord = error as Record<string, unknown>;
+    return {
+      name: errorRecord.name,
+      message: errorRecord.message,
+      code: errorRecord.code,
+      readableErrorCode: errorRecord.readableErrorCode,
+      underlyingErrorMessage: errorRecord.underlyingErrorMessage,
+      userCancelled: errorRecord.userCancelled,
+    };
+  }
+
   private addRevenueCatBreadcrumb(
     message: string,
     data?: Record<string, unknown>,
@@ -45,6 +88,7 @@ class SubscriptionService {
       scope.setTag('platform', Platform.OS);
       scope.setContext('revenuecat', {
         entitlementId: ENTITLEMENT_ID,
+        runtime: this.getRuntimeDiagnostics(),
         ...data,
       });
       Sentry.captureMessage(message, level);
@@ -61,6 +105,8 @@ class SubscriptionService {
       scope.setTag('platform', Platform.OS);
       scope.setContext('revenuecat', {
         entitlementId: ENTITLEMENT_ID,
+        runtime: this.getRuntimeDiagnostics(),
+        error: this.serializeError(error),
         ...data,
       });
       Sentry.captureException(error instanceof Error ? error : new Error(message));
@@ -86,7 +132,7 @@ class SubscriptionService {
     this.addRevenueCatBreadcrumb('RevenueCat configure requested', {
       hasUserId: !!userId,
       hasApiKey: !!apiKey,
-      appEnv: Constants.expoConfig?.extra?.appEnv,
+      runtime: this.getRuntimeDiagnostics(),
     });
 
     if (!apiKey) {
@@ -95,7 +141,6 @@ class SubscriptionService {
         console.warn('RevenueCat API key not found for platform:', Platform.OS);
         this.captureRevenueCatMessage('RevenueCat API key missing', 'warning', {
           hasUserId: !!userId,
-          appEnv: Constants.expoConfig?.extra?.appEnv,
         });
       }
       return false;
@@ -120,7 +165,7 @@ class SubscriptionService {
     this.isConfigured = true;
     this.addRevenueCatBreadcrumb('RevenueCat configured', {
       hasUserId: !!userId,
-      appEnv: Constants.expoConfig?.extra?.appEnv,
+      runtime: this.getRuntimeDiagnostics(),
     });
     return true;
   }
@@ -202,12 +247,14 @@ class SubscriptionService {
         offeringIds: allOfferingIds,
         packageCount: currentOffering.availablePackages.length,
         packages: packageSummaries,
+        runtime: this.getRuntimeDiagnostics(),
       });
 
       if (currentOffering.availablePackages.length === 0) {
         this.captureRevenueCatMessage('RevenueCat current offering has no packages', 'warning', {
           currentOfferingIdentifier: currentOffering.identifier,
           offeringIds: allOfferingIds,
+          runtime: this.getRuntimeDiagnostics(),
         });
         return [];
       }
@@ -217,7 +264,9 @@ class SubscriptionService {
       );
     } catch (error) {
       console.error('Error fetching products:', error);
-      this.captureRevenueCatException('RevenueCat product fetch failed', error);
+      this.captureRevenueCatException('RevenueCat product fetch failed', error, {
+        runtime: this.getRuntimeDiagnostics(),
+      });
       return [];
     }
   }

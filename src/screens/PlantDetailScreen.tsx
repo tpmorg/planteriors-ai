@@ -35,9 +35,6 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1}>
-          {plant.name}
-        </Text>
         <View style={styles.backButton} />
       </View>
 
@@ -50,6 +47,14 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
       >
         {/* Hero Section */}
         <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <View style={styles.heroText}>
+            <Text style={[styles.plantName, { color: theme.colors.text }]}>
+              {plant.name}
+            </Text>
+            <Text style={[styles.scientificName, { color: theme.colors.textSecondary }]}>
+              {plant.scientificName}
+            </Text>
+          </View>
           <View style={[styles.plantImageFrame, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             {imageSource ? (
               <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
@@ -59,13 +64,7 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
               </Text>
             )}
           </View>
-          <View style={styles.heroText}>
-            <Text style={[styles.plantName, { color: theme.colors.text }]}>
-              {plant.name}
-            </Text>
-            <Text style={[styles.scientificName, { color: theme.colors.textSecondary }]}>
-              {plant.scientificName}
-            </Text>
+          <View style={styles.heroMeta}>
             <View style={styles.categoryTag}>
               <AppIcon
                 name="Tag"
@@ -331,29 +330,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 8,
-  },
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
     gap: 16,
   },
   heroCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 14,
     padding: 16,
     borderRadius: 20,
     borderWidth: 1,
-    gap: 16,
   },
   plantImageFrame: {
-    width: 112,
-    height: 112,
+    width: '100%',
+    aspectRatio: 1.25,
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
@@ -369,16 +359,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   heroText: {
-    flex: 1,
-    gap: 4,
+    gap: 5,
   },
   plantName: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
   },
   scientificName: {
-    fontSize: 15,
+    fontSize: 16,
     fontStyle: 'italic',
+  },
+  heroMeta: {
+    alignItems: 'flex-start',
   },
   categoryTag: {
     flexDirection: 'row',

@@ -29,10 +29,28 @@ export const SubscriptionScreen: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isPurchasing, setPurchasing] = useState(false);
   const [isRestoring, setRestoring] = useState(false);
+  const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    if (!hasLoadedProducts || selectedProductId) return;
+
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setTag('subscription_button_disabled_reason', 'no_selected_product');
+      scope.setContext('subscription_screen', {
+        productCount: products.length,
+        productIds: products.map((product) => product.id),
+        selectedProductId,
+        isPurchasing,
+        runtime: subscriptionService.getDiagnostics(),
+      });
+      Sentry.captureMessage('Subscription button disabled after product load', 'warning');
+    });
+  }, [hasLoadedProducts, isPurchasing, products, selectedProductId]);
 
   const loadProducts = async () => {
     if (!requireNetwork('Please connect to the internet to load subscription plans.')) {
@@ -40,6 +58,9 @@ export const SubscriptionScreen: React.FC = () => {
         category: 'subscription',
         message: 'Subscription products not loaded; network unavailable',
         level: 'warning',
+        data: {
+          runtime: subscriptionService.getDiagnostics(),
+        },
       });
       return;
     }
@@ -48,10 +69,15 @@ export const SubscriptionScreen: React.FC = () => {
       category: 'subscription',
       message: 'Subscription screen loading products',
       level: 'info',
+      data: {
+        runtime: subscriptionService.getDiagnostics(),
+      },
     });
 
+    setHasLoadedProducts(false);
     const availableProducts = await subscriptionService.getAvailableProducts();
     setProducts(availableProducts);
+    setHasLoadedProducts(true);
 
     Sentry.addBreadcrumb({
       category: 'subscription',
@@ -60,6 +86,7 @@ export const SubscriptionScreen: React.FC = () => {
       data: {
         productCount: availableProducts.length,
         productIds: availableProducts.map((product) => product.id),
+        runtime: subscriptionService.getDiagnostics(),
       },
     });
 
@@ -69,6 +96,7 @@ export const SubscriptionScreen: React.FC = () => {
         scope.setContext('subscription_screen', {
           productCount: 0,
           selectedProductId,
+          runtime: subscriptionService.getDiagnostics(),
         });
         Sentry.captureMessage('Subscription screen loaded no products', 'warning');
       });
