@@ -188,7 +188,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <AppIcon name="Images" size={24} color="white" />
+            <AppIcon name="ArrowLeft" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{copy.addTitle}</Text>
           <View style={styles.placeholder} />
@@ -300,7 +300,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-          <AppIcon name="Images" size={24} color="white" />
+          <AppIcon name="ArrowLeft" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{copy.takeTitle}</Text>
         <TouchableOpacity
