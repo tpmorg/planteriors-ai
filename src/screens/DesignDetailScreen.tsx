@@ -670,7 +670,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const swipeUpGesture = Gesture.Fling()
     .direction(Directions.UP)
     .onEnd(() => {
-      if (!showInfoModal) {
+      if (scale.value <= 1 && !showInfoModal) {
         runOnJS(showModal)();
       }
     });
