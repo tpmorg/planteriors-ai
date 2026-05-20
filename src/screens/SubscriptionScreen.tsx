@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -17,6 +18,38 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { subscriptionService } from '../services/subscriptionService';
 import { SubscriptionProduct } from '../types';
+
+const FALLBACK_PRODUCTS: SubscriptionProduct[] = [
+  {
+    id: 'planterior_pro_monthly_preview',
+    name: 'Planterior Pro Monthly',
+    price: '$9.99',
+    priceValue: 9.99,
+    currency: 'USD',
+    period: 'month',
+    features: [
+      'Unlimited AI plant designs',
+      'Priority generation queue',
+      'HD image exports',
+      'Save unlimited designs',
+    ],
+  },
+  {
+    id: 'planterior_pro_annual_preview',
+    name: 'Planterior Pro Annual',
+    price: '$79.99',
+    priceValue: 79.99,
+    currency: 'USD',
+    period: 'year',
+    features: [
+      'Everything in Monthly',
+      'Save 33% vs monthly',
+      'Priority support',
+      'Best for frequent redesigns',
+    ],
+    savings: 'BEST VALUE',
+  },
+];
 
 export const SubscriptionScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,10 +63,38 @@ export const SubscriptionScreen: React.FC = () => {
   const [isPurchasing, setPurchasing] = useState(false);
   const [isRestoring, setRestoring] = useState(false);
   const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
+  const [usesFallbackProducts, setUsesFallbackProducts] = useState(false);
 
   useEffect(() => {
+    captureSubscriptionScreenMessage('Subscription screen opened', 'warning', {
+      runtime: subscriptionService.getDiagnostics(),
+    });
     loadProducts();
   }, []);
+
+  const captureSubscriptionScreenMessage = (
+    message: string,
+    level: 'info' | 'warning' | 'error',
+    context?: Record<string, unknown>
+  ) => {
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setTag('subscription_screen_event', message);
+      scope.setContext('subscription_screen', {
+        runtime: subscriptionService.getDiagnostics(),
+        ...context,
+      });
+      Sentry.captureMessage(message, level);
+    });
+  };
+
+  const openExternalLink = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Unable to Open Link', 'Please try again later.');
+    }
+  };
 
   useEffect(() => {
     if (!hasLoadedProducts || selectedProductId) return;
@@ -54,6 +115,9 @@ export const SubscriptionScreen: React.FC = () => {
 
   const loadProducts = async () => {
     if (!requireNetwork('Please connect to the internet to load subscription plans.')) {
+      captureSubscriptionScreenMessage('Subscription products blocked by network guard', 'warning', {
+        reason: 'network_unavailable',
+      });
       Sentry.addBreadcrumb({
         category: 'subscription',
         message: 'Subscription products not loaded; network unavailable',
@@ -62,6 +126,7 @@ export const SubscriptionScreen: React.FC = () => {
           runtime: subscriptionService.getDiagnostics(),
         },
       });
+      loadFallbackProducts('network_unavailable');
       return;
     }
 
@@ -73,19 +138,36 @@ export const SubscriptionScreen: React.FC = () => {
         runtime: subscriptionService.getDiagnostics(),
       },
     });
+    captureSubscriptionScreenMessage('Subscription products load started', 'warning', {
+      runtime: subscriptionService.getDiagnostics(),
+    });
 
     setHasLoadedProducts(false);
+    setUsesFallbackProducts(false);
     const availableProducts = await subscriptionService.getAvailableProducts();
-    setProducts(availableProducts);
+    const displayProducts = availableProducts.length > 0 ? availableProducts : FALLBACK_PRODUCTS;
+    const isFallback = availableProducts.length === 0;
+
+    setProducts(displayProducts);
+    setUsesFallbackProducts(isFallback);
     setHasLoadedProducts(true);
+    captureSubscriptionScreenMessage('Subscription products load completed', 'warning', {
+      revenueCatProductCount: availableProducts.length,
+      displayProductCount: displayProducts.length,
+      revenueCatProductIds: availableProducts.map((product) => product.id),
+      displayProductIds: displayProducts.map((product) => product.id),
+      usesFallbackProducts: isFallback,
+      selectedProductIdBeforeDefault: selectedProductId,
+    });
 
     Sentry.addBreadcrumb({
       category: 'subscription',
       message: 'Subscription screen products loaded',
       level: availableProducts.length > 0 ? 'info' : 'warning',
       data: {
-        productCount: availableProducts.length,
-        productIds: availableProducts.map((product) => product.id),
+        productCount: displayProducts.length,
+        productIds: displayProducts.map((product) => product.id),
+        usesFallbackProducts: isFallback,
         runtime: subscriptionService.getDiagnostics(),
       },
     });
@@ -103,9 +185,13 @@ export const SubscriptionScreen: React.FC = () => {
     }
 
     // Pre-select annual plan (better value)
-    if (availableProducts.length > 0) {
-      const defaultProductId = availableProducts[1]?.id || availableProducts[0].id;
+    if (displayProducts.length > 0) {
+      const defaultProductId = displayProducts[1]?.id || displayProducts[0].id;
       setSelectedProductId(defaultProductId);
+      captureSubscriptionScreenMessage('Subscription default product selected', 'warning', {
+        selectedProductId: defaultProductId,
+        usesFallbackProducts: isFallback,
+      });
       Sentry.addBreadcrumb({
         category: 'subscription',
         message: 'Subscription screen selected default product',
@@ -115,6 +201,27 @@ export const SubscriptionScreen: React.FC = () => {
         },
       });
     }
+  };
+
+  const loadFallbackProducts = (reason: string) => {
+    setProducts(FALLBACK_PRODUCTS);
+    setUsesFallbackProducts(true);
+    setHasLoadedProducts(true);
+    setSelectedProductId(FALLBACK_PRODUCTS[1].id);
+    captureSubscriptionScreenMessage('Subscription fallback products displayed', 'warning', {
+      reason,
+      displayProductIds: FALLBACK_PRODUCTS.map((product) => product.id),
+      selectedProductId: FALLBACK_PRODUCTS[1].id,
+    });
+    Sentry.addBreadcrumb({
+      category: 'subscription',
+      message: 'Subscription screen using fallback display products',
+      level: 'warning',
+      data: {
+        reason,
+        productIds: FALLBACK_PRODUCTS.map((product) => product.id),
+      },
+    });
   };
 
   const handlePurchase = async () => {
@@ -146,6 +253,30 @@ export const SubscriptionScreen: React.FC = () => {
     }
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
+    if (usesFallbackProducts || !selectedProduct?.rcPackage) {
+      captureSubscriptionScreenMessage('Subscription purchase blocked by display-only product', 'warning', {
+        selectedProductId,
+        usesFallbackProducts,
+        hasSelectedProduct: !!selectedProduct,
+        hasRevenueCatPackage: !!selectedProduct?.rcPackage,
+        productIds: products.map((product) => product.id),
+      });
+      Sentry.addBreadcrumb({
+        category: 'subscription',
+        message: 'Subscription purchase blocked; display-only product selected',
+        level: 'warning',
+        data: {
+          selectedProductId,
+          usesFallbackProducts,
+        },
+      });
+      Alert.alert(
+        'Subscription Temporarily Unavailable',
+        'Planterior Pro subscriptions are being prepared for App Store approval. Please try again soon.'
+      );
+      return;
+    }
+
     setPurchasing(true);
 
     try {
@@ -310,7 +441,23 @@ export const SubscriptionScreen: React.FC = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By subscribing, you agree to our Terms of Service and Privacy Policy
+            By subscribing, you agree to our{' '}
+            <Text
+              style={styles.footerLink}
+              onPress={() => openExternalLink('https://planterior.app/terms')}
+            >
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text
+              style={styles.footerLink}
+              onPress={() => openExternalLink('https://planterior.app/privacy')}
+            >
+              Privacy Policy
+            </Text>
+            . Subscriptions
+            renew automatically unless canceled at least 24 hours before the end of the current
+            period. Payment is charged to your Apple ID at confirmation of purchase.
           </Text>
         </View>
       </ScrollView>
@@ -628,5 +775,9 @@ const createStyles = (theme: any) =>
       color: theme.colors.textSecondary,
       textAlign: 'center',
       lineHeight: 18,
+    },
+    footerLink: {
+      color: theme.colors.primary,
+      fontWeight: '700',
     },
   });

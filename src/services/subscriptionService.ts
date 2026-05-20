@@ -222,6 +222,9 @@ class SubscriptionService {
     }
     try {
       this.addRevenueCatBreadcrumb('RevenueCat fetching offerings');
+      this.captureRevenueCatMessage('RevenueCat offerings fetch started', 'warning', {
+        runtime: this.getRuntimeDiagnostics(),
+      });
       const offerings = await Purchases.getOfferings();
       const currentOffering = offerings.current;
       const allOfferingIds = Object.keys(offerings.all || {});
@@ -243,6 +246,13 @@ class SubscriptionService {
       }));
 
       this.addRevenueCatBreadcrumb('RevenueCat offering loaded', {
+        currentOfferingIdentifier: currentOffering.identifier,
+        offeringIds: allOfferingIds,
+        packageCount: currentOffering.availablePackages.length,
+        packages: packageSummaries,
+        runtime: this.getRuntimeDiagnostics(),
+      });
+      this.captureRevenueCatMessage('RevenueCat offering loaded', 'warning', {
         currentOfferingIdentifier: currentOffering.identifier,
         offeringIds: allOfferingIds,
         packageCount: currentOffering.availablePackages.length,

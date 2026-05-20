@@ -45,12 +45,16 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
   // Full variant for free plan
   const progressPercentage = (freeRemaining / FREE_GENERATION_LIMIT) * 100;
+  const hasReachedLimit = freeRemaining === 0;
+  const showUpgradeCta = Boolean(onUpgradePress) && (hasReachedLimit || !isUpgradeCtaDismissed);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, hasReachedLimit && styles.limitContainer]}>
       <View style={styles.header}>
-        <Text style={styles.planName}>Free Plan</Text>
-        {freeRemaining === 0 && (
+        <Text style={[styles.planName, hasReachedLimit && styles.limitPlanName]}>
+          {hasReachedLimit ? 'Free Trial Complete' : 'Free Plan'}
+        </Text>
+        {hasReachedLimit && (
           <View style={styles.limitBadge}>
             <Text style={styles.limitBadgeText}>Limit Reached</Text>
           </View>
@@ -72,22 +76,41 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
         </Text>
       </View>
 
-      {onUpgradePress && !isUpgradeCtaDismissed && (
-        <View style={styles.upgradeCtaWrap}>
-          <TouchableOpacity style={styles.dismissButton} onPress={() => {
-            isUpgradeCtaDismissedForSession = true;
-            setIsUpgradeCtaDismissed(true);
-          }}>
-            <AppIcon name="X" size={14} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
-            <AppIcon name="ArrowCircleUp" size={18} color={theme.colors.surface} />
-            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+      {hasReachedLimit && (
+        <Text style={styles.limitMessage}>
+          Subscribe to keep generating plant designs. Premium unlocks unlimited creations, priority processing, and HD exports.
+        </Text>
+      )}
+
+      {showUpgradeCta && onUpgradePress && (
+        <View style={[styles.upgradeCtaWrap, hasReachedLimit && styles.limitCtaWrap]}>
+          {!hasReachedLimit && (
+            <TouchableOpacity style={styles.dismissButton} onPress={() => {
+              isUpgradeCtaDismissedForSession = true;
+              setIsUpgradeCtaDismissed(true);
+            }}>
+              <AppIcon name="X" size={14} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.upgradeButton, hasReachedLimit && styles.limitUpgradeButton]}
+            onPress={onUpgradePress}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={hasReachedLimit ? 'Subscribe to continue creating designs' : 'Upgrade to Premium'}
+          >
+            <AppIcon name={hasReachedLimit ? 'LockKeyOpen' : 'ArrowCircleUp'} size={18} color={theme.colors.surface} />
+            <Text style={styles.upgradeButtonText}>
+              {hasReachedLimit ? 'Subscribe to Continue' : 'Upgrade to Premium'}
+            </Text>
+            {hasReachedLimit && (
+              <AppIcon name="ArrowRight" size={18} color={theme.colors.surface} />
+            )}
           </TouchableOpacity>
         </View>
       )}
 
-      {freeRemaining === 0 && !onUpgradePress && (
+      {hasReachedLimit && !onUpgradePress && (
         <Text style={styles.warningText}>
           You've used all your free generations. Upgrade to continue creating designs.
         </Text>
@@ -107,6 +130,16 @@ const createStyles = (theme: any) =>
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
+    limitContainer: {
+      borderColor: theme.colors.primary,
+      borderWidth: 2,
+      backgroundColor: theme.isDark ? theme.colors.surface : '#f8fbf6',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 4,
+    },
     containerCompact: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -125,6 +158,10 @@ const createStyles = (theme: any) =>
       fontSize: 16,
       fontWeight: '600',
       color: theme.colors.text,
+    },
+    limitPlanName: {
+      fontSize: 19,
+      fontWeight: '700',
     },
     premiumBadge: {
       flexDirection: 'row',
@@ -178,6 +215,12 @@ const createStyles = (theme: any) =>
       color: theme.colors.textSecondary,
       fontWeight: '500',
     },
+    limitMessage: {
+      fontSize: 14,
+      color: theme.colors.text,
+      lineHeight: 20,
+      marginTop: 12,
+    },
     compactText: {
       fontSize: 13,
       color: theme.colors.text,
@@ -194,8 +237,16 @@ const createStyles = (theme: any) =>
       borderRadius: 8,
       marginTop: 6,
     },
+    limitUpgradeButton: {
+      paddingVertical: 15,
+      borderRadius: 10,
+      marginTop: 0,
+    },
     upgradeCtaWrap: {
       marginTop: 6,
+    },
+    limitCtaWrap: {
+      marginTop: 14,
     },
     dismissButton: {
       alignSelf: 'flex-end',

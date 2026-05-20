@@ -25,10 +25,20 @@ interface SettingsScreenProps {
 }
 
 const getAppVersionDisplay = (): string => {
-  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const nativeConstants = Constants as typeof Constants & {
+    nativeAppVersion?: string | null;
+    nativeBuildVersion?: string | null;
+  };
+  const appVersion =
+    nativeConstants.nativeAppVersion ||
+    Constants.expoConfig?.version ||
+    '1.0.0';
   const buildNumber =
-    Constants.platform?.ios?.buildNumber ??
-    Constants.platform?.android?.versionCode?.toString();
+    nativeConstants.nativeBuildVersion ||
+    Constants.platform?.ios?.buildNumber ||
+    Constants.platform?.android?.versionCode?.toString() ||
+    Constants.expoConfig?.ios?.buildNumber ||
+    Constants.expoConfig?.android?.versionCode?.toString();
 
   return buildNumber ? `${appVersion}(${buildNumber})` : appVersion;
 };

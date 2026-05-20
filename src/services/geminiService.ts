@@ -217,7 +217,7 @@ Generate this as a high-quality photorealistic image with the single ${plant.nam
 
     // Build container description based on plant options
     const containerDescription = this.buildContainerDescription(plantOptions);
-    const densityDescription = this.buildDensityDescription(plantOptions);
+    const densityDescription = this.buildDensityDescription(plantOptions, plantType.id);
     const careDescription = this.buildCareDescription(plantOptions);
 
     return `Generate a photorealistic image of this exact room transformed with ${plantType.name.toLowerCase()} plants arranged in a ${plantStyle.name.toLowerCase()} style.
@@ -237,6 +237,7 @@ Hard Constraints:
 - Preserve all existing non-plant physical objects exactly as they are.
 - Do NOT add, remove, move, or alter furniture or decor (tables, chairs, sofas, lamps, rugs, art, shelves, appliances, fixtures, etc.).
 - The only new objects allowed are plants and their necessary containers/planters.
+- Follow the density limit exactly. If the selected density is Sparse, the plant count cap is more important than making the style look lush, cascading, or abundant.
 - Ignore non-plant object changes unless the user explicitly asks for that exact object change.
 
 ${request.prompt ? `Additional requirements: ${request.prompt}` : ""}
@@ -258,16 +259,18 @@ Generate this as a high-quality photorealistic image.`;
     return description;
   }
 
-  private buildDensityDescription(plantOptions?: PlantOptions): string {
+  private buildDensityDescription(plantOptions?: PlantOptions, plantTypeId?: string): string {
     if (!plantOptions) return "";
 
     const { placementDensity } = plantOptions;
+    const isHanging = plantTypeId === 'hanging';
 
     const densityInstructions: Record<string, string> = {
-      minimal:
-        "- Density: Place plants sparingly with just 2-3 statement pieces. Focus on one or two key focal points",
+      sparse: isHanging
+        ? "- Density: SPARSE HARD LIMIT. Add exactly 1 hanging planter, or at most 2 only if the room has two obvious, physically supported anchor points. Do not add rows of hanging plants, wall clusters, ceiling grids, shelf plants, floor plants, or extra trailing greenery. Most of the room should remain unchanged and visually open"
+        : "- Density: SPARSE HARD LIMIT. Add exactly 1-2 plants total, never more than 2 visible plants or planters. Treat them as quiet accent pieces with generous empty space around them. Do not fill shelves, corners, windowsills, tables, or multiple surfaces",
       moderate:
-        "- Density: Add a balanced amount of greenery with 4-6 plants distributed throughout the space",
+        "- Density: Add a balanced amount of greenery with 3-5 plants distributed through the space. Avoid crowding every surface",
       lush: "- Density: Create an abundant, jungle-like atmosphere with many plants (8+) filling corners, shelves, and surfaces",
     };
 

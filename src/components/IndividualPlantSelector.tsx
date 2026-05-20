@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -59,24 +59,22 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   );
 
   // Filter plants based on search
-  const [filteredPlants, setFilteredPlants] = useState<IndividualPlant[]>(INDIVIDUAL_PLANTS);
-  const [isListLoading, setIsListLoading] = useState(true);
   const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
   const listRef = useRef<FlatList<IndividualPlant>>(null);
   const scrollOffsetRef = useRef(0);
   const searchContainerTopRef = useRef(0);
+  const lastSearchActiveRef = useRef(false);
 
   const { theme } = useTheme();
   const gridColumns = isTablet ? 2 : 2;
   const styles = createStyles(theme, isTablet);
 
-  useEffect(() => {
-    setIsListLoading(true);
+  const filteredPlants = useMemo(() => {
     const lowerQuery = searchQuery.toLowerCase().trim();
     const sourcePlants = petSafeOnly
       ? INDIVIDUAL_PLANTS.filter((plant) => plant.petSafe)
       : INDIVIDUAL_PLANTS;
-    const filtered = !lowerQuery
+    return !lowerQuery
       ? sourcePlants
       : sourcePlants.filter(
           (plant) =>
@@ -85,9 +83,6 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
             plant.description.toLowerCase().includes(lowerQuery) ||
             plant.category.toLowerCase().includes(lowerQuery)
         );
-    setFilteredPlants(filtered);
-    const timeout = setTimeout(() => setIsListLoading(false), 50);
-    return () => clearTimeout(timeout);
   }, [searchQuery, petSafeOnly]);
 
   useEffect(() => {
@@ -102,14 +97,21 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       return;
     }
 
-    const isActive =
-      !selectedPlant && (isSearchFocused || searchQuery.trim().length > 0);
-    onSearchActiveChange(isActive);
-
-    return () => {
-      onSearchActiveChange(false);
-    };
+    const isActive = !selectedPlant && (isSearchFocused || searchQuery.trim().length > 0);
+    if (lastSearchActiveRef.current !== isActive) {
+      lastSearchActiveRef.current = isActive;
+      onSearchActiveChange(isActive);
+    }
   }, [selectedPlant, isSearchFocused, searchQuery, onSearchActiveChange]);
+
+  useEffect(() => {
+    return () => {
+      if (lastSearchActiveRef.current && onSearchActiveChange) {
+        lastSearchActiveRef.current = false;
+        onSearchActiveChange(false);
+      }
+    };
+  }, [onSearchActiveChange]);
 
   // Update parent when selection changes
   const updateSelection = (
@@ -277,7 +279,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         windowSize={7}
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
-        removeClippedSubviews
+        removeClippedSubviews={Platform.OS === 'android'}
         numColumns={viewMode === 'grid' ? gridColumns : 1}
         columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
         key={viewMode === 'grid' ? `grid-${gridColumns}` : 'list'}
@@ -444,13 +446,6 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
           ) : null
         }
       />
-      {isListLoading && (
-        <View style={styles.loadingOverlay} pointerEvents="auto">
-          <View style={styles.loadingCard}>
-            <Text style={styles.loadingText}>Loading plants…</Text>
-          </View>
-        </View>
-      )}
     </KeyboardAvoidingView>
   );
 };
@@ -710,29 +705,6 @@ const createStyles = (theme: any, isTablet: boolean) => {
       fontSize: 10,
       color: theme.colors.textSecondary,
       textAlign: 'center',
-    },
-    loadingOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: theme.isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.35)',
-    },
-    loadingCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    loadingText: {
-      color: theme.colors.text,
-      fontSize: 13,
-      fontWeight: '600',
     },
   });
 };
