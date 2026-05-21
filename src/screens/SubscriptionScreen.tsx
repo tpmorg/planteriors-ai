@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -377,7 +378,11 @@ export const SubscriptionScreen: React.FC = () => {
       >
         <View style={styles.heroSection}>
           <View style={styles.iconCircle}>
-            <AppIcon name="StarFour" size={40} color={theme.colors.primary} />
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Unlock Unlimited Plant Designs</Text>
           <Text style={styles.subtitle}>
@@ -694,6 +699,11 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
+    },
+    logoImage: {
+      width: 82,
+      height: 82,
+      borderRadius: 24,
     },
     title: {
       fontSize: 34,
