@@ -15,7 +15,7 @@ import { NetworkProvider } from "./src/contexts/NetworkContext";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { TabBarProvider, useTabBar } from "./src/contexts/TabBarContext";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
-import { SubscriptionProvider } from "./src/contexts/SubscriptionContext";
+import { SubscriptionProvider, useSubscription } from "./src/contexts/SubscriptionContext";
 import { DebugPreferencesProvider } from "./src/contexts/DebugPreferencesContext";
 import { ToastProvider } from "./src/contexts/ToastContext";
 import { AuthScreen } from "./src/screens/AuthScreen";
@@ -44,6 +44,7 @@ import {
 } from "./src/types";
 import { databaseService } from "./src/services/databaseService";
 import { onboardingService } from "./src/services/onboardingService";
+import { usageTrackingService } from "./src/services/usageTrackingService";
 
 const sentryDsn =
   Constants.expoConfig?.extra?.sentryDsn ||
@@ -584,11 +585,26 @@ function GenerationScreenWrapper({ route, navigation }: any) {
 }
 
 function GalleryScreenWrapper({ navigation }: any) {
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
+
   const handleNewDesign = () => {
     navigation.navigate("DesignFlow", { screen: "Camera" });
   };
 
-  const handleIdentifyPlant = () => {
+  const handleIdentifyPlant = async () => {
+    if (!user?.id) {
+      navigation.navigate("PlantIdentify");
+      return;
+    }
+
+    const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
+    if (!canGenerate) {
+      await refreshStatus();
+      navigation.navigate("Subscription");
+      return;
+    }
+
     navigation.navigate("PlantIdentify");
   };
 
@@ -630,10 +646,15 @@ function PlantIdentifyScreenWrapper({ navigation, route }: any) {
     });
   }, [navigation]);
 
+  const handleUpgradePress = () => {
+    navigation.navigate("Subscription");
+  };
+
   return (
     <PlantIdentifyScreen
       onBack={handleBack}
       onOpenCamera={handleOpenCamera}
+      onUpgradePress={handleUpgradePress}
       onCapturedImageHandled={handleCapturedImageHandled}
       capturedImageUri={route.params?.capturedImageUri}
       capturedImageAt={route.params?.capturedImageAt}

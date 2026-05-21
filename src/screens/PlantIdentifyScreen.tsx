@@ -12,13 +12,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { createPlantIdentificationService } from '../services/plantIdentificationService';
 import { databaseService } from '../services/databaseService';
+import { subscriptionService } from '../services/subscriptionService';
+import { usageTrackingService } from '../services/usageTrackingService';
 import { PlantIdentificationResult } from '../types';
 
 interface PlantIdentifyScreenProps {
   onBack: () => void;
   onOpenCamera: () => void;
+  onUpgradePress: () => void;
   onCapturedImageHandled?: () => void;
   capturedImageUri?: string;
   capturedImageAt?: number;
@@ -27,17 +32,21 @@ interface PlantIdentifyScreenProps {
 export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
   onBack,
   onOpenCamera,
+  onUpgradePress,
   onCapturedImageHandled,
   capturedImageUri,
   capturedImageAt,
 }) => {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
   const styles = createStyles(theme);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState<PlantIdentificationResult | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingUsage, setIsCheckingUsage] = useState(false);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
   const [isAlreadyInLibrary, setIsAlreadyInLibrary] = useState(false);
   const lastHandledCaptureRef = useRef<number | null>(null);
@@ -75,7 +84,49 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
     );
   };
 
+  const ensureCanIdentify = async (): Promise<boolean> => {
+    if (!user?.id) {
+      return true;
+    }
+
+    setIsCheckingUsage(true);
+    try {
+      const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
+      if (!canGenerate) {
+        await refreshStatus();
+        onUpgradePress();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to check Plant ID usage:', error);
+      return true;
+    } finally {
+      setIsCheckingUsage(false);
+    }
+  };
+
+  const trackPlantIdentificationUsage = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const subscription = await subscriptionService.getSubscriptionStatus(user.id);
+      const generationType = subscription.isActive ? 'paid' : 'free';
+      await usageTrackingService.trackGeneration(user.id, generationType);
+      await refreshStatus();
+    } catch (error) {
+      console.warn('Failed to track Plant ID usage:', error);
+    }
+  };
+
   const identifyFromUri = async (uri: string) => {
+    const canIdentify = await ensureCanIdentify();
+    if (!canIdentify) {
+      return;
+    }
+
     setImageUri(uri);
     setResult(null);
     setIsAlreadyInLibrary(false);
@@ -83,6 +134,7 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
     try {
       const service = createPlantIdentificationService();
       const identified = await service.identifyPlantFromImage(uri);
+      await trackPlantIdentificationUsage();
       setResult(identified);
       setIsCheckingDuplicate(true);
       try {
@@ -102,7 +154,11 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
   };
 
   const openCameraFlow = () => {
-    onOpenCamera();
+    ensureCanIdentify().then((canIdentify) => {
+      if (canIdentify) {
+        onOpenCamera();
+      }
+    });
   };
 
   const saveToPlantDb = async () => {
@@ -138,6 +194,7 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
     setImageUri(null);
     setResult(null);
     setIsIdentifying(false);
+    setIsCheckingUsage(false);
     setIsCheckingDuplicate(false);
     setIsAlreadyInLibrary(false);
   };
@@ -216,8 +273,16 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
       <View style={styles.footer}>
         {!result ? (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.primaryButton} onPress={openCameraFlow}>
-              <AppIcon name="Camera" size={18} color="white" />
+            <TouchableOpacity
+              style={[styles.primaryButton, isCheckingUsage && styles.disabledButton]}
+              onPress={openCameraFlow}
+              disabled={isCheckingUsage}
+            >
+              {isCheckingUsage ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <AppIcon name="Camera" size={18} color="white" />
+              )}
               <Text style={styles.primaryButtonText}>Take / Upload Photo</Text>
             </TouchableOpacity>
           </View>
