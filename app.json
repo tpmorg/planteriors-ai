@@ -26,6 +26,14 @@
           "photosPermission": "Allow Planterior AI to access your photos to select room images."
         }
       ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Planterior AI to access your photos so you can save designs to your library.",
+          "savePhotosPermission": "Allow Planterior AI to save plant design images to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       "expo-font",
       "expo-sqlite",
       "expo-web-browser",

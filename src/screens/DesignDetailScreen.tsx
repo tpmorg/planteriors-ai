@@ -43,6 +43,7 @@ import {
   getPlantById as getSeedPlantById,
   searchPlants as searchSeedPlants,
 } from '../data/plantDatabase';
+import { saveDesignImageToDevice } from '../utils/imageSave';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -175,6 +176,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     return initialFromList || initialDesign;
   });
   const [isSharing, setIsSharing] = useState(false);
+  const [isSavingToDevice, setIsSavingToDevice] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showPlantProfileModal, setShowPlantProfileModal] = useState(false);
   const [showRefineModal, setShowRefineModal] = useState(false);
@@ -567,6 +569,23 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     }
   };
 
+  const saveDesignToDevice = async () => {
+    if (isSavingToDevice) return;
+
+    setIsSavingToDevice(true);
+    try {
+      const didSave = await saveDesignImageToDevice(design);
+      if (didSave) {
+        showToast('Saved to Photos', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to save design to device:', error);
+      showToast('Could not save image', 'error');
+    } finally {
+      setIsSavingToDevice(false);
+    }
+  };
+
   const resetImageTransform = () => {
     scale.value = withSpring(1);
     savedScale.value = 1;
@@ -754,6 +773,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             >
               <AppIcon
                 name={isSharing ? 'Hourglass' : 'ShareNetwork'}
+                size={24}
+                color="white"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={saveDesignToDevice}
+              style={styles.headerButton}
+              disabled={isSavingToDevice}
+            >
+              <AppIcon
+                name={isSavingToDevice ? 'Hourglass' : 'DownloadSimple'}
                 size={24}
                 color="white"
               />

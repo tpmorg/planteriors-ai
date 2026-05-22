@@ -154,9 +154,11 @@ The user has specifically marked where they want the plant placed:
     }
 
     const hasExplicitPlacement = placement !== 'auto';
+    const validSupportInstruction = 'Use only realistic plant support locations: floor areas, plant stands, shelves, windowsills, side tables, coffee tables, counters, or sturdy built-in surfaces. Never place plants or planters on couches, sofas, chairs, beds, pillows, blankets, or seat cushions.';
+
     const placementInstruction = hasExplicitPlacement
       ? `The plant MUST be ${placementDescriptions[placement]}. This placement preference is a top priority.`
-      : 'Choose the most realistic placement based on the room layout, available surfaces, and the plant’s light needs. Ensure physical support, avoid blocking walkways, and keep the placement believable.';
+      : `Choose the most realistic placement based on the room layout, valid plant support surfaces, and the plant’s light needs. ${validSupportInstruction} Ensure physical support, avoid blocking walkways, and keep the placement believable.`;
 
     return `Add a single ${sizeDescriptions[size]} ${plant.name} (${plant.scientificName}) to this room image.
 
@@ -165,6 +167,7 @@ Plant Details:
 - Scientific Name: ${plant.scientificName}
 - Description: ${plant.description}
 - ${placementInstruction}
+- ${validSupportInstruction}
 - ${lightContexts[plant.lightRequirement]}
 ${locationInstruction}
 
@@ -179,7 +182,8 @@ ${location ? '4. Place the plant EXACTLY in the user-specified location marked a
 8. Match the perspective, angle, and lighting of the original photo precisely
 9. Do NOT add, remove, move, or redesign any non-plant physical objects (including tables, chairs, sofas, lamps, rugs, art, shelves, appliances, fixtures, or decor)
 10. The only allowed additions are the plant and its required pot/planter (and hanging support only if hanging placement is requested)
-11. Ignore any non-plant modifications unless the user explicitly and directly requests that specific object change
+11. Do not use soft furniture or bedding as a plant support surface, even if visually open
+12. Ignore any non-plant modifications unless the user explicitly and directly requests that specific object change
 
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
 
@@ -237,6 +241,8 @@ Hard Constraints:
 - Preserve all existing non-plant physical objects exactly as they are.
 - Do NOT add, remove, move, or alter furniture or decor (tables, chairs, sofas, lamps, rugs, art, shelves, appliances, fixtures, etc.).
 - The only new objects allowed are plants and their necessary containers/planters.
+- Use only realistic plant support locations: floor areas, plant stands, shelves, windowsills, side tables, coffee tables, counters, or sturdy built-in surfaces.
+- Never place plants or planters on couches, sofas, chairs, beds, pillows, blankets, or seat cushions.
 - Follow the density limit exactly. If the selected density is Sparse, the plant count cap is more important than making the style look lush, cascading, or abundant.
 - Ignore non-plant object changes unless the user explicitly asks for that exact object change.
 

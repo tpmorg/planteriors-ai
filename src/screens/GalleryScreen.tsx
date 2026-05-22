@@ -12,6 +12,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
@@ -24,6 +25,9 @@ import { UsageIndicator } from '../components/UsageIndicator';
 import { CollectionPickerModal } from '../components/CollectionPickerModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { requestPhotoSavePermission, saveDesignImageToDevice } from '../utils/imageSave';
+
+const GALLERY_HINTS_SEEN_KEY = '@planterior_gallery_hints_seen';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
@@ -42,7 +46,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
-  const [activeDesignId, setActiveDesignId] = useState<string | null>(null);
+  const [collectionTargetIds, setCollectionTargetIds] = useState<string[]>([]);
+  const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(new Set());
+  const [showGalleryHints, setShowGalleryHints] = useState(false);
+  const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
@@ -103,9 +110,142 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const filteredDesigns = selectedCollectionId
     ? designs.filter((d) => d.collectionId === selectedCollectionId)
     : designs;
+  const selectedCount = selectedDesignIds.size;
+  const isSelectionMode = selectedCount > 0;
+  const selectedDesigns = designs.filter((d) => selectedDesignIds.has(d.id));
 
   const handleDesignPress = (design: SavedDesign, index: number) => {
+    if (isSelectionMode) {
+      toggleDesignSelection(design.id);
+      return;
+    }
     onDesignSelect(design, designs, index);
+  };
+
+  const dismissGalleryHints = useCallback(async () => {
+    setShowGalleryHints(false);
+    try {
+      await AsyncStorage.setItem(GALLERY_HINTS_SEEN_KEY, 'true');
+    } catch (error) {
+      console.error('Failed to store gallery hints status:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadGalleryHintsStatus = async () => {
+      try {
+        const value = await AsyncStorage.getItem(GALLERY_HINTS_SEEN_KEY);
+        setShowGalleryHints(value !== 'true');
+      } catch (error) {
+        console.error('Failed to read gallery hints status:', error);
+      }
+    };
+
+    loadGalleryHintsStatus();
+  }, []);
+
+  const toggleDesignSelection = (designId: string) => {
+    setSelectedDesignIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(designId)) {
+        next.delete(designId);
+      } else {
+        next.add(designId);
+      }
+      return next;
+    });
+  };
+
+  const enterSelectionMode = (designId: string) => {
+    setSelectedDesignIds(new Set([designId]));
+    if (showGalleryHints) {
+      dismissGalleryHints();
+    }
+  };
+
+  const startNewDesign = () => {
+    if (showGalleryHints) {
+      dismissGalleryHints();
+    }
+    onNewDesign();
+  };
+
+  const startPlantIdentification = () => {
+    if (showGalleryHints) {
+      dismissGalleryHints();
+    }
+    onIdentifyPlant();
+  };
+
+  const clearSelection = () => {
+    setSelectedDesignIds(new Set());
+    setCollectionTargetIds([]);
+  };
+
+  const openSelectedCollectionPicker = () => {
+    if (selectedCount === 0) return;
+    setCollectionTargetIds(Array.from(selectedDesignIds));
+    setShowCollectionsModal(true);
+  };
+
+  const deleteSelectedDesigns = () => {
+    if (selectedCount === 0) return;
+
+    Alert.alert(
+      selectedCount === 1 ? 'Delete Design' : `Delete ${selectedCount} Designs`,
+      selectedCount === 1
+        ? 'Are you sure you want to delete this design? This action cannot be undone.'
+        : 'Are you sure you want to delete these designs? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const idsToDelete = Array.from(selectedDesignIds);
+              await Promise.all(idsToDelete.map((id) => databaseService.deleteDesign(id)));
+              setDesigns((prev) => prev.filter((design) => !selectedDesignIds.has(design.id)));
+              clearSelection();
+              showToast(
+                idsToDelete.length === 1 ? 'Design deleted' : `${idsToDelete.length} designs deleted`,
+                'success'
+              );
+            } catch (error) {
+              console.error('Failed to delete selected designs:', error);
+              showToast('Could not delete selected designs', 'error');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const saveSelectedDesignsToDevice = async () => {
+    if (selectedDesigns.length === 0 || isBatchSaving) return;
+
+    setIsBatchSaving(true);
+    try {
+      const hasPermission = await requestPhotoSavePermission();
+      if (!hasPermission) return;
+
+      await Promise.all(
+        selectedDesigns.map((selectedDesign) =>
+          saveDesignImageToDevice(selectedDesign, { requestPermission: false })
+        )
+      );
+      showToast(
+        selectedDesigns.length === 1
+          ? 'Saved to Photos'
+          : `Saved ${selectedDesigns.length} images to Photos`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Failed to save selected designs:', error);
+      showToast('Could not save selected images', 'error');
+    } finally {
+      setIsBatchSaving(false);
+    }
   };
 
   const toggleFavorite = async (design: SavedDesign) => {
@@ -140,15 +280,19 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     return design.localImagePath || design.generatedImageUri;
   };
 
-  const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => (
+  const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => {
+    const isSelected = selectedDesignIds.has(item.id);
+
+    return (
     <TouchableOpacity
-      style={[styles.designItem, { width: itemSize }]}
+      style={[styles.designItem, { width: itemSize }, isSelected && styles.designItemSelected]}
       onPress={() => handleDesignPress(item, index)}
-      onLongPress={() => {
-        setActiveDesignId(item.id);
-        setShowCollectionsModal(true);
-      }}
+      onLongPress={() => enterSelectionMode(item.id)}
+      delayLongPress={450}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${item.mode === 'individual' && item.individualPlant ? item.individualPlant.name : item.plantType?.name || 'Custom'}`}
+      accessibilityHint={isSelectionMode ? 'Toggles selection' : 'Opens design details'}
     >
       <View style={styles.imageContainer}>
         <Image
@@ -160,7 +304,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         {/* Favorite button */}
         <TouchableOpacity
           style={styles.favoriteButton}
-          onPress={() => toggleFavorite(item)}
+          onPress={() => {
+            if (isSelectionMode) {
+              toggleDesignSelection(item.id);
+              return;
+            }
+            toggleFavorite(item);
+          }}
         >
           <AppIcon
             name="Heart"
@@ -169,6 +319,19 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
             weight={item.isFavorite ? 'fill' : 'regular'}
           />
         </TouchableOpacity>
+
+        {isSelected && <View style={styles.selectedImageOverlay} />}
+
+        {isSelectionMode && (
+          <View style={[styles.selectionBadge, isSelected && styles.selectionBadgeSelected]}>
+            <AppIcon
+              name={isSelected ? 'Check' : 'Circle'}
+              size={18}
+              color={isSelected ? theme.colors.surface : 'white'}
+              weight={isSelected ? 'bold' : 'regular'}
+            />
+          </View>
+        )}
 
         {/* Plant info overlay */}
         <View style={styles.infoOverlay}>
@@ -188,7 +351,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       {/* Date */}
       <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const styles = createStyles(theme, isTablet, listHorizontalPadding, interItemGap);
 
@@ -201,7 +365,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <Text style={styles.emptyText}>
         Snap a photo of your room and let AI add the perfect plants
       </Text>
-      <TouchableOpacity style={styles.emptyCreateButton} onPress={onNewDesign}>
+      <TouchableOpacity style={styles.emptyCreateButton} onPress={startNewDesign}>
         <AppIcon name="Plus" size={18} color="white" />
         <Text style={styles.emptyCreateText}>Create Your First Design</Text>
       </TouchableOpacity>
@@ -214,14 +378,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <View style={styles.backdropBlobA} />
         <View style={styles.backdropBlobB} />
         <TouchableOpacity
-          onPress={onNewDesign}
+          onPress={startNewDesign}
           style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
           accessibilityLabel="New design"
         >
           <AppIcon name="Plus" size={24} color="white" />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={onIdentifyPlant}
+          onPress={startPlantIdentification}
           style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
           accessibilityLabel="Identify plant"
           accessibilityHint="Opens the plant identification flow"
@@ -241,14 +405,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
       <TouchableOpacity
-        onPress={onNewDesign}
+        onPress={startNewDesign}
         style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
         accessibilityLabel="New design"
       >
         <AppIcon name="Plus" size={24} color="white" />
       </TouchableOpacity>
       <TouchableOpacity
-        onPress={onIdentifyPlant}
+        onPress={startPlantIdentification}
         style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
         accessibilityLabel="Identify plant"
         accessibilityHint="Opens the plant identification flow"
@@ -256,22 +420,90 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <AppIcon name="MagnifyingGlass" size={22} color="white" />
       </TouchableOpacity>
 
-      <View style={styles.floatingButtonOffset} />
+      <View style={[styles.floatingButtonOffset, isSelectionMode && styles.selectionFloatingButtonOffset]} />
 
-      {/* Usage Indicator */}
-      <UsageIndicator
-        freeRemaining={freeGenerationsRemaining}
-        isSubscribed={subscription?.isActive || false}
-        variant="full"
-        onUpgradePress={onUpgradePress}
-      />
+      {isSelectionMode ? (
+        <View style={styles.selectionToolbar}>
+          <TouchableOpacity
+            onPress={clearSelection}
+            style={styles.selectionCancelButton}
+            accessibilityLabel="Cancel selection"
+          >
+            <AppIcon name="X" size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.selectionTitle}>
+            {selectedCount} selected
+          </Text>
+          <View style={styles.selectionActions}>
+            <TouchableOpacity
+              onPress={openSelectedCollectionPicker}
+              style={styles.selectionActionButton}
+              accessibilityLabel="Add selected designs to collection"
+            >
+              <AppIcon name="FolderPlus" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={saveSelectedDesignsToDevice}
+              style={styles.selectionActionButton}
+              disabled={isBatchSaving}
+              accessibilityLabel="Save selected designs to device"
+            >
+              <AppIcon
+                name={isBatchSaving ? 'Hourglass' : 'DownloadSimple'}
+                size={24}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={deleteSelectedDesigns}
+              style={[styles.selectionActionButton, styles.selectionDeleteButton]}
+              accessibilityLabel="Delete selected designs"
+            >
+              <AppIcon name="Trash" size={24} color="#dc2626" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <>
+          {showGalleryHints && (
+            <View style={styles.galleryHints}>
+              <View style={styles.galleryHintRow}>
+                <AppIcon name="Plus" size={16} color={theme.colors.primary} />
+                <Text style={styles.galleryHintText}>Create designs</Text>
+              </View>
+              <View style={styles.galleryHintRow}>
+                <AppIcon name="MagnifyingGlass" size={16} color={theme.colors.primary} />
+                <Text style={styles.galleryHintText}>Identify plants</Text>
+              </View>
+              <View style={styles.galleryHintRow}>
+                <AppIcon name="CursorClick" size={16} color={theme.colors.primary} />
+                <Text style={styles.galleryHintText}>Long-press images to select</Text>
+              </View>
+              <TouchableOpacity
+                onPress={dismissGalleryHints}
+                style={styles.galleryHintDismiss}
+                accessibilityLabel="Dismiss gallery tips"
+              >
+                <Text style={styles.galleryHintDismissText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <UsageIndicator
+            freeRemaining={freeGenerationsRemaining}
+            isSubscribed={subscription?.isActive || false}
+            variant="full"
+            onUpgradePress={onUpgradePress}
+          />
+        </>
+      )}
 
       <View style={styles.collectionsSection}>
         <View style={styles.collectionsHeader}>
           <Text style={styles.collectionsTitle}>Collections</Text>
           <TouchableOpacity
             onPress={() => {
-              setActiveDesignId(null);
+              setCollectionTargetIds([]);
               setShowCollectionsModal(true);
             }}
             style={styles.manageCollectionsButton}
@@ -342,28 +574,37 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         visible={showCollectionsModal}
         collections={collections}
         selectedCollectionId={
-          activeDesignId
-            ? designs.find((d) => d.id === activeDesignId)?.collectionId ?? null
+          collectionTargetIds.length === 1
+            ? designs.find((d) => d.id === collectionTargetIds[0])?.collectionId ?? null
             : selectedCollectionId
         }
-        title={activeDesignId ? 'Move to Collection' : 'Collections'}
+        title={collectionTargetIds.length > 0 ? 'Add to Collection' : 'Collections'}
         allowNone
-        noneLabel={activeDesignId ? 'No Collection' : 'All Collections'}
-        noneIcon={activeDesignId ? 'Prohibit' : 'GridFour'}
+        noneLabel={collectionTargetIds.length > 0 ? 'No Collection' : 'All Collections'}
+        noneIcon={collectionTargetIds.length > 0 ? 'Prohibit' : 'GridFour'}
         onDismiss={() => {
           setShowCollectionsModal(false);
-          setActiveDesignId(null);
+          setCollectionTargetIds([]);
         }}
         onCreate={async (name) => {
           try {
             const created = await databaseService.createCollection(name, user?.id);
             setCollections((prev) => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
-            if (activeDesignId) {
-              await databaseService.setDesignCollection(activeDesignId, created.id);
-              setDesigns((prev) => prev.map((d) => (d.id === activeDesignId ? { ...d, collectionId: created.id } : d)));
+            if (collectionTargetIds.length > 0) {
+              await Promise.all(
+                collectionTargetIds.map((id) => databaseService.setDesignCollection(id, created.id))
+              );
+              setDesigns((prev) =>
+                prev.map((d) => (collectionTargetIds.includes(d.id) ? { ...d, collectionId: created.id } : d))
+              );
               setShowCollectionsModal(false);
-              setActiveDesignId(null);
-              showToast(`Added to ${created.name}`, 'success');
+              clearSelection();
+              showToast(
+                collectionTargetIds.length === 1
+                  ? `Added to ${created.name}`
+                  : `Added ${collectionTargetIds.length} designs to ${created.name}`,
+                'success'
+              );
             } else {
               setSelectedCollectionId(created.id);
               setShowCollectionsModal(false);
@@ -376,22 +617,30 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         }}
         onSelect={async (collectionId) => {
           try {
-            if (!activeDesignId) {
+            if (collectionTargetIds.length === 0) {
               setSelectedCollectionId(collectionId);
               setShowCollectionsModal(false);
-              setActiveDesignId(null);
               showToast(collectionId ? 'Collection filter applied' : 'Showing all designs', 'info');
               return;
             }
-            await databaseService.setDesignCollection(activeDesignId, collectionId);
+            await Promise.all(
+              collectionTargetIds.map((id) => databaseService.setDesignCollection(id, collectionId))
+            );
             const selectedCollection = collections.find((c) => c.id === collectionId);
-            setDesigns((prev) => prev.map((d) => (d.id === activeDesignId ? { ...d, collectionId } : d)));
+            setDesigns((prev) =>
+              prev.map((d) => (collectionTargetIds.includes(d.id) ? { ...d, collectionId } : d))
+            );
             setShowCollectionsModal(false);
-            setActiveDesignId(null);
+            const movedCount = collectionTargetIds.length;
+            clearSelection();
             showToast(
               collectionId
-                ? `Moved to ${selectedCollection?.name || 'collection'}`
-                : 'Removed from collection',
+                ? movedCount === 1
+                  ? `Moved to ${selectedCollection?.name || 'collection'}`
+                  : `Moved ${movedCount} designs to ${selectedCollection?.name || 'collection'}`
+                : movedCount === 1
+                  ? 'Removed from collection'
+                  : `Removed ${movedCount} designs from collection`,
               'success'
             );
           } catch (error) {
@@ -460,6 +709,96 @@ const createStyles = (
   },
   floatingButtonOffset: {
     height: 34,
+  },
+  selectionFloatingButtonOffset: {
+    height: 62,
+  },
+  selectionToolbar: {
+    marginTop: 14,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    minHeight: 68,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: theme.isDark ? 'rgba(143,179,154,0.55)' : 'rgba(47,122,82,0.28)',
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.38 : 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  selectionCancelButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : '#eef2f1',
+  },
+  selectionTitle: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  selectionActionButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
+  },
+  selectionDeleteButton: {
+    borderColor: theme.isDark ? 'rgba(220,38,38,0.4)' : '#fecaca',
+    backgroundColor: theme.isDark ? 'rgba(220,38,38,0.1)' : '#fff1f2',
+  },
+  galleryHints: {
+    marginTop: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    padding: 12,
+    gap: 8,
+  },
+  galleryHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  galleryHintText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  galleryHintDismiss: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+  },
+  galleryHintDismissText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.surface,
   },
   placeholder: {
     width: 40,
@@ -551,6 +890,9 @@ const createStyles = (
   designItem: {
     marginBottom: 24,
   },
+  designItemSelected: {
+    transform: [{ scale: 0.985 }],
+  },
   imageContainer: {
     position: 'relative',
     borderRadius: 18,
@@ -578,6 +920,32 @@ const createStyles = (
     height: 34,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 3,
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    zIndex: 2,
+  },
+  selectionBadgeSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  selectedImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 3,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.isDark ? 'rgba(47,122,82,0.18)' : 'rgba(47,122,82,0.12)',
+    zIndex: 1,
   },
   infoOverlay: {
     position: 'absolute',
@@ -587,6 +955,7 @@ const createStyles = (
     backgroundColor: 'rgba(0,0,0,0.62)',
     paddingVertical: 10,
     paddingHorizontal: 10,
+    zIndex: 2,
   },
   plantTypeText: {
     color: 'white',

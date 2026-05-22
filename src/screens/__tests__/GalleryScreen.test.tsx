@@ -4,6 +4,11 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { GalleryScreen } from '../GalleryScreen';
 import { databaseService } from '../../services/databaseService';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue('true'),
+  setItem: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void | (() => void)) => callback(),
 }));
@@ -79,8 +84,32 @@ jest.mock('../../services/databaseService', () => ({
     toggleFavorite: jest.fn(),
     createCollection: jest.fn(),
     setDesignCollection: jest.fn(),
+    deleteDesign: jest.fn(),
   },
 }));
+
+jest.mock('../../utils/imageSave', () => ({
+  requestPhotoSavePermission: jest.fn().mockResolvedValue(true),
+  saveDesignImageToDevice: jest.fn().mockResolvedValue(true),
+}));
+
+const mockDesign = {
+  id: 'design-1',
+  originalImageUri: 'file://original.png',
+  generatedImageUri: 'file://generated.png',
+  localImagePath: 'file://generated.png',
+  mode: 'multi-plant',
+  plantType: {
+    name: 'Ferns',
+    description: 'Green and soft',
+  },
+  plantStyle: {
+    name: 'Modern',
+    description: 'Clean',
+  },
+  createdAt: new Date('2026-05-01T12:00:00Z'),
+  isFavorite: false,
+} as const;
 
 const renderGallery = (overrides = {}) => {
   const props = {
@@ -99,6 +128,7 @@ const renderGallery = (overrides = {}) => {
 
 describe('GalleryScreen', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     (databaseService.getAllDesigns as jest.Mock).mockResolvedValue([]);
     (databaseService.getCollections as jest.Mock).mockResolvedValue([]);
   });
@@ -142,5 +172,19 @@ describe('GalleryScreen', () => {
       expect(databaseService.getAllDesigns).toHaveBeenCalled();
       expect(databaseService.getCollections).toHaveBeenCalledWith('test-user');
     });
+  });
+
+  it('enters selection mode from a design long press', async () => {
+    (databaseService.getAllDesigns as jest.Mock).mockResolvedValue([mockDesign]);
+
+    const { findByLabelText, findByText, getByLabelText } = renderGallery();
+
+    const design = await findByLabelText('Design Ferns');
+    fireEvent(design, 'longPress');
+
+    expect(await findByText('1 selected')).toBeOnTheScreen();
+    expect(getByLabelText('Add selected designs to collection')).toBeOnTheScreen();
+    expect(getByLabelText('Save selected designs to device')).toBeOnTheScreen();
+    expect(getByLabelText('Delete selected designs')).toBeOnTheScreen();
   });
 });
