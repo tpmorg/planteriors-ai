@@ -29,13 +29,14 @@ const token =
   process.env.REVENUECAT_API_TOKEN ||
   '';
 
-const isProduction = targetEnv === 'production';
-const expectedAppleKey = isProduction
-  ? process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || process.env.REVENUECAT_APPLE_API_KEY || ''
-  : process.env.REVENUECAT_APPLE_API_KEY_TEST || process.env.REVENUECAT_APPLE_API_KEY || '';
-const expectedGoogleKey = isProduction
-  ? process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || process.env.REVENUECAT_GOOGLE_API_KEY || ''
-  : process.env.REVENUECAT_GOOGLE_API_KEY_TEST || process.env.REVENUECAT_GOOGLE_API_KEY || '';
+const expectedAppleKey =
+  process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION ||
+  process.env.REVENUECAT_APPLE_API_KEY ||
+  '';
+const expectedGoogleKey =
+  process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION ||
+  process.env.REVENUECAT_GOOGLE_API_KEY ||
+  '';
 
 const checks = [];
 

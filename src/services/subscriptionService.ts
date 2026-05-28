@@ -22,6 +22,66 @@ class SubscriptionService {
     return this.getRuntimeDiagnostics();
   }
 
+  async debugOfferings(userId?: string): Promise<Record<string, unknown>> {
+    const requestedAt = new Date().toISOString();
+    const runtime = this.getRuntimeDiagnostics();
+    const ok = await this.ensureConfigured(userId);
+
+    if (!ok) {
+      return {
+        ok: false,
+        requestedAt,
+        runtime,
+        error: 'RevenueCat SDK is not configured',
+      };
+    }
+
+    try {
+      const offerings = await Purchases.getOfferings();
+      const currentOffering = offerings.current;
+      const offeringIds = Object.keys(offerings.all || {});
+      const packages = currentOffering?.availablePackages.map((pkg) => {
+        const product = pkg.product as unknown as Record<string, unknown>;
+
+        return {
+          packageIdentifier: pkg.identifier,
+          packageType: pkg.packageType,
+          productIdentifier: pkg.product.identifier,
+          productTitle: product.title,
+          productDescription: product.description,
+          productPrice: product.price,
+          productPriceString: product.priceString,
+          currencyCode: product.currencyCode,
+          subscriptionPeriod: product.subscriptionPeriod,
+          productCategory: product.productCategory,
+          productType: product.productType,
+        };
+      }) || [];
+
+      const payload = {
+        ok: true,
+        requestedAt,
+        runtime,
+        currentOfferingIdentifier: currentOffering?.identifier || null,
+        offeringIds,
+        packageCount: packages.length,
+        packages,
+      };
+
+      this.captureRevenueCatMessage('RevenueCat offerings debug completed', 'warning', payload);
+      return payload;
+    } catch (error) {
+      const payload = {
+        ok: false,
+        requestedAt,
+        runtime,
+        error: this.serializeError(error),
+      };
+      this.captureRevenueCatException('RevenueCat offerings debug failed', error, payload);
+      return payload;
+    }
+  }
+
   private getRuntimeDiagnostics(): Record<string, unknown> {
     const constants = Constants as any;
     const extra = Constants.expoConfig?.extra || {};

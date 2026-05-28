@@ -20,38 +20,6 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { subscriptionService } from '../services/subscriptionService';
 import { SubscriptionProduct } from '../types';
 
-const FALLBACK_PRODUCTS: SubscriptionProduct[] = [
-  {
-    id: 'planterior_pro_monthly_preview',
-    name: 'Planterior Pro Monthly',
-    price: '$9.99',
-    priceValue: 9.99,
-    currency: 'USD',
-    period: 'month',
-    features: [
-      'Unlimited AI plant designs',
-      'Priority generation queue',
-      'HD image exports',
-      'Save unlimited designs',
-    ],
-  },
-  {
-    id: 'planterior_pro_annual_preview',
-    name: 'Planterior Pro Annual',
-    price: '$79.99',
-    priceValue: 79.99,
-    currency: 'USD',
-    period: 'year',
-    features: [
-      'Everything in Monthly',
-      'Save 33% vs monthly',
-      'Priority support',
-      'Best for frequent redesigns',
-    ],
-    savings: 'BEST VALUE',
-  },
-];
-
 export const SubscriptionScreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
@@ -64,7 +32,7 @@ export const SubscriptionScreen: React.FC = () => {
   const [isPurchasing, setPurchasing] = useState(false);
   const [isRestoring, setRestoring] = useState(false);
   const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
-  const [usesFallbackProducts, setUsesFallbackProducts] = useState(false);
+  const [productLoadError, setProductLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     captureSubscriptionScreenMessage('Subscription screen opened', 'warning', {
@@ -87,6 +55,27 @@ export const SubscriptionScreen: React.FC = () => {
       });
       Sentry.captureMessage(message, level);
     });
+  };
+
+  const captureSubscriptionScreenException = async (
+    message: string,
+    context?: Record<string, unknown>
+  ) => {
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setTag('subscription_screen_event', message);
+      scope.setContext('subscription_screen', {
+        runtime: subscriptionService.getDiagnostics(),
+        ...context,
+      });
+      Sentry.captureException(new Error(message));
+    });
+
+    try {
+      await Sentry.flush();
+    } catch (error) {
+      console.warn('Sentry flush failed after subscription exception:', error);
+    }
   };
 
   const openExternalLink = async (url: string) => {
@@ -127,7 +116,10 @@ export const SubscriptionScreen: React.FC = () => {
           runtime: subscriptionService.getDiagnostics(),
         },
       });
-      loadFallbackProducts('network_unavailable');
+      setProducts([]);
+      setSelectedProductId(null);
+      setProductLoadError('Connect to the internet to load subscription plans.');
+      setHasLoadedProducts(true);
       return;
     }
 
@@ -144,20 +136,17 @@ export const SubscriptionScreen: React.FC = () => {
     });
 
     setHasLoadedProducts(false);
-    setUsesFallbackProducts(false);
+    setProductLoadError(null);
+    setSelectedProductId(null);
     const availableProducts = await subscriptionService.getAvailableProducts();
-    const displayProducts = availableProducts.length > 0 ? availableProducts : FALLBACK_PRODUCTS;
-    const isFallback = availableProducts.length === 0;
 
-    setProducts(displayProducts);
-    setUsesFallbackProducts(isFallback);
+    setProducts(availableProducts);
     setHasLoadedProducts(true);
     captureSubscriptionScreenMessage('Subscription products load completed', 'warning', {
       revenueCatProductCount: availableProducts.length,
-      displayProductCount: displayProducts.length,
+      displayProductCount: availableProducts.length,
       revenueCatProductIds: availableProducts.map((product) => product.id),
-      displayProductIds: displayProducts.map((product) => product.id),
-      usesFallbackProducts: isFallback,
+      displayProductIds: availableProducts.map((product) => product.id),
       selectedProductIdBeforeDefault: selectedProductId,
     });
 
@@ -166,32 +155,31 @@ export const SubscriptionScreen: React.FC = () => {
       message: 'Subscription screen products loaded',
       level: availableProducts.length > 0 ? 'info' : 'warning',
       data: {
-        productCount: displayProducts.length,
-        productIds: displayProducts.map((product) => product.id),
-        usesFallbackProducts: isFallback,
+        productCount: availableProducts.length,
+        productIds: availableProducts.map((product) => product.id),
         runtime: subscriptionService.getDiagnostics(),
       },
     });
 
     if (availableProducts.length === 0) {
-      Sentry.withScope((scope) => {
-        scope.setTag('area', 'subscription');
-        scope.setContext('subscription_screen', {
-          productCount: 0,
-          selectedProductId,
-          runtime: subscriptionService.getDiagnostics(),
-        });
-        Sentry.captureMessage('Subscription screen loaded no products', 'warning');
+      const message = 'Subscription plans unavailable: RevenueCat returned no purchasable packages';
+      setProductLoadError('Subscription plans are unavailable right now. Please try again.');
+      console.error(message, {
+        runtime: subscriptionService.getDiagnostics(),
       });
+      await captureSubscriptionScreenException(message, {
+        productCount: 0,
+        selectedProductId,
+      });
+      return;
     }
 
     // Pre-select annual plan (better value)
-    if (displayProducts.length > 0) {
-      const defaultProductId = displayProducts[1]?.id || displayProducts[0].id;
+    if (availableProducts.length > 0) {
+      const defaultProductId = availableProducts[1]?.id || availableProducts[0].id;
       setSelectedProductId(defaultProductId);
       captureSubscriptionScreenMessage('Subscription default product selected', 'warning', {
         selectedProductId: defaultProductId,
-        usesFallbackProducts: isFallback,
       });
       Sentry.addBreadcrumb({
         category: 'subscription',
@@ -202,27 +190,6 @@ export const SubscriptionScreen: React.FC = () => {
         },
       });
     }
-  };
-
-  const loadFallbackProducts = (reason: string) => {
-    setProducts(FALLBACK_PRODUCTS);
-    setUsesFallbackProducts(true);
-    setHasLoadedProducts(true);
-    setSelectedProductId(FALLBACK_PRODUCTS[1].id);
-    captureSubscriptionScreenMessage('Subscription fallback products displayed', 'warning', {
-      reason,
-      displayProductIds: FALLBACK_PRODUCTS.map((product) => product.id),
-      selectedProductId: FALLBACK_PRODUCTS[1].id,
-    });
-    Sentry.addBreadcrumb({
-      category: 'subscription',
-      message: 'Subscription screen using fallback display products',
-      level: 'warning',
-      data: {
-        reason,
-        productIds: FALLBACK_PRODUCTS.map((product) => product.id),
-      },
-    });
   };
 
   const handlePurchase = async () => {
@@ -254,26 +221,24 @@ export const SubscriptionScreen: React.FC = () => {
     }
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
-    if (usesFallbackProducts || !selectedProduct?.rcPackage) {
-      captureSubscriptionScreenMessage('Subscription purchase blocked by display-only product', 'warning', {
+    if (!selectedProduct?.rcPackage) {
+      await captureSubscriptionScreenException('Subscription purchase blocked: selected product has no RevenueCat package', {
         selectedProductId,
-        usesFallbackProducts,
         hasSelectedProduct: !!selectedProduct,
         hasRevenueCatPackage: !!selectedProduct?.rcPackage,
         productIds: products.map((product) => product.id),
       });
       Sentry.addBreadcrumb({
         category: 'subscription',
-        message: 'Subscription purchase blocked; display-only product selected',
+        message: 'Subscription purchase blocked; selected product has no RevenueCat package',
         level: 'warning',
         data: {
           selectedProductId,
-          usesFallbackProducts,
         },
       });
       Alert.alert(
-        'Subscription Temporarily Unavailable',
-        'Planterior Pro subscriptions are being prepared for App Store approval. Please try again soon.'
+        'Subscription Unavailable',
+        'We could not load this subscription from the App Store. Please try again.'
       );
       return;
     }
@@ -400,36 +365,58 @@ export const SubscriptionScreen: React.FC = () => {
         )}
 
         <View style={styles.plansSection}>
-          {products.map((product) => (
-            <PlanCard
-              key={product.id}
-              product={product}
-              isSelected={selectedProductId === product.id}
-              onSelect={() => setSelectedProductId(product.id)}
-              theme={theme}
-              isCurrentPlan={!!(subscription?.isActive && ((subscription.type === 'monthly' && product.period === 'month') || (subscription.type === 'annual' && product.period === 'year')))}
-            />
-          ))}
+          {!hasLoadedProducts ? (
+            <View style={styles.statusCard}>
+              <ActivityIndicator color={theme.colors.primary} />
+              <Text style={styles.statusTitle}>Loading Plans</Text>
+            </View>
+          ) : productLoadError ? (
+            <View style={styles.statusCard}>
+              <AppIcon name="WarningCircle" size={28} color={theme.colors.textSecondary} />
+              <Text style={styles.statusTitle}>Plans Unavailable</Text>
+              <Text style={styles.statusText}>{productLoadError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={loadProducts}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            products.map((product) => (
+              <PlanCard
+                key={product.id}
+                product={product}
+                isSelected={selectedProductId === product.id}
+                onSelect={() => setSelectedProductId(product.id)}
+                theme={theme}
+                isCurrentPlan={!!(subscription?.isActive && ((subscription.type === 'monthly' && product.period === 'month') || (subscription.type === 'annual' && product.period === 'year')))}
+              />
+            ))
+          )}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.purchaseButton,
-            (isPurchasing || !selectedProductId) && styles.purchaseButtonDisabled
-          ]}
-          onPress={handlePurchase}
-          disabled={isPurchasing || !selectedProductId}
-          activeOpacity={0.8}
-        >
-          {isPurchasing ? (
-            <ActivityIndicator color={theme.colors.surface} />
-          ) : (
-            <>
-              <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
-              <Text style={styles.purchaseButtonText}>Subscribe Now</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {!productLoadError && (
+          <TouchableOpacity
+            style={[
+              styles.purchaseButton,
+              (isPurchasing || !selectedProductId) && styles.purchaseButtonDisabled
+            ]}
+            onPress={handlePurchase}
+            disabled={isPurchasing || !selectedProductId}
+            activeOpacity={0.8}
+          >
+            {isPurchasing ? (
+              <ActivityIndicator color={theme.colors.surface} />
+            ) : (
+              <>
+                <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
+                <Text style={styles.purchaseButtonText}>Subscribe Now</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.restoreButton}
@@ -739,6 +726,40 @@ const createStyles = (theme: any) =>
     },
     plansSection: {
       marginBottom: 24,
+    },
+    statusCard: {
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 24,
+      paddingHorizontal: 18,
+      borderRadius: 18,
+      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    statusTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+      textAlign: 'center',
+    },
+    statusText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    retryButton: {
+      marginTop: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+      borderRadius: 12,
+      backgroundColor: theme.colors.primary,
+    },
+    retryButtonText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.colors.surface,
     },
     purchaseButton: {
       flexDirection: 'row',

@@ -6,15 +6,16 @@ dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const appEnv = process.env.APP_ENV || 'development';
-const isProduction = appEnv === 'production';
 
-const revenueCatAppleApiKey = isProduction
-  ? process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || process.env.REVENUECAT_APPLE_API_KEY || ''
-  : process.env.REVENUECAT_APPLE_API_KEY_TEST || process.env.REVENUECAT_APPLE_API_KEY || '';
+const revenueCatAppleApiKey =
+  process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION ||
+  process.env.REVENUECAT_APPLE_API_KEY ||
+  '';
 
-const revenueCatGoogleApiKey = isProduction
-  ? process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || process.env.REVENUECAT_GOOGLE_API_KEY || ''
-  : process.env.REVENUECAT_GOOGLE_API_KEY_TEST || process.env.REVENUECAT_GOOGLE_API_KEY || '';
+const revenueCatGoogleApiKey =
+  process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION ||
+  process.env.REVENUECAT_GOOGLE_API_KEY ||
+  '';
 
 module.exports = ({ config }) => ({
   ...config,
@@ -34,8 +35,6 @@ module.exports = ({ config }) => ({
     revenueCatEntitlementId: process.env.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
     revenueCatAppleApiKey,
     revenueCatGoogleApiKey,
-    revenueCatAppleApiKeyTest: process.env.REVENUECAT_APPLE_API_KEY_TEST || '',
-    revenueCatGoogleApiKeyTest: process.env.REVENUECAT_GOOGLE_API_KEY_TEST || '',
     revenueCatAppleApiKeyProduction: process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || '',
     revenueCatGoogleApiKeyProduction: process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
   },

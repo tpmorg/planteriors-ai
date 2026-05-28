@@ -18,6 +18,7 @@ import { useTabBar } from '../contexts/TabBarContext';
 import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 import { onboardingService } from '../services/onboardingService';
+import { subscriptionService } from '../services/subscriptionService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface SettingsScreenProps {
@@ -107,6 +108,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
     Sentry.captureException(new Error(`Planterior Sentry test exception (${sentryEventTime})`));
 
     Alert.alert('Sentry Test', 'Sent test message + error to Sentry. Check your Sentry issue list.');
+  };
+
+  const handleDebugRevenueCatOfferings = async () => {
+    const payload = await subscriptionService.debugOfferings();
+    const json = JSON.stringify(payload, null, 2);
+    console.log('RevenueCat offerings debug:', json);
+
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setContext('revenuecat_offerings_debug', payload);
+      Sentry.captureMessage('RevenueCat offerings debug requested from settings', 'warning');
+    });
+
+    Alert.alert(
+      'RevenueCat Offerings',
+      json.length > 3500 ? `${json.slice(0, 3500)}\n\n...truncated; full payload is in device logs.` : json
+    );
   };
 
   const openExternalLink = async (url: string) => {
@@ -245,6 +263,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
               <TouchableOpacity style={styles.menuItem} onPress={handleSendSentryTestEvent}>
                 <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
                 <Text style={styles.menuText}>Send Sentry Test Event</Text>
+                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleDebugRevenueCatOfferings}>
+                <AppIcon name="Receipt" size={24} color={theme.colors.text} />
+                <Text style={styles.menuText}>Debug RevenueCat Offerings</Text>
                 <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </>

@@ -13,8 +13,6 @@ interface EnvConfig {
   REVENUECAT_ENTITLEMENT_ID: string;
   REVENUECAT_APPLE_API_KEY: string;
   REVENUECAT_GOOGLE_API_KEY: string;
-  REVENUECAT_APPLE_API_KEY_TEST: string;
-  REVENUECAT_GOOGLE_API_KEY_TEST: string;
   REVENUECAT_APPLE_API_KEY_PRODUCTION: string;
   REVENUECAT_GOOGLE_API_KEY_PRODUCTION: string;
 }
@@ -47,8 +45,6 @@ class EnvironmentManager {
       REVENUECAT_ENTITLEMENT_ID: expoConfig.revenueCatEntitlementId || expoConfig.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
       REVENUECAT_APPLE_API_KEY: expoConfig.revenueCatAppleApiKey || expoConfig.REVENUECAT_APPLE_API_KEY || '',
       REVENUECAT_GOOGLE_API_KEY: expoConfig.revenueCatGoogleApiKey || expoConfig.REVENUECAT_GOOGLE_API_KEY || '',
-      REVENUECAT_APPLE_API_KEY_TEST: expoConfig.revenueCatAppleApiKeyTest || expoConfig.REVENUECAT_APPLE_API_KEY_TEST || '',
-      REVENUECAT_GOOGLE_API_KEY_TEST: expoConfig.revenueCatGoogleApiKeyTest || expoConfig.REVENUECAT_GOOGLE_API_KEY_TEST || '',
       REVENUECAT_APPLE_API_KEY_PRODUCTION: expoConfig.revenueCatAppleApiKeyProduction || expoConfig.REVENUECAT_APPLE_API_KEY_PRODUCTION || '',
       REVENUECAT_GOOGLE_API_KEY_PRODUCTION: expoConfig.revenueCatGoogleApiKeyProduction || expoConfig.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
     };
