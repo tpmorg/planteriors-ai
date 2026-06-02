@@ -1,13 +1,8 @@
 import { databaseService } from './databaseService';
 import { subscriptionService } from './subscriptionService';
 import { UsageStats } from '../types';
-import Constants from 'expo-constants';
 
-const appEnv = String(
-  Constants.expoConfig?.extra?.appEnv ?? Constants.expoConfig?.extra?.APP_ENV ?? 'development'
-).toLowerCase();
-
-export const FREE_GENERATION_LIMIT = appEnv === 'preview' ? 20 : 5;
+export const FREE_GENERATION_LIMIT = 5;
 
 class UsageTrackingService {
   /**
