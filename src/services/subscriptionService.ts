@@ -82,12 +82,78 @@ class SubscriptionService {
     }
   }
 
+  async debugSubscriptionState(userId?: string): Promise<Record<string, unknown>> {
+    const requestedAt = new Date().toISOString();
+    const runtime = this.getRuntimeDiagnostics();
+    const ok = await this.ensureConfigured(userId);
+    const appUserID = await this.getCurrentAppUserId();
+
+    if (!ok) {
+      return {
+        ok: false,
+        requestedAt,
+        runtime,
+        requestedUserId: userId,
+        appUserID,
+        error: 'RevenueCat SDK is not configured',
+      };
+    }
+
+    try {
+      const [offerings, customerInfo] = await Promise.all([
+        Purchases.getOfferings(),
+        Purchases.getCustomerInfo(),
+      ]);
+      const currentOffering = offerings.current;
+      const packages = currentOffering?.availablePackages.map((pkg) => ({
+        packageIdentifier: pkg.identifier,
+        packageType: pkg.packageType,
+        productIdentifier: pkg.product.identifier,
+      })) || [];
+      const activeEntitlementIds = Object.keys(customerInfo.entitlements.active || {});
+      const expectedEntitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+      const originalAppUserId = (customerInfo as CustomerInfo & { originalAppUserId?: string })
+        .originalAppUserId;
+      const payload = {
+        ok: true,
+        requestedAt,
+        runtime,
+        requestedUserId: userId,
+        appUserID,
+        originalAppUserId,
+        expectedEntitlementId: ENTITLEMENT_ID,
+        hasExpectedEntitlement: !!expectedEntitlement,
+        activeEntitlementIds,
+        allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
+        activeSubscriptions: customerInfo.activeSubscriptions,
+        allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+        currentOfferingIdentifier: currentOffering?.identifier || null,
+        packageCount: packages.length,
+        packages,
+      };
+
+      this.captureRevenueCatMessage('RevenueCat subscription sanity check completed', 'warning', payload);
+      return payload;
+    } catch (error) {
+      const payload = {
+        ok: false,
+        requestedAt,
+        runtime,
+        requestedUserId: userId,
+        appUserID,
+        error: this.serializeError(error),
+      };
+      this.captureRevenueCatException('RevenueCat subscription sanity check failed', error, payload);
+      return payload;
+    }
+  }
+
   private getRuntimeDiagnostics(): Record<string, unknown> {
     const constants = Constants as any;
     const extra = Constants.expoConfig?.extra || {};
     const apiKey = Platform.select({
-      ios: extra.revenueCatAppleApiKey,
-      android: extra.revenueCatGoogleApiKey,
+      ios: extra.revenueCatIosApiKeyProduction,
+      android: extra.revenueCatGoogleApiKeyProduction,
     });
 
     return {
@@ -119,6 +185,14 @@ class SubscriptionService {
       underlyingErrorMessage: errorRecord.underlyingErrorMessage,
       userCancelled: errorRecord.userCancelled,
     };
+  }
+
+  private async getCurrentAppUserId(): Promise<string | undefined> {
+    try {
+      return await Purchases.getAppUserID();
+    } catch {
+      return undefined;
+    }
   }
 
   private addRevenueCatBreadcrumb(
@@ -185,8 +259,8 @@ class SubscriptionService {
     }
 
     const apiKey = Platform.select({
-      ios: Constants.expoConfig?.extra?.revenueCatAppleApiKey,
-      android: Constants.expoConfig?.extra?.revenueCatGoogleApiKey,
+      ios: Constants.expoConfig?.extra?.revenueCatIosApiKeyProduction,
+      android: Constants.expoConfig?.extra?.revenueCatGoogleApiKeyProduction,
     });
 
     this.addRevenueCatBreadcrumb('RevenueCat configure requested', {
@@ -352,19 +426,37 @@ class SubscriptionService {
     success: boolean;
     subscription: SubscriptionStatus;
     error?: string;
+    debug?: Record<string, unknown>;
   }> {
     const ok = await this.ensureConfigured(_userId);
+    const appUserID = await this.getCurrentAppUserId();
+    const getPurchaseDebug = () => ({
+      requestedUserId: _userId,
+      appUserID,
+      productId,
+      packageIdentifier: rcPackage?.identifier,
+      packageType: rcPackage?.packageType,
+      storeProductId: rcPackage?.product.identifier,
+    });
+
     if (!ok) {
       return {
         success: false,
         subscription: this.defaultStatus(),
         error: 'Purchases not available',
+        debug: {
+          ...getPurchaseDebug(),
+          source: 'revenuecat_config',
+        },
       };
     }
+
     try {
       if (!rcPackage) {
         this.addRevenueCatBreadcrumb('RevenueCat purchase package missing; refetching offerings', {
           productId,
+          requestedUserId: _userId,
+          appUserID,
         });
         const offerings = await Purchases.getOfferings();
         rcPackage = offerings.current?.availablePackages.find(
@@ -380,42 +472,88 @@ class SubscriptionService {
           success: false,
           subscription: this.defaultStatus(),
           error: 'Product not found',
+          debug: {
+            ...getPurchaseDebug(),
+            source: 'revenuecat_offerings',
+          },
         };
       }
 
       this.addRevenueCatBreadcrumb('RevenueCat purchase started', {
+        requestedUserId: _userId,
+        appUserID,
         productId,
         packageIdentifier: rcPackage.identifier,
         packageType: rcPackage.packageType,
+        storeProductId: rcPackage.product.identifier,
       });
       const { customerInfo } = await Purchases.purchasePackage(rcPackage);
+      const originalAppUserId = (customerInfo as CustomerInfo & { originalAppUserId?: string })
+        .originalAppUserId;
       const status = this.mapCustomerInfoToStatus(customerInfo);
       this.addRevenueCatBreadcrumb('RevenueCat purchase completed', {
+        requestedUserId: _userId,
+        appUserID,
         productId,
         isActive: status.isActive,
         type: status.type,
+        originalAppUserId,
+        activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
+        allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
+        activeSubscriptions: customerInfo.activeSubscriptions,
+        allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
       });
 
-      return { success: status.isActive, subscription: status };
+      return {
+        success: status.isActive,
+        subscription: status,
+        error: status.isActive ? undefined : 'Purchase completed, but no active subscription entitlement was returned.',
+        debug: {
+          ...getPurchaseDebug(),
+          source: 'revenuecat_customer_info',
+          originalAppUserId,
+          activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
+          allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
+          activeSubscriptions: customerInfo.activeSubscriptions,
+          allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+        },
+      };
     } catch (error: any) {
       if (error.userCancelled) {
         this.addRevenueCatBreadcrumb('RevenueCat purchase cancelled', {
           productId,
+          requestedUserId: _userId,
+          appUserID,
         });
         return {
           success: false,
           subscription: this.defaultStatus(),
           error: 'Purchase cancelled',
+          debug: {
+            ...getPurchaseDebug(),
+            source: 'storekit_user_cancelled',
+            error: this.serializeError(error),
+          },
         };
       }
       console.error('Purchase error:', error);
       this.captureRevenueCatException('RevenueCat purchase failed', error, {
+        requestedUserId: _userId,
+        appUserID,
         productId,
+        packageIdentifier: rcPackage?.identifier,
+        packageType: rcPackage?.packageType,
+        storeProductId: rcPackage?.product.identifier,
       });
       return {
         success: false,
         subscription: this.defaultStatus(),
-        error: error.message || 'Purchase failed',
+        error: error.message || error.underlyingErrorMessage || error.readableErrorCode || 'RevenueCat purchase failed',
+        debug: {
+          ...getPurchaseDebug(),
+          source: 'revenuecat_purchase',
+          error: this.serializeError(error),
+        },
       };
     }
   }

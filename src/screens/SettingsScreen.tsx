@@ -20,6 +20,7 @@ import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 import { onboardingService } from '../services/onboardingService';
 import { subscriptionService } from '../services/subscriptionService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsScreenProps {
   onOpenOnboarding?: () => void;
@@ -47,10 +48,13 @@ const getAppVersionDisplay = (): string => {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
   const [notifications, setNotifications] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [diagnosticTapCount, setDiagnosticTapCount] = useState(0);
+  const [showDiagnostics, setShowDiagnostics] = useState(__DEV__);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
   const requireNetwork = useNetworkGuard();
   const { suppressFreePlanWarnings, setSuppressFreePlanWarnings } = useDebugPreferences();
+  const { user } = useAuth();
   const appVersionDisplay = getAppVersionDisplay();
 
   useFocusEffect(
@@ -95,6 +99,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
     setOnboardingCompleted(value);
   };
 
+  const handleVersionPress = () => {
+    if (showDiagnostics) return;
+
+    const nextCount = diagnosticTapCount + 1;
+    setDiagnosticTapCount(nextCount);
+
+    if (nextCount >= 7) {
+      setShowDiagnostics(true);
+      Alert.alert('Diagnostics Enabled', 'Developer diagnostics are now visible in Settings.');
+    }
+  };
+
   const handleSendSentryTestEvent = async () => {
     const sentryEventTime = new Date().toISOString();
     const payload = {
@@ -111,7 +127,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   };
 
   const handleDebugRevenueCatOfferings = async () => {
-    const payload = await subscriptionService.debugOfferings();
+    const payload = await subscriptionService.debugOfferings(user?.id);
     const json = JSON.stringify(payload, null, 2);
     console.log('RevenueCat offerings debug:', json);
 
@@ -123,6 +139,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
 
     Alert.alert(
       'RevenueCat Offerings',
+      json.length > 3500 ? `${json.slice(0, 3500)}\n\n...truncated; full payload is in device logs.` : json
+    );
+  };
+
+  const handleDebugRevenueCatSanityCheck = async () => {
+    const payload = await subscriptionService.debugSubscriptionState(user?.id);
+    const json = JSON.stringify(payload, null, 2);
+    console.log('RevenueCat subscription sanity check:', json);
+
+    Sentry.withScope((scope) => {
+      scope.setTag('area', 'subscription');
+      scope.setContext('revenuecat_subscription_sanity_check', payload);
+      Sentry.captureMessage('RevenueCat subscription sanity check requested from settings', 'warning');
+    });
+
+    Alert.alert(
+      'RevenueCat Sanity Check',
       json.length > 3500 ? `${json.slice(0, 3500)}\n\n...truncated; full payload is in device logs.` : json
     );
   };
@@ -222,7 +255,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
-          {__DEV__ && (
+          {showDiagnostics && (
             <>
               <View style={styles.settingItem}>
                 <View style={styles.settingInfo}>
@@ -271,6 +304,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
                 <Text style={styles.menuText}>Debug RevenueCat Offerings</Text>
                 <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleDebugRevenueCatSanityCheck}>
+                <AppIcon name="ShieldCheck" size={24} color={theme.colors.text} />
+                <Text style={styles.menuText}>RevenueCat Sanity Check</Text>
+                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -278,10 +317,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
 
-          <View style={styles.infoItem}>
+          <TouchableOpacity style={styles.infoItem} onPress={handleVersionPress} activeOpacity={0.7}>
             <Text style={styles.infoLabel}>Version</Text>
             <Text style={styles.infoValue}>{appVersionDisplay}</Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}

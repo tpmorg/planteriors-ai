@@ -15,6 +15,7 @@ interface SubscriptionContextType {
   purchaseSubscription: (productId: string, rcPackage?: any) => Promise<{
     success: boolean;
     error?: string;
+    debug?: Record<string, unknown>;
   }>;
   restorePurchases: () => Promise<{
     success: boolean;
@@ -122,7 +123,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const purchaseSubscription = async (
     productId: string,
     rcPackage?: any
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; debug?: Record<string, unknown> }> => {
     if (!user) {
       return {
         success: false,
@@ -143,12 +144,17 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       return {
         success: result.success,
         error: result.error,
+        debug: result.debug,
       };
     } catch (error) {
       console.error('Error purchasing subscription:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
+        debug: {
+          source: 'subscription_context',
+          productId,
+        },
       };
     } finally {
       setIsLoading(false);

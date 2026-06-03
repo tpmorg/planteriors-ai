@@ -7,16 +7,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const appEnv = process.env.APP_ENV || 'development';
 
-const revenueCatAppleApiKey =
-  process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION ||
-  process.env.REVENUECAT_APPLE_API_KEY ||
-  '';
-
-const revenueCatGoogleApiKey =
-  process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION ||
-  process.env.REVENUECAT_GOOGLE_API_KEY ||
-  '';
-
 module.exports = ({ config }) => ({
   ...config,
   extra: {
@@ -33,9 +23,7 @@ module.exports = ({ config }) => ({
     debugMode: process.env.DEBUG_MODE === 'true',
     apiTimeout: parseInt(process.env.API_TIMEOUT || '30000', 10),
     revenueCatEntitlementId: process.env.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
-    revenueCatAppleApiKey,
-    revenueCatGoogleApiKey,
-    revenueCatAppleApiKeyProduction: process.env.REVENUECAT_APPLE_API_KEY_PRODUCTION || '',
+    revenueCatIosApiKeyProduction: process.env.REVENUECAT_IOS_API_KEY_PRODUCTION || '',
     revenueCatGoogleApiKeyProduction: process.env.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
   },
 });

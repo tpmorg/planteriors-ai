@@ -34,6 +34,29 @@ export const SubscriptionScreen: React.FC = () => {
   const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
   const [productLoadError, setProductLoadError] = useState<string | null>(null);
 
+  const formatPurchaseFailureDebug = (
+    debug?: Record<string, unknown>
+  ): string => {
+    if (!debug) return '';
+
+    const diagnostics = subscriptionService.getDiagnostics();
+    const fields = {
+      expectedEntitlementId: diagnostics.entitlementId,
+      source: debug.source,
+      requestedProductId: debug.productId,
+      storeProductId: debug.storeProductId,
+      packageIdentifier: debug.packageIdentifier,
+      appUserID: debug.appUserID,
+      originalAppUserId: debug.originalAppUserId,
+      activeEntitlementIds: debug.activeEntitlementIds,
+      allEntitlementIds: debug.allEntitlementIds,
+      activeSubscriptions: debug.activeSubscriptions,
+      allPurchasedProductIdentifiers: debug.allPurchasedProductIdentifiers,
+    };
+
+    return `\n\nDebug:\n${JSON.stringify(fields, null, 2)}`;
+  };
+
   useEffect(() => {
     captureSubscriptionScreenMessage('Subscription screen opened', 'warning', {
       runtime: subscriptionService.getDiagnostics(),
@@ -270,16 +293,33 @@ export const SubscriptionScreen: React.FC = () => {
           ]
         );
       } else {
+        const failureMessage =
+          result.error ||
+          'Purchase failed before RevenueCat returned an error message. Please try again.';
+        Sentry.withScope((scope) => {
+          scope.setTag('area', 'subscription');
+          scope.setTag('purchase_failure_source', String(result.debug?.source || 'unknown'));
+          scope.setContext('subscription_purchase_failure', {
+            selectedProductId,
+            error: result.error,
+            debug: result.debug,
+          });
+          Sentry.captureMessage('Subscription purchase failed from screen', 'warning');
+        });
         Sentry.addBreadcrumb({
           category: 'subscription',
           message: 'Subscription purchase failed from context',
           level: 'warning',
           data: {
             selectedProductId,
-            error: result.error,
+            error: failureMessage,
+            source: result.debug?.source,
           },
         });
-        Alert.alert('Purchase Failed', result.error || 'Something went wrong');
+        Alert.alert(
+          'Purchase Failed',
+          `${failureMessage}${formatPurchaseFailureDebug(result.debug)}`
+        );
       }
     } catch (error) {
       Sentry.captureException(error instanceof Error ? error : new Error('Subscription purchase screen error'));
