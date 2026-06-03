@@ -14,13 +14,7 @@
         "buildConfiguration": "Debug"
       },
       "env": {
-        "APP_ENV": "development",
-        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
-        "REVENUECAT_IOS_API_KEY_PRODUCTION": "${REVENUECAT_IOS_API_KEY_PRODUCTION}",
-        "REVENUECAT_GOOGLE_API_KEY_PRODUCTION": "${REVENUECAT_GOOGLE_API_KEY_PRODUCTION}",
-        "REVENUECAT_ENTITLEMENT_ID": "${REVENUECAT_ENTITLEMENT_ID}",
-        "SENTRY_DSN": "${SENTRY_DSN}"
+        "APP_ENV": "development"
       }
     },
     "preview": {
@@ -32,29 +26,21 @@
         "buildConfiguration": "Release"
       },
       "env": {
-        "APP_ENV": "preview",
-        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
-        "REVENUECAT_IOS_API_KEY_PRODUCTION": "${REVENUECAT_IOS_API_KEY_PRODUCTION}",
-        "REVENUECAT_GOOGLE_API_KEY_PRODUCTION": "${REVENUECAT_GOOGLE_API_KEY_PRODUCTION}",
-        "REVENUECAT_ENTITLEMENT_ID": "${REVENUECAT_ENTITLEMENT_ID}",
-        "SENTRY_DSN": "${SENTRY_DSN}"
+        "APP_ENV": "preview"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "APP_ENV": "production",
-        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
-        "REVENUECAT_IOS_API_KEY_PRODUCTION": "${REVENUECAT_IOS_API_KEY_PRODUCTION}",
-        "REVENUECAT_GOOGLE_API_KEY_PRODUCTION": "${REVENUECAT_GOOGLE_API_KEY_PRODUCTION}",
-        "REVENUECAT_ENTITLEMENT_ID": "${REVENUECAT_ENTITLEMENT_ID}",
-        "SENTRY_DSN": "${SENTRY_DSN}"
+        "APP_ENV": "production"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6760205294"
+      }
+    }
   }
 }
