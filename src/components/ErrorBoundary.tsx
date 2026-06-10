@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +29,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
-    // Log error to your error tracking service (e.g., Sentry)
+    Sentry.withScope((scope) => {
+      scope.setContext('react_error_boundary', {
+        componentStack: errorInfo.componentStack,
+      });
+      Sentry.captureException(error);
+    });
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 

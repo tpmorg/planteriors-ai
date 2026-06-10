@@ -195,6 +195,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const [plantProfile, setPlantProfile] = useState<PlantProfile | null>(null);
   const [isPlantProfileLoading, setIsPlantProfileLoading] = useState(false);
   const plantProfileRequestIdRef = useRef(0);
+  const isImageTransitioningRef = useRef(false);
   const isMountedRef = useRef(true);
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -206,6 +207,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
+  const imageOpacity = useSharedValue(1);
 
   // Modal animation
   const modalTranslateY = useSharedValue(screenHeight);
@@ -595,10 +597,16 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     savedTranslateY.value = 0;
   };
 
-  const navigateToIndex = (index: number) => {
-    if (index < 0 || index >= designList.length) return;
+  const commitImageNavigation = (index: number) => {
+    const nextDesign = designList[index];
+    if (!nextDesign || !isMountedRef.current) {
+      isImageTransitioningRef.current = false;
+      imageOpacity.value = withTiming(1, { duration: 120 });
+      return;
+    }
+
     setCurrentIndex(index);
-    setDesign(designList[index]);
+    setDesign(nextDesign);
     if (showInfoModal) {
       hideModal();
     }
@@ -606,6 +614,26 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       setShowPlantProfileModal(false);
     }
     resetImageTransform();
+    requestAnimationFrame(() => {
+      imageOpacity.value = withTiming(1, { duration: 170 });
+      isImageTransitioningRef.current = false;
+    });
+  };
+
+  const navigateToIndex = (index: number) => {
+    if (
+      index < 0 ||
+      index >= designList.length ||
+      index === currentIndex ||
+      isImageTransitioningRef.current
+    ) {
+      return;
+    }
+
+    isImageTransitioningRef.current = true;
+    imageOpacity.value = withTiming(0.28, { duration: 90 }, () => {
+      runOnJS(commitImageNavigation)(index);
+    });
   };
 
   const goToPrevious = () => {
@@ -720,6 +748,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     };
   });
 
+  const imageFadeStyle = useAnimatedStyle(() => {
+    return {
+      opacity: imageOpacity.value,
+    };
+  });
+
   const modalStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: modalTranslateY.value }],
@@ -811,7 +845,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             <Animated.View style={styles.imageWrapper}>
               <Animated.Image
                 source={{ uri: getImageUri() }}
-                style={[styles.image, imageStyle]}
+                style={[styles.image, imageStyle, imageFadeStyle]}
                 resizeMode="contain"
               />
               {design.collectionId && (
@@ -1471,7 +1505,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: Math.round(screenHeight * 0.84),
     maxHeight: screenHeight * 0.9,
     minHeight: screenHeight * 0.52,
-    alignSelf: 'stretch',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border,

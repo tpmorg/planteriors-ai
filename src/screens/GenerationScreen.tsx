@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -60,9 +60,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [apiCallStarted, setApiCallStarted] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.8);
-  const pulseAnim = new Animated.Value(1);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const initialSteps = [
     { text: "Preparing your room image...", duration: 1000 },
@@ -141,7 +141,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       return () => pulse.stop();
     }
-  }, [apiCallStarted]);
+  }, [apiCallStarted, pulseAnim]);
 
   useEffect(() => {
     if (generatedImageUri) {
@@ -158,7 +158,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         }),
       ]).start();
     }
-  }, [generatedImageUri]);
+  }, [generatedImageUri, fadeAnim, scaleAnim]);
 
   const startGeneration = async () => {
     try {

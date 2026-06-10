@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -107,12 +107,26 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     }, [loadDesigns, loadCollections])
   );
 
-  const filteredDesigns = selectedCollectionId
-    ? designs.filter((d) => d.collectionId === selectedCollectionId)
-    : designs;
+  const filteredDesigns = useMemo(
+    () =>
+      selectedCollectionId
+        ? designs.filter((d) => d.collectionId === selectedCollectionId)
+        : designs,
+    [designs, selectedCollectionId]
+  );
   const selectedCount = selectedDesignIds.size;
   const isSelectionMode = selectedCount > 0;
   const selectedDesigns = designs.filter((d) => selectedDesignIds.has(d.id));
+  const estimatedRowHeight = itemSize + 44;
+
+  const getItemLayout = useCallback(
+    (_: ArrayLike<SavedDesign> | null | undefined, index: number) => ({
+      length: estimatedRowHeight,
+      offset: estimatedRowHeight * Math.floor(index / numColumns),
+      index,
+    }),
+    [estimatedRowHeight, numColumns]
+  );
 
   const handleDesignPress = (design: SavedDesign, index: number) => {
     if (isSelectionMode) {
@@ -564,6 +578,12 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        initialNumToRender={numColumns * 3}
+        updateCellsBatchingPeriod={50}
+        getItemLayout={getItemLayout}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

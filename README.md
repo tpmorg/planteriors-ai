@@ -60,6 +60,79 @@ npx tsc --noEmit       # Type check
 - Gemini 2.5 Flash Image Preview -- trying Gemini 3.1 (image generation)
 - RevenueCat (react-native-purchases) for subscriptions
 
+## Apple Sandbox + RevenueCat Subscription Testing
+
+Subscription state has three layers:
+
+1. **Apple Sandbox** owns the underlying App Store subscription and renewal state.
+2. **RevenueCat** reads the Apple receipt and maps it to the configured entitlement.
+3. **The app** reads RevenueCat `CustomerInfo` and treats `entitlements.active[ENTITLEMENT_ID]` as the source of truth.
+
+Local SQLite subscription rows are not authoritative for real IAP testing. Clearing local app data, deleting a local subscription row, signing out, or deleting a RevenueCat customer does not immediately revoke an active Apple subscription.
+
+### Cancellation and Expiration
+
+- Canceling a sandbox subscription means "do not renew"; it does not remove access for the current paid/test period.
+- Apple Sandbox renewals are accelerated. If the Sandbox Apple Account renewal rate is set to **3 minutes**, a one-month test subscription should remain active until that compressed period expires.
+- After the compressed period ends, RevenueCat may still need a receipt/customer-info refresh before the app sees the entitlement disappear.
+- If RevenueCat still returns the entitlement as active after the sandbox period plus a buffer, treat RevenueCat/Apple sandbox state as the thing to inspect first, not SQLite.
+
+### What Can and Cannot Be Revoked
+
+Can do:
+
+- Cancel auto-renewal from the Sandbox Apple Account.
+- Wait for the accelerated sandbox period to expire.
+- Use a fresh Sandbox Apple Account for clean first-purchase testing.
+- Use a fresh app user / RevenueCat App User ID to avoid alias confusion.
+- Invalidate the app-side RevenueCat cache and fetch fresh `CustomerInfo`.
+- Delete local SQLite subscription/test data when testing local usage logic.
+- Remove RevenueCat promotional/granted entitlements, if any were manually granted.
+
+Cannot do:
+
+- Force Apple to immediately revoke an active App Store subscription period from the app.
+- Make RevenueCat deletion cancel or revoke Apple's underlying subscription.
+- Trust local DB deletion as proof that the real StoreKit entitlement is gone.
+
+### Recommended Reset Flow
+
+1. In the app, open **Settings -> RevenueCat Sanity Check** and capture:
+   - `requestedUserId`
+   - `appUserID`
+   - `originalAppUserId`
+   - `activeEntitlementIds`
+   - `activeSubscriptions`
+   - `allPurchasedProductIdentifiers`
+2. In App Store sandbox settings, cancel auto-renew for the Sandbox Apple Account.
+3. Wait for the configured compressed renewal period to expire. With the current 3-minute setting, wait at least 3 minutes, preferably 5-10 minutes when debugging.
+4. Force a RevenueCat refresh in the app:
+
+```ts
+await Purchases.invalidateCustomerInfoCache();
+const customerInfo = await Purchases.getCustomerInfo();
+console.log(customerInfo.entitlements.active);
+```
+
+5. Run **Settings -> RevenueCat Sanity Check** again.
+6. In RevenueCat, search the Sandbox customer view for `requestedUserId`, `appUserID`, and `originalAppUserId`. Aliases can make the app appear to "keep" a subscription under a different customer identity.
+
+### Practical Testing Guidance
+
+- For repeated clean purchase tests, use a new Sandbox Apple Account and, ideally, a fresh app user.
+- For "cancel then lose access" tests, cancellation is only step one; the test is complete only after the accelerated subscription period expires and RevenueCat returns no active entitlement.
+- If `CustomerInfo.entitlements.active` still contains `Planterior Pro`, the app is correctly treating the user as subscribed.
+- If RevenueCat's dashboard also shows the entitlement active for the same App User ID, the issue is upstream of app state.
+- If RevenueCat's dashboard shows inactive but the app still shows active, suspect SDK cache, stale app user identity, or a UI state refresh issue.
+- Use `Purchases.invalidateCustomerInfoCache()` only as a diagnostic/dev refresh tool. It does not override an active Apple receipt.
+
+Relevant docs:
+
+- [Apple: Testing auto-renewable subscriptions](https://developer.apple.com/documentation/storekit/testing-an-auto-renewable-subscription)
+- [Apple: Manage Sandbox Apple Account settings](https://developer.apple.com/help/app-store-connect/test-in-app-purchases/manage-sandbox-apple-account-settings/)
+- [RevenueCat: CustomerInfo](https://www.revenuecat.com/docs/customers/customer-info)
+- [RevenueCat: Delete customer limits](https://www.revenuecat.com/docs/dashboard-and-metrics/customer-profile#delete-customer)
+
 ## Common Commands
 
 ```bash
