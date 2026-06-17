@@ -52,12 +52,14 @@ export class FirebaseAuthService {
   }
 
   static mapFirebaseUserToUser(firebaseUser: FirebaseUser): User {
+    const providerId = firebaseUser.providerData[0]?.providerId ?? '';
+    const provider = providerId.includes('apple') ? 'apple' : 'google';
     return {
       id: firebaseUser.uid,
       email: firebaseUser.email || '',
-      name: firebaseUser.displayName || '',
+      name: firebaseUser.displayName || (provider === 'apple' ? 'Apple User' : ''),
       picture: firebaseUser.photoURL || undefined,
-      provider: 'google',
+      provider,
     };
   }
 

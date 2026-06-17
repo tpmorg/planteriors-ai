@@ -3,10 +3,11 @@ import { Alert, Platform } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onAuthStateChanged } from 'firebase/auth';
 import * as Sentry from '@sentry/react-native';
 import { AuthState, User } from '../types';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
+import { auth } from '../config/firebase';
 import { env } from '../utils/env';
 
 // Configure Google Sign-In only on Android.
@@ -70,17 +71,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
   });
 
+  // Firebase is the single source of truth for authentication state.
+  // It automatically handles token refresh and persists sessions.
   useEffect(() => {
-    loadStoredAuth();
-  }, []);
-
-  const loadStoredAuth = async () => {
-    try {
-      console.log('Loading stored authentication...');
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        const user: User = JSON.parse(storedUser);
-        console.log('Found stored user:', user.email);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const user = FirebaseAuthService.mapFirebaseUserToUser(firebaseUser);
+        console.log('Firebase auth state changed — user:', user.email);
         syncSentryUser(user);
         setAuthState({
           isAuthenticated: true,
@@ -88,14 +85,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isLoading: false,
         });
       } else {
-        console.log('No stored user found, showing login screen');
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+        console.log('Firebase auth state changed — no user');
+        syncSentryUser(null);
+        setAuthState({
+          isAuthenticated: false,
+          user: null,
+          isLoading: false,
+        });
       }
-    } catch (error) {
-      console.error('Error loading stored auth:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
-  };
+    });
+
+    return unsubscribe;
+  }, []);
 
   const signInWithGoogle = async () => {
     try {
@@ -122,29 +123,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Signing in to Firebase with Google ID token...');
-      const firebaseUser = await FirebaseAuthService.signInWithGoogleIdToken(idToken);
-
-      if (!firebaseUser) {
-        throw new Error('Failed to sign in to Firebase');
-      }
-
-      // Create user object from Google user info
-      const user: User = {
-        id: firebaseUser.id,
-        email: firebaseUser.email,
-        name: firebaseUser.name || userInfo.data?.user.name || '',
-        picture: firebaseUser.picture || userInfo.data?.user.photo || undefined,
-        provider: 'google',
-      };
-
-      console.log('Storing user and updating auth state...');
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      syncSentryUser(user);
-      setAuthState({
-        isAuthenticated: true,
-        user,
-        isLoading: false,
-      });
+      await FirebaseAuthService.signInWithGoogleIdToken(idToken);
+      // onAuthStateChanged will update authState automatically
     } catch (error: any) {
       console.error('Error signing in with Google:', error);
 
@@ -189,35 +169,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('No identity token received from Apple Sign-In');
       }
 
-      const firebaseUser = await FirebaseAuthService.signInWithAppleIdentityToken(
+      await FirebaseAuthService.signInWithAppleIdentityToken(
         credential.identityToken,
         rawNonce
       );
-
-      if (!firebaseUser) {
-        throw new Error('Failed to sign in to Firebase');
-      }
-
-      const appleName = [credential.fullName?.givenName, credential.fullName?.familyName]
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-
-      const user: User = {
-        id: firebaseUser.id,
-        email: firebaseUser.email || credential.email || '',
-        name: firebaseUser.name || appleName || 'Apple User',
-        picture: firebaseUser.picture,
-        provider: 'apple',
-      };
-
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      syncSentryUser(user);
-      setAuthState({
-        isAuthenticated: true,
-        user,
-        isLoading: false,
-      });
+      // onAuthStateChanged will update authState automatically
     } catch (error) {
       console.error('Error signing in with Apple:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -228,16 +184,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // Create a mock user for development/prototyping
+      // Create a mock user for development/prototyping.
+      // This bypasses Firebase entirely and will not persist across app restarts.
       const user: User = {
         id: 'dev-user-' + Date.now(),
         email: 'developer@plantai.com',
         name: 'Development User',
         picture: undefined,
-        provider: 'google', // Use google as default provider
+        provider: 'google',
       };
 
-      await AsyncStorage.setItem('user', JSON.stringify(user));
       syncSentryUser(user);
       setAuthState({
         isAuthenticated: true,
@@ -259,30 +215,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await GoogleSignin.signOut();
       }
 
-      // Clear Firebase auth
+      // Clear Firebase auth (fires onAuthStateChanged with null)
       await FirebaseAuthService.signOut();
-
-      // Clear stored user data (keep theme preference)
-      await AsyncStorage.removeItem('user');
-
-      // Reset auth state
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      // Always clear local state to handle bypass users or any fallback scenario
       syncSentryUser(null);
       setAuthState({
         isAuthenticated: false,
         user: null,
         isLoading: false,
       });
-
       console.log('Complete sign out successful');
-    } catch (error) {
-      console.error('Error signing out:', error);
-
-      // Force clear state even if signout fails
-      setAuthState({
-        isAuthenticated: false,
-        user: null,
-        isLoading: false,
-      });
     }
   };
 
