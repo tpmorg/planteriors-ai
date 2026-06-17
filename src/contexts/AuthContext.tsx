@@ -7,12 +7,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
 import { AuthState, User } from '../types';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
+import { env } from '../utils/env';
 
 // Configure Google Sign-In only on Android.
 // iOS uses Apple Sign-In exclusively in this app.
 if (Platform.OS === 'android') {
   GoogleSignin.configure({
-    webClientId: '161202796930-np9orfkt885ej10ienccr4rc98n5oar4.apps.googleusercontent.com',
+    webClientId: env.getGoogleClientId(),
     offlineAccess: true,
   });
 }
