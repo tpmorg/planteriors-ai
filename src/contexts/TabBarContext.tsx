@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useState, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -32,7 +32,7 @@ export const TabBarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     scrollY.value = withTiming(visible ? 0 : 100, { duration: 200 });
   };
 
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
     const currentScrollY = event.nativeEvent.contentOffset.y;
     const scrollDiff = currentScrollY - lastScrollY.current;
 
@@ -54,7 +54,7 @@ export const TabBarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     lastScrollY.current = currentScrollY;
-  };
+  }, [isTabBarVisible]);
 
   const tabBarStyle = useAnimatedStyle(() => {
     const translateY = interpolate(

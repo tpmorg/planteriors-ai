@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -205,9 +205,9 @@ function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
 }
 
 function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {
-  const handlePlantSelect = (plant: PlantSearchResult) => {
+  const handlePlantSelect = useCallback((plant: PlantSearchResult) => {
     navigation.getParent()?.navigate('PlantDetail', { plant });
-  };
+  }, [navigation]);
 
   return <LibraryScreen onPlantSelect={handlePlantSelect} />;
 }

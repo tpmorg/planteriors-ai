@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, Theme } from '../contexts/ThemeContext';
 import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
 import { CareLevel, LightRequirement, PlacementType, PlantSearchResult, WaterRequirement } from '../types';
@@ -79,6 +79,71 @@ const FILTER_GROUPS: Array<{ key: FilterKey; title: string; options: FilterOptio
     ],
   },
 ];
+
+function getPlantImageSource(plant: PlantSearchResult): ImageSourcePropType | undefined {
+  if (plant.localImagePath || plant.primaryImageUrl) {
+    return { uri: plant.localImagePath || plant.primaryImageUrl };
+  }
+
+  const seedPlant = getSeedPlantById(plant.id);
+  return seedPlant?.imageUrl;
+}
+
+interface PlantCardProps {
+  plant: PlantSearchResult;
+  itemSize: number;
+  onPress: () => void;
+  theme: Theme;
+}
+
+const PlantCard = React.memo(({ plant, itemSize, onPress, theme }: PlantCardProps) => {
+  const imageSource = getPlantImageSource(plant);
+
+  return (
+    <TouchableOpacity
+      style={[styles.plantCard, { width: itemSize }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityLabel={`Open ${plant.name}`}
+    >
+      <View
+        style={[
+          styles.plantImageFrame,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
+        {imageSource ? (
+          <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
+        ) : (
+          <AppIcon
+            name={plant.icon || 'Leaf'}
+            size={42}
+            color={theme.colors.primary}
+            weight="fill"
+          />
+        )}
+        {plant.userAdded && (
+          <View style={styles.userAddedBadge}>
+            <Text style={styles.userAddedBadgeText}>Imported</Text>
+          </View>
+        )}
+      </View>
+
+      <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
+        {plant.name}
+      </Text>
+      <Text
+        style={[styles.scientificName, { color: theme.colors.textSecondary }]}
+        numberOfLines={1}
+      >
+        {plant.scientificName}
+      </Text>
+    </TouchableOpacity>
+  );
+});
 
 export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) => {
   const [plants, setPlants] = useState<PlantSearchResult[]>([]);
@@ -154,56 +219,16 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
     }));
   }, []);
 
-  const renderPlantCard = ({ item }: { item: PlantSearchResult }) => {
-    const imageSource = getPlantImageSource(item);
+  const renderPlantCard = useCallback(({ item }: { item: PlantSearchResult }) => (
+    <PlantCard
+      plant={item}
+      itemSize={itemSize}
+      onPress={() => onPlantSelect(item)}
+      theme={theme}
+    />
+  ), [itemSize, onPlantSelect, theme]);
 
-    return (
-      <TouchableOpacity
-        style={[styles.plantCard, { width: itemSize }]}
-        onPress={() => onPlantSelect(item)}
-        activeOpacity={0.85}
-        accessibilityLabel={`Open ${item.name}`}
-      >
-        <View
-          style={[
-            styles.plantImageFrame,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          {imageSource ? (
-            <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
-          ) : (
-            <AppIcon
-              name={item.icon || 'Leaf'}
-              size={42}
-              color={theme.colors.primary}
-              weight="fill"
-            />
-          )}
-          {item.userAdded && (
-            <View style={styles.userAddedBadge}>
-              <Text style={styles.userAddedBadgeText}>Imported</Text>
-            </View>
-          )}
-        </View>
-
-        <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text
-          style={[styles.scientificName, { color: theme.colors.textSecondary }]}
-          numberOfLines={1}
-        >
-          {item.scientificName}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderEmptyState = () => (
+  const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
       <AppIcon name="Plant" size={64} color={theme.colors.border} weight="thin" />
       <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
@@ -215,7 +240,19 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
           : 'Try a different plant name.'}
       </Text>
     </View>
-  );
+  ), [plantCount, theme]);
+
+  const listContentStyle = useMemo(() => [
+    styles.listContent,
+    {
+      paddingHorizontal: listHorizontalPadding,
+      paddingBottom: tabBarHeight + 16,
+    },
+  ], [listHorizontalPadding, tabBarHeight]);
+
+  const columnWrapperStyle = useMemo(() => ({ gap: interItemGap }), [interItemGap]);
+
+  const keyExtractor = useCallback((item: PlantSearchResult) => item.id, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -385,16 +422,10 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
           key={`library-${numColumns}`}
           data={plants}
           renderItem={renderPlantCard}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           numColumns={numColumns}
-          contentContainerStyle={[
-            styles.listContent,
-            {
-              paddingHorizontal: listHorizontalPadding,
-              paddingBottom: tabBarHeight + 16,
-            },
-          ]}
-          columnWrapperStyle={{ gap: interItemGap }}
+          contentContainerStyle={listContentStyle}
+          columnWrapperStyle={columnWrapperStyle}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
@@ -411,15 +442,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
     </SafeAreaView>
   );
 };
-
-function getPlantImageSource(plant: PlantSearchResult): ImageSourcePropType | undefined {
-  if (plant.localImagePath || plant.primaryImageUrl) {
-    return { uri: plant.localImagePath || plant.primaryImageUrl };
-  }
-
-  const seedPlant = getSeedPlantById(plant.id);
-  return seedPlant?.imageUrl;
-}
 
 function toSearchFilterOptions(filters: LibraryFilters) {
   const options: {
