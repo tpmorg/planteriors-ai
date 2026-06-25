@@ -15,6 +15,12 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const hintText =
+    mode === 'multi-plant'
+      ? 'Fill your space with a curated plant arrangement'
+      : mode === 'replace-plant'
+        ? 'Swap a current plant for a new alternative'
+        : 'Place a specific plant in your room';
 
   return (
     <View style={styles.container}>
@@ -38,7 +44,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'multi-plant' && styles.toggleTextActive,
             ]}
           >
-            Multi-Plant Style
+            Style
           </Text>
         </TouchableOpacity>
 
@@ -61,16 +67,35 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'individual' && styles.toggleTextActive,
             ]}
           >
-            Individual Plant
+            Add
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            mode === 'replace-plant' && styles.toggleButtonActive,
+          ]}
+          onPress={() => onModeChange('replace-plant')}
+          activeOpacity={0.7}
+        >
+          <AppIcon
+            name="ArrowsClockwise"
+            size={18}
+            color={mode === 'replace-plant' ? theme.colors.primary : theme.colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.toggleText,
+              mode === 'replace-plant' && styles.toggleTextActive,
+            ]}
+          >
+            Replace
           </Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.hint}>
-        {mode === 'multi-plant'
-          ? 'Fill your space with a curated plant arrangement'
-          : 'Place a specific plant in your room'}
-      </Text>
+      <Text style={styles.hint}>{hintText}</Text>
     </View>
   );
 };
@@ -95,7 +120,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 10,
     gap: 6,
   },
@@ -108,7 +133,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 2,
   },
   toggleText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: theme.colors.textSecondary,
   },

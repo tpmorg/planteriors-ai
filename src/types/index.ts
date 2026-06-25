@@ -130,7 +130,7 @@ export type PlacementType = 'floor' | 'shelf' | 'hanging' | 'auto';
 export type PlantCategoryType = 'tropical' | 'succulent' | 'flowering' | 'fern' | 'palm' | 'vine';
 export type CareLevel = 'easy' | 'moderate' | 'difficult';
 export type GrowthRate = 'slow' | 'moderate' | 'fast';
-export type PlantSelectionMode = 'multi-plant' | 'individual';
+export type PlantSelectionMode = 'multi-plant' | 'individual' | 'replace-plant';
 
 export interface IndividualPlant {
   id: string;

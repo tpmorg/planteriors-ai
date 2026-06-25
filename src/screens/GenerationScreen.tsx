@@ -63,6 +63,18 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isSinglePlantRequest =
+    (request.mode === 'individual' || request.mode === 'replace-plant') &&
+    !!request.individualPlant;
+  const requestPlantSummary = isSinglePlantRequest
+    ? `${request.individualPlant!.plant.name} • ${request.individualPlant!.size} • ${
+        request.mode === 'replace-plant' ? 'replacement' : request.individualPlant!.placement
+      }`
+    : `${request.plantType?.name} • ${request.plantStyle?.name} Style`;
+  const requestActionLabel =
+    request.mode === 'replace-plant'
+      ? 'Replacing plant with:'
+      : 'Creating your design with:';
 
   const initialSteps = [
     { text: "Preparing your room image...", duration: 1000 },
@@ -357,11 +369,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
           {/* Compact info overlay at bottom */}
           <View style={styles.resultOverlay}>
-            <Text style={styles.resultSubtitle}>
-              {request.mode === 'individual' && request.individualPlant
-                ? `${request.individualPlant.plant.name} • ${request.individualPlant.size} • ${request.individualPlant.placement}`
-                : `${request.plantType?.name} • ${request.plantStyle?.name} Style`}
-            </Text>
+            <Text style={styles.resultSubtitle}>{requestPlantSummary}</Text>
           </View>
 
           {/* Action buttons overlaid at bottom */}
@@ -435,12 +443,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         </View>
 
         <View style={styles.plantInfo}>
-          <Text style={styles.plantInfoTitle}>Creating your design with:</Text>
-          <Text style={styles.plantInfoDetail}>
-            {request.mode === 'individual' && request.individualPlant
-              ? `${request.individualPlant.plant.name} (${request.individualPlant.size}, ${request.individualPlant.placement})`
-              : `${request.plantType?.name} • ${request.plantStyle?.name} Style`}
-          </Text>
+          <Text style={styles.plantInfoTitle}>{requestActionLabel}</Text>
+          <Text style={styles.plantInfoDetail}>{requestPlantSummary}</Text>
         </View>
 
       </View>

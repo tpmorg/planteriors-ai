@@ -52,6 +52,7 @@ interface DesignDetailScreenProps {
   onBack: () => void;
   onDesignDeleted: () => void;
   onRefineDesign: (design: SavedDesign, refinementPrompt: string) => void;
+  onReplacePlant: (design: SavedDesign) => void;
 }
 
 interface RefinementMessage {
@@ -83,13 +84,16 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Helper function to get design display text
 const getDesignDisplayText = (design: SavedDesign): { title: string; subtitle: string; shareMessage: string } => {
-  if (design.mode === 'individual' && design.individualPlant) {
+  if ((design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant) {
     const { name, size, placement } = design.individualPlant;
     const placementLabel = placement === 'auto' ? 'no preference' : placement;
+    const isReplacement = design.mode === 'replace-plant';
     return {
       title: name,
-      subtitle: `${size} • ${placementLabel}`,
-      shareMessage: `Check out my plant design! Added a ${size} ${name} (${placementLabel}) to my room.`,
+      subtitle: isReplacement ? `${size} • replacement` : `${size} • ${placementLabel}`,
+      shareMessage: isReplacement
+        ? `Check out my plant design! Replaced my plant with a ${size} ${name}.`
+        : `Check out my plant design! Added a ${size} ${name} (${placementLabel}) to my room.`,
     };
   }
   // Multi-plant mode or fallback for legacy data
@@ -153,6 +157,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   onBack,
   onDesignDeleted,
   onRefineDesign,
+  onReplacePlant,
 }) => {
   const insets = useSafeAreaInsets();
   const modalOpenTranslateY = Math.max(insets.top + 56, screenHeight * 0.22);
@@ -346,7 +351,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   };
 
   useEffect(() => {
-    const individualPlant = design.mode === 'individual' ? design.individualPlant : null;
+    const individualPlant =
+      design.mode === 'individual' || design.mode === 'replace-plant'
+        ? design.individualPlant
+        : null;
     if (!individualPlant?.name) {
       setPlantProfile(null);
       setShowPlantProfileModal(false);
@@ -357,7 +365,10 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   }, [design.mode, design.individualPlant?.id, design.individualPlant?.name, design.individualPlant?.scientificName]);
 
   const showPlantProfile = () => {
-    if (design.mode !== 'individual' || !design.individualPlant) {
+    if (
+      (design.mode !== 'individual' && design.mode !== 'replace-plant') ||
+      !design.individualPlant
+    ) {
       return;
     }
     // Keep the main info panel closed while opening a dedicated plant profile sheet.
@@ -369,6 +380,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       return;
     }
     setShowPlantProfileModal(true);
+  };
+
+  const startPlantReplacement = () => {
+    hidePlantProfileModal();
+    if (showInfoModal) {
+      hideModal();
+    }
+    showToast('Choose a replacement plant', 'info');
+    onReplacePlant(design);
   };
 
   useEffect(() => {
@@ -915,9 +935,26 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   contentContainerStyle={{ paddingBottom: 24 }}
                   showsVerticalScrollIndicator={false}
                 >
+                  <TouchableOpacity
+                    style={styles.quickReplaceButton}
+                    onPress={startPlantReplacement}
+                    activeOpacity={0.82}
+                  >
+                    <View style={styles.quickReplaceIcon}>
+                      <AppIcon name="ArrowsClockwise" size={18} color={theme.colors.surface} />
+                    </View>
+                    <View style={styles.quickReplaceText}>
+                      <Text style={styles.quickReplaceTitle}>Replace Plant</Text>
+                      <Text style={styles.quickReplaceDescription}>
+                        Use this image and choose a different plant
+                      </Text>
+                    </View>
+                    <AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+
                   <View style={styles.infoGrid}>
                     {/* Individual plant mode info */}
-                    {design.mode === 'individual' && design.individualPlant && (
+                    {(design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant && (
                       <>
                         <TouchableOpacity
                           style={styles.infoItem}
@@ -946,15 +983,21 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                         <View style={styles.infoItem}>
                           <AppIcon name="MapPin" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Placement</Text>
-                            <Text style={styles.infoValue}>{design.individualPlant.placement}</Text>
+                            <Text style={styles.infoLabel}>
+                              {design.mode === 'replace-plant' ? 'Mode' : 'Placement'}
+                            </Text>
+                            <Text style={styles.infoValue}>
+                              {design.mode === 'replace-plant'
+                                ? 'Replacement'
+                                : design.individualPlant.placement}
+                            </Text>
                           </View>
                         </View>
                       </>
                     )}
 
                     {/* Multi-plant mode info */}
-                    {design.mode !== 'individual' && design.plantType && (
+                    {design.mode === 'multi-plant' && design.plantType && (
                       <View style={styles.infoItem}>
                         <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
@@ -967,7 +1010,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
                     )}
 
-                    {design.mode !== 'individual' && design.plantStyle && (
+                    {design.mode === 'multi-plant' && design.plantStyle && (
                       <View style={styles.infoItem}>
                         <AppIcon name="Palette" size={20} color={theme.colors.primary} />
                         <View style={styles.infoContent}>
@@ -1153,6 +1196,21 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                     </>
                   )}
                 </ScrollView>
+
+                {(design.mode === 'individual' || design.mode === 'replace-plant') && (
+                  <View style={styles.plantProfileActions}>
+                    <TouchableOpacity
+                      style={styles.plantProfilePrimaryAction}
+                      onPress={startPlantReplacement}
+                      activeOpacity={0.82}
+                    >
+                      <AppIcon name="ArrowsClockwise" size={18} color={theme.colors.surface} />
+                      <Text style={styles.plantProfilePrimaryActionText}>
+                        Replace in This Room
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </SafeAreaView>
             </SafeAreaView>
           </View>
@@ -1485,6 +1543,40 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 18,
   },
+  quickReplaceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  quickReplaceIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  quickReplaceText: {
+    flex: 1,
+  },
+  quickReplaceTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  quickReplaceDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
+  },
   plantProfileBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.62)',
@@ -1634,6 +1726,28 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: theme.colors.text,
     lineHeight: 20,
+  },
+  plantProfileActions: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: theme.colors.surface,
+  },
+  plantProfilePrimaryAction: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  plantProfilePrimaryActionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.surface,
   },
   refineOverlay: {
     ...StyleSheet.absoluteFillObject,

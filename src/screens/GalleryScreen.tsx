@@ -296,6 +296,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => {
     const isSelected = selectedDesignIds.has(item.id);
+    const isSinglePlantDesign =
+      (item.mode === 'individual' || item.mode === 'replace-plant') && item.individualPlant;
 
     return (
     <TouchableOpacity
@@ -305,7 +307,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       delayLongPress={450}
       activeOpacity={0.8}
       accessibilityRole="button"
-      accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${item.mode === 'individual' && item.individualPlant ? item.individualPlant.name : item.plantType?.name || 'Custom'}`}
+      accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${isSinglePlantDesign ? item.individualPlant!.name : item.plantType?.name || 'Custom'}`}
       accessibilityHint={isSelectionMode ? 'Toggles selection' : 'Opens design details'}
     >
       <View style={styles.imageContainer}>
@@ -350,13 +352,15 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         {/* Plant info overlay */}
         <View style={styles.infoOverlay}>
           <Text style={styles.plantTypeText} numberOfLines={1}>
-            {item.mode === 'individual' && item.individualPlant
-              ? item.individualPlant.name
+            {isSinglePlantDesign
+              ? item.individualPlant!.name
               : item.plantType?.name || 'Custom'}
           </Text>
           <Text style={styles.plantStyleText} numberOfLines={1}>
-            {item.mode === 'individual' && item.individualPlant
-              ? `${item.individualPlant.size} • ${item.individualPlant.placement}`
+            {isSinglePlantDesign
+              ? item.mode === 'replace-plant'
+                ? `${item.individualPlant!.size} • replacement`
+                : `${item.individualPlant!.size} • ${item.individualPlant!.placement}`
               : item.plantStyle?.name || 'Design'}
           </Text>
         </View>

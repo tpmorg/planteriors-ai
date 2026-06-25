@@ -32,6 +32,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 interface PlantSelectionScreenProps {
   imageUri: string;
+  initialMode?: PlantSelectionMode;
   onPlantSelected: (request: Omit<GenerationRequest, 'imageUri'>) => void;
   onBack: () => void;
 }
@@ -123,6 +124,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
+  initialMode = 'individual',
   onPlantSelected,
   onBack,
 }) => {
@@ -131,7 +133,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
 
   // Mode state
-  const [mode, setMode] = useState<PlantSelectionMode>('individual');
+  const [mode, setMode] = useState<PlantSelectionMode>(initialMode);
 
   // Individual plant selection state
   const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
@@ -154,17 +156,19 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme, isTablet);
+  const isSinglePlantMode = mode === 'individual' || mode === 'replace-plant';
+  const isReplaceMode = mode === 'replace-plant';
 
   useEffect(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
   }, [isPlantSearchActive, individualSelection]);
 
   useEffect(() => {
-    if (mode !== 'individual') {
+    if (!isSinglePlantMode) {
       setIsPlantSearchActive(false);
       setShowPetSafePlantsOnly(false);
     }
-  }, [mode]);
+  }, [isSinglePlantMode]);
 
   const handlePlantTypeSelect = (plantType: PlantType) => {
     setSelectedPlantType(plantType);
@@ -199,7 +203,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
     } else {
       if (individualSelection) {
         onPlantSelected({
-          mode: 'individual',
+          mode,
           individualPlant: individualSelection,
         });
       }
@@ -258,12 +262,12 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {mode === 'individual' ? 'Choose Plant' : 'Choose Style'}
+          {isSinglePlantMode ? 'Choose Plant' : 'Choose Style'}
         </Text>
         <View style={styles.placeholder} />
       </View>
 
-      {mode === 'individual' ? (
+      {isSinglePlantMode ? (
         <IndividualPlantSelector
           selection={individualSelection}
           onSelectionChange={setIndividualSelection}
@@ -283,7 +287,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                   </View>
                   <View style={styles.heroContent}>
                     <Text style={styles.heroDescription}>
-                      Choose a specific plant to see how it would look in your space.
+                      {isReplaceMode
+                        ? 'Choose the plant you want to see in place of your current one.'
+                        : 'Choose a specific plant to see how it would look in your space.'}
                     </Text>
                   </View>
                 </View>
@@ -575,7 +581,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
       )}
 
       {/* Fixed Footer */}
-      {!(mode === 'individual' && isPlantSearchActive && !individualSelection) && (
+      {!(isSinglePlantMode && isPlantSearchActive && !individualSelection) && (
         <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.footerContent}>
             {!isComplete ? (
@@ -610,7 +616,11 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
               disabled={!isComplete}
             >
               <Text style={styles.continueButtonText}>
-                {mode === 'multi-plant' ? 'Generate Design' : 'Choose Placement'}
+                {mode === 'multi-plant'
+                  ? 'Generate Design'
+                  : isReplaceMode
+                    ? 'Mark Plant to Replace'
+                    : 'Choose Placement'}
               </Text>
             </TouchableOpacity>
           </View>

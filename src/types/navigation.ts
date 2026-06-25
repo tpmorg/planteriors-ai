@@ -22,7 +22,7 @@ export type RootStackParamList = {
 
 export type DesignFlowStackParamList = {
   Camera: { mode?: 'room' | 'plant-id' } | undefined;
-  PlantSelection: { imageUri: string };
+  PlantSelection: { imageUri: string; initialMode?: GenerationRequest['mode'] };
   PlantLocation: {
     imageUri: string;
     request: Omit<GenerationRequest, 'imageUri' | 'location'>;

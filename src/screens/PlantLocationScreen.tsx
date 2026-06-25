@@ -169,6 +169,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
 
   const plantName = request.individualPlant?.plant.name || 'Plant';
   const plantSize = request.individualPlant?.size || 'medium';
+  const isReplaceMode = request.mode === 'replace-plant';
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
@@ -177,7 +178,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Choose Location</Text>
+        <Text style={styles.headerTitle}>{isReplaceMode ? 'Mark Plant' : 'Choose Location'}</Text>
         <TouchableOpacity
           onPress={handleReset}
           style={[styles.resetButton, !hasSelection && styles.resetButtonDisabled]}
@@ -198,10 +199,14 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         </View>
         <View style={styles.instructionText}>
           <Text style={styles.instructionTitle}>
-            Drag to select where you want the {plantName}
+            {isReplaceMode
+              ? `Drag around the plant to replace with ${plantName}`
+              : `Drag to select where you want the ${plantName}`}
           </Text>
           <Text style={styles.instructionSubtitle}>
-            Draw a rectangle on the area where the {plantSize} plant should be placed
+            {isReplaceMode
+              ? 'Draw a rectangle around the current plant so the swap stays in the same spot'
+              : `Draw a rectangle on the area where the ${plantSize} plant should be placed`}
           </Text>
         </View>
       </View>
@@ -220,7 +225,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               placementMode === 'choose' && styles.modeButtonTextActive,
             ]}
           >
-            Choose location (default)
+            {isReplaceMode ? 'Mark current plant' : 'Choose location (default)'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -236,7 +241,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               placementMode === 'auto' && styles.modeButtonTextActive,
             ]}
           >
-            Let AI decide
+            {isReplaceMode ? 'Find plant automatically' : 'Let AI decide'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -292,7 +297,9 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
           <View style={styles.selectionInfoRow}>
             <AppIcon name={request.individualPlant?.plant.icon || 'Leaf'} size={14} color={theme.colors.primary} />
             <Text style={styles.selectionInfoText}>
-              {plantName} will be placed in the selected area
+              {isReplaceMode
+                ? `${plantName} will replace the marked plant`
+                : `${plantName} will be placed in the selected area`}
             </Text>
           </View>
         </View>
@@ -303,18 +310,24 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         <View style={styles.footerContent}>
           {placementMode === 'choose' && !hasSelection ? (
             <Text style={styles.footerHint}>
-              Tap and drag on the image to select plant location
+              {isReplaceMode
+                ? 'Tap and drag around the plant you want replaced'
+                : 'Tap and drag on the image to select plant location'}
             </Text>
           ) : placementMode === 'choose' ? (
             <View style={styles.selectionPreview}>
               <Text style={styles.selectionPreviewText}>
-                Location selected - ready to generate
+                {isReplaceMode
+                  ? 'Plant marked - ready to replace'
+                  : 'Location selected - ready to generate'}
               </Text>
             </View>
           ) : (
             <View style={styles.selectionPreview}>
               <Text style={styles.selectionPreviewText}>
-                AI will choose the most realistic placement
+                {isReplaceMode
+                  ? 'AI will identify the current plant to replace'
+                  : 'AI will choose the most realistic placement'}
               </Text>
             </View>
           )}
@@ -338,7 +351,9 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
                 onPress={handleContinue}
                 disabled={!hasSelection}
               >
-                <Text style={styles.continueButtonText}>Confirm Location</Text>
+                <Text style={styles.continueButtonText}>
+                  {isReplaceMode ? 'Confirm Plant' : 'Confirm Location'}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (

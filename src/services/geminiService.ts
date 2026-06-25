@@ -14,12 +14,15 @@ import NetInfo from '@react-native-community/netinfo';
 import { compressImageForAI } from "../utils/imageUtils";
 
 // Image generation/editing model - takes input image + prompt to create modified version
-const MODEL_NAME = "gemini-2.5-flash-image" //"gemini-3.1-flash-image-preview"  ;
+const MODEL_NAME = "gemini-2.5-flash-image";
+const INTERACTIONS_MODEL_NAME = "gemini-3.1-flash-image";
 
 export class GeminiService {
   private client: GoogleGenAI;
+  private apiKey: string;
 
   constructor(apiKey: string) {
+    this.apiKey = apiKey;
     this.client = new GoogleGenAI({
       apiKey: apiKey,
     });
@@ -72,7 +75,17 @@ export class GeminiService {
         },
       ];
 
-      console.log("Making Gemini API request...");
+      try {
+        console.log("Making Gemini Interactions API request...");
+        return await this.generateWithInteractionsApi(promptText, base64, mimeType);
+      } catch (interactionsError) {
+        console.warn(
+          "Gemini Interactions API image generation failed, falling back to generateContent:",
+          interactionsError,
+        );
+      }
+
+      console.log("Making Gemini generateContent API request...");
 
       const response = await this.client.models.generateContent({
         model: MODEL_NAME,
@@ -96,12 +109,188 @@ export class GeminiService {
     }
   }
 
+  private async generateWithInteractionsApi(
+    promptText: string,
+    base64: string,
+    mimeType: string,
+  ): Promise<{ imageUri: string; isGenerated: boolean }> {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": this.apiKey,
+        },
+        body: JSON.stringify({
+          model: INTERACTIONS_MODEL_NAME,
+          input: [
+            { type: "text", text: promptText },
+            {
+              type: "image",
+              mime_type: mimeType,
+              data: base64,
+            },
+          ],
+          response_format: {
+            type: "image",
+            mime_type: "image/jpeg",
+          },
+        }),
+      },
+    );
+
+    const responseText = await response.text();
+    let payload: any = null;
+
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      const message =
+        payload?.error?.message ||
+        responseText ||
+        `Gemini Interactions API failed with status ${response.status}`;
+      throw new Error(message);
+    }
+
+    const outputImage = this.findImageBlock(payload);
+
+    const imageData =
+      outputImage?.data ||
+      outputImage?.inlineData?.data ||
+      outputImage?.inline_data?.data;
+    const outputMimeType =
+      outputImage?.mime_type ||
+      outputImage?.mimeType ||
+      outputImage?.inlineData?.mimeType ||
+      outputImage?.inline_data?.mime_type ||
+      "image/jpeg";
+
+    if (!imageData) {
+      console.log("Interactions API response keys:", Object.keys(payload || {}));
+      throw new Error("No output image returned from Gemini Interactions API");
+    }
+
+    console.log("Found Interactions API output image");
+    console.log("Image data size:", `${Math.round(imageData.length / 1024)}KB`);
+    console.log("Image MIME type:", outputMimeType);
+
+    return {
+      imageUri: `data:${outputMimeType};base64,${imageData}`,
+      isGenerated: true,
+    };
+  }
+
+  private findImageBlock(value: any): any | null {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+
+    if (value.output_image || value.outputImage) {
+      return value.output_image || value.outputImage;
+    }
+
+    if (
+      (value.type === "image" || value.mime_type?.startsWith?.("image/") || value.mimeType?.startsWith?.("image/")) &&
+      value.data
+    ) {
+      return value;
+    }
+
+    if (value.inlineData?.data || value.inline_data?.data) {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const imageBlock = this.findImageBlock(item);
+        if (imageBlock) {
+          return imageBlock;
+        }
+      }
+      return null;
+    }
+
+    for (const key of Object.keys(value)) {
+      const imageBlock = this.findImageBlock(value[key]);
+      if (imageBlock) {
+        return imageBlock;
+      }
+    }
+
+    return null;
+  }
+
   private buildPrompt(request: GenerationRequest): string {
     // Check mode and delegate to appropriate method
+    if (request.mode === 'replace-plant' && request.individualPlant) {
+      return this.buildReplacePlantPrompt(request.individualPlant, request.prompt, request.location);
+    }
     if (request.mode === 'individual' && request.individualPlant) {
       return this.buildIndividualPlantPrompt(request.individualPlant, request.prompt, request.location);
     }
     return this.buildMultiPlantPrompt(request);
+  }
+
+  private buildReplacePlantPrompt(
+    selection: IndividualPlantSelection,
+    customPrompt?: string,
+    location?: PlantLocation
+  ): string {
+    const { plant, size } = selection;
+
+    const sizeDescriptions: Record<PlantSize, string> = {
+      small: 'a small, compact (6-12 inch)',
+      medium: 'a medium-sized (1-3 foot)',
+      large: 'a large, statement (3-6 foot)',
+    };
+
+    let targetInstruction = `
+TARGET PLANT:
+Identify the most prominent existing houseplant in the image and replace that plant only.`;
+
+    if (location) {
+      const horizontalPosition = this.getHorizontalPosition(location.x, location.width);
+      const verticalPosition = this.getVerticalPosition(location.y, location.height);
+      const areaSize = this.getAreaSizeDescription(location.width, location.height);
+
+      targetInstruction = `
+HIGHEST PRIORITY - USER MARKED PLANT TO REPLACE:
+The user has specifically marked the current plant to replace:
+- Horizontal position: ${horizontalPosition}
+- Vertical position: ${verticalPosition}
+- Marked area size: ${areaSize}
+- Replace the plant inside this marked region only
+- Preserve the plant's original support surface, surrounding furniture, and nearby decor exactly
+- Do NOT replace or alter plants outside this marked region`;
+    }
+
+    return `Replace an existing plant in this room image with a single ${sizeDescriptions[size]} ${plant.name} (${plant.scientificName}).
+
+Replacement Plant Details:
+- Common Name: ${plant.name}
+- Scientific Name: ${plant.scientificName}
+- Description: ${plant.description}
+- Target size: ${sizeDescriptions[size]} specimen, scaled to fit the same real-world location as the current plant
+${targetInstruction}
+
+Critical Requirements:
+1. This is a plant replacement, not a new plant placement
+2. Remove the current plant being replaced and put the ${plant.name} in that same location
+3. Keep the same pot or planter if it plausibly fits; otherwise use a similar pot that matches the room and original placement
+4. Preserve the original room layout, camera angle, lighting, walls, flooring, furniture, and decor exactly
+5. Do NOT add extra plants, duplicate the plant, move furniture, change art, change rugs, or redesign the room
+6. Match the new plant's shadows, perspective, reflections, and occlusion to the original photo
+7. Keep the support surface believable and physically stable
+8. If the original plant is partially hidden behind furniture or decor, preserve that natural occlusion
+
+${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+
+Generate this as a high-quality photorealistic image where the current plant has been cleanly swapped for the selected ${plant.name}.`;
   }
 
   private buildIndividualPlantPrompt(
@@ -361,16 +550,18 @@ Generate this as a high-quality photorealistic image.`;
           console.log("Found image URL in text:", url);
           return { imageUri: url, isGenerated: true };
         }
-      } else if (part.inlineData) {
+      } else if (part.inlineData || part.inline_data) {
+        const inlineData = part.inlineData || part.inline_data;
         console.log("Found inlineData image part");
         console.log(
           "Image data size:",
-          `${Math.round(part.inlineData.data.length / 1024)}KB`,
+          `${Math.round(inlineData.data.length / 1024)}KB`,
         );
-        console.log("Image MIME type:", part.inlineData.mimeType);
+        const mimeType = inlineData.mimeType || inlineData.mime_type || "image/jpeg";
+        console.log("Image MIME type:", mimeType);
 
         // Convert base64 data to data URI
-        const dataUri = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        const dataUri = `data:${mimeType};base64,${inlineData.data}`;
         return { imageUri: dataUri, isGenerated: true };
       }
     }

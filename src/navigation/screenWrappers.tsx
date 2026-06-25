@@ -289,10 +289,10 @@ function PlantSelectionScreenWrapper({
   route,
   navigation,
 }: DesignFlowScreenProps<'PlantSelection'>) {
-  const { imageUri } = route.params;
+  const { imageUri, initialMode } = route.params;
 
   const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
-    if (selectionData.mode === 'individual') {
+    if (selectionData.mode === 'individual' || selectionData.mode === 'replace-plant') {
       navigation.navigate('PlantLocation', { imageUri, request: selectionData });
     } else {
       const request: GenerationRequest = {
@@ -310,6 +310,7 @@ function PlantSelectionScreenWrapper({
   return (
     <PlantSelectionScreen
       imageUri={imageUri}
+      initialMode={initialMode}
       onPlantSelected={handlePlantSelected}
       onBack={handleBack}
     />
@@ -510,7 +511,7 @@ export function DesignDetailScreenWrapper({
       'Refine this existing generated design while preserving room layout, architecture, and all non-plant objects.';
     const prompt = `${basePromptPrefix} ${normalizedPrompt}`;
 
-    if (currentDesign.mode === 'individual') {
+    if (currentDesign.mode === 'individual' || currentDesign.mode === 'replace-plant') {
       if (!currentDesign.individualPlant) {
         return;
       }
@@ -526,7 +527,7 @@ export function DesignDetailScreenWrapper({
 
       const request: GenerationRequest = {
         imageUri,
-        mode: 'individual',
+        mode: currentDesign.mode,
         individualPlant: {
           plant: {
             id: individualPlantId,
@@ -592,6 +593,19 @@ export function DesignDetailScreenWrapper({
     navigation.navigate('DesignFlow', { screen: 'Generation', params: { request } });
   };
 
+  const handleReplacePlant = (currentDesign: SavedDesign) => {
+    const imageUri = currentDesign.localImagePath || currentDesign.generatedImageUri;
+
+    if (!imageUri) {
+      return;
+    }
+
+    navigation.navigate('DesignFlow', {
+      screen: 'PlantSelection',
+      params: { imageUri, initialMode: 'replace-plant' },
+    });
+  };
+
   return (
     <DesignDetailScreen
       design={design}
@@ -600,6 +614,7 @@ export function DesignDetailScreenWrapper({
       onBack={handleBack}
       onDesignDeleted={handleDesignDeleted}
       onRefineDesign={handleRefineDesign}
+      onReplacePlant={handleReplacePlant}
     />
   );
 }

@@ -1159,12 +1159,13 @@ export class DatabaseService {
         localImagePath = await this.saveImageToLocal(design.generatedImageUri);
       }
 
+      const isSinglePlantMode = design.mode === 'individual' || design.mode === 'replace-plant';
       // For backwards compatibility with NOT NULL constraints on legacy databases,
-      // provide default values for plant_type_name and plant_style_name when in individual mode
-      const plantTypeName = design.plantTypeName || (design.mode === 'individual' ? 'Individual Plant' : '');
-      const plantTypeDescription = design.plantTypeDescription || (design.mode === 'individual' ? design.individualPlantName || '' : '');
-      const plantStyleName = design.plantStyleName || (design.mode === 'individual' ? design.individualPlantSize || '' : '');
-      const plantStyleDescription = design.plantStyleDescription || (design.mode === 'individual' ? design.individualPlantPlacement || '' : '');
+      // provide default values for plant_type_name and plant_style_name when in single-plant modes.
+      const plantTypeName = design.plantTypeName || (isSinglePlantMode ? (design.mode === 'replace-plant' ? 'Replace Plant' : 'Individual Plant') : '');
+      const plantTypeDescription = design.plantTypeDescription || (isSinglePlantMode ? design.individualPlantName || '' : '');
+      const plantStyleName = design.plantStyleName || (isSinglePlantMode ? design.individualPlantSize || '' : '');
+      const plantStyleDescription = design.plantStyleDescription || (isSinglePlantMode ? design.individualPlantPlacement || '' : '');
 
       const result = await this.db.runAsync(
         `INSERT INTO saved_designs (
@@ -1213,7 +1214,7 @@ export class DatabaseService {
           name: design.plantStyleName,
           description: design.plantStyleDescription || '',
         } : undefined,
-        individualPlant: design.mode === 'individual' && design.individualPlantName ? {
+        individualPlant: isSinglePlantMode && design.individualPlantName ? {
           id: toDbValue(design.individualPlantId) as string | undefined,
           name: design.individualPlantName,
           scientificName: design.individualPlantScientificName || '',
