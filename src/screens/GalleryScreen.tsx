@@ -407,7 +407,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
 
-      <View style={[styles.floatingButtonOffset, isSelectionMode && styles.selectionFloatingButtonOffset]} />
+      {isSelectionMode && <View style={styles.selectionFloatingButtonOffset} />}
 
       {isSelectionMode ? (
         <View style={styles.selectionToolbar}>
@@ -671,9 +671,6 @@ const createStyles = (
     backgroundColor: theme.isDark ? 'rgba(181,122,82,0.08)' : 'rgba(181,122,82,0.08)',
     bottom: -120,
     right: -80,
-  },
-  floatingButtonOffset: {
-    height: 44,
   },
   selectionFloatingButtonOffset: {
     height: 62,
