@@ -77,8 +77,20 @@ export interface GeneratedImage {
   generatedImageUri: string;
   plantType: PlantType;
   plantStyle: PlantStyle;
+  generatedPlants?: IdentifiedDesignPlant[];
   prompt: string;
   createdAt: Date;
+}
+
+export interface IdentifiedDesignPlant {
+  commonName: string;
+  scientificName?: string;
+  confidence: number;
+  placement: 'floor' | 'shelf' | 'hanging' | 'table' | 'windowsill' | 'counter' | 'unknown';
+  visibleCount: number;
+  careLevel: CareLevel;
+  lightRequirement: LightRequirement;
+  notes: string;
 }
 
 export interface SavedDesign {
@@ -97,6 +109,7 @@ export interface SavedDesign {
     name: string;
     description: string;
   };
+  generatedPlants?: IdentifiedDesignPlant[];
   // Individual plant mode data
   individualPlant?: {
     id?: string;

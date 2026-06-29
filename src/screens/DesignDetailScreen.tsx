@@ -35,6 +35,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
+import { createPlantIdentificationService } from '../services/plantIdentificationService';
 import { useTheme } from '../contexts/ThemeContext';
 import { CollectionPickerModal } from '../components/CollectionPickerModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -199,6 +200,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
   const [plantProfile, setPlantProfile] = useState<PlantProfile | null>(null);
   const [isPlantProfileLoading, setIsPlantProfileLoading] = useState(false);
+  const [isIdentifyingDesignPlants, setIsIdentifyingDesignPlants] = useState(false);
   const plantProfileRequestIdRef = useRef(0);
   const isImageTransitioningRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -389,6 +391,40 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     }
     showToast('Choose a replacement plant', 'info');
     onReplacePlant(design);
+  };
+
+  const identifyGeneratedDesignPlants = async () => {
+    if (design.mode !== 'multi-plant' || isIdentifyingDesignPlants) return;
+
+    const imageUri = design.localImagePath || design.generatedImageUri;
+    if (!imageUri) {
+      showToast('No generated image available', 'error');
+      return;
+    }
+
+    try {
+      setIsIdentifyingDesignPlants(true);
+      const service = createPlantIdentificationService();
+      const generatedPlants = await service.identifyPlantsInGeneratedDesign(imageUri);
+
+      if (generatedPlants.length === 0) {
+        showToast('No clear plant matches found', 'info');
+        return;
+      }
+
+      await databaseService.updateGeneratedPlants(design.id, generatedPlants);
+      const updatedDesign = { ...design, generatedPlants };
+      setDesign(updatedDesign);
+      setDesignList((prev) =>
+        prev.map((item) => item.id === updatedDesign.id ? updatedDesign : item)
+      );
+      showToast('Plant matches identified', 'success');
+    } catch (error) {
+      console.error('Failed to identify generated design plants:', error);
+      showToast('Could not identify plants', 'error');
+    } finally {
+      setIsIdentifyingDesignPlants(false);
+    }
   };
 
   useEffect(() => {
@@ -1037,6 +1073,68 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
                     )}
 
+                    {design.mode === 'multi-plant' && (
+                      <View style={styles.infoItem}>
+                        <AppIcon name="MagnifyingGlass" size={20} color={theme.colors.primary} />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Plants in this design</Text>
+                          {design.generatedPlants && design.generatedPlants.length > 0 ? (
+                            <View style={styles.generatedPlantsList}>
+                              {design.generatedPlants.map((plant, index) => (
+                                <View
+                                  key={`${plant.commonName}-${index}`}
+                                  style={styles.generatedPlantItem}
+                                >
+                                  <View style={styles.generatedPlantHeader}>
+                                    <Text style={styles.infoValue}>{plant.commonName}</Text>
+                                    <Text style={styles.generatedPlantConfidence}>
+                                      {Math.round(plant.confidence * 100)}%
+                                    </Text>
+                                  </View>
+                                  {plant.scientificName && (
+                                    <Text style={styles.generatedPlantScientific}>
+                                      {plant.scientificName}
+                                    </Text>
+                                  )}
+                                  <Text style={styles.infoDescription}>
+                                    {plant.visibleCount > 1 ? `${plant.visibleCount} visible • ` : ""}
+                                    {plant.placement} • {plant.careLevel} care • {plant.lightRequirement}
+                                  </Text>
+                                  {plant.notes && (
+                                    <Text style={styles.generatedPlantNotes}>{plant.notes}</Text>
+                                  )}
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <>
+                              <Text style={styles.infoDescription}>
+                                Get suggested plant matches from the generated image.
+                              </Text>
+                              <TouchableOpacity
+                                style={[
+                                  styles.identifyPlantsButton,
+                                  isIdentifyingDesignPlants && styles.identifyPlantsButtonDisabled,
+                                ]}
+                                onPress={identifyGeneratedDesignPlants}
+                                disabled={isIdentifyingDesignPlants}
+                                activeOpacity={0.8}
+                              >
+                                {isIdentifyingDesignPlants ? (
+                                  <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                  <AppIcon name="MagnifyingGlass" size={16} color="white" />
+                                )}
+                                <Text style={styles.identifyPlantsButtonText}>
+                                  {isIdentifyingDesignPlants ? 'Identifying plants...' : 'Identify plants'}
+                                </Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
+                        </View>
+                      </View>
+                    )}
+
                     {design.customPrompt && (
                       <View style={styles.infoItem}>
                         <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
@@ -1588,6 +1686,54 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSecondary,
     lineHeight: 18,
+  },
+  generatedPlantsList: {
+    gap: 12,
+  },
+  generatedPlantItem: {
+    gap: 3,
+  },
+  generatedPlantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  generatedPlantConfidence: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  generatedPlantScientific: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: theme.colors.textSecondary,
+    marginTop: -2,
+  },
+  generatedPlantNotes: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+  },
+  identifyPlantsButton: {
+    alignSelf: 'flex-start',
+    minHeight: 36,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  identifyPlantsButtonDisabled: {
+    opacity: 0.72,
+  },
+  identifyPlantsButtonText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '700',
   },
   quickReplaceButton: {
     flexDirection: 'row',

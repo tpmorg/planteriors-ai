@@ -31,6 +31,13 @@ jest.mock('../../components/CollectionPickerModal', () => ({
   CollectionPickerModal: () => null,
 }));
 
+jest.mock('../AccountScreen', () => ({
+  AccountScreen: () => {
+    const { Text } = require('react-native');
+    return <Text>Account screen</Text>;
+  },
+}));
+
 jest.mock('../../contexts/TabBarContext', () => ({
   useTabBar: () => ({
     handleScroll: jest.fn(),
@@ -133,14 +140,14 @@ describe('GalleryScreen', () => {
     (databaseService.getCollections as jest.Mock).mockResolvedValue([]);
   });
 
-  it('opens the new-design flow from the floating plus button', async () => {
-    const { findByText, getByLabelText, props } = renderGallery();
+  it('opens the account sheet from the top-right profile button', async () => {
+    const { findByText, getByLabelText } = renderGallery();
 
     await findByText('No designs yet');
 
-    fireEvent.press(getByLabelText('New design'));
+    fireEvent.press(getByLabelText('Open account'));
 
-    expect(props.onNewDesign).toHaveBeenCalledTimes(1);
+    expect(await findByText('Account screen')).toBeOnTheScreen();
   });
 
   it('opens plant identification from the floating magnifying glass button', async () => {
@@ -160,7 +167,7 @@ describe('GalleryScreen', () => {
 
     expect(await findByText('No designs yet')).toBeOnTheScreen();
 
-    fireEvent.press(getByText('Create Your First Design'));
+    fireEvent.press(getByText('Start With A Photo'));
 
     expect(props.onNewDesign).toHaveBeenCalledTimes(1);
   });

@@ -13,11 +13,11 @@ import { PlantLocationScreen } from '../screens/PlantLocationScreen';
 import { GenerationScreen } from '../screens/GenerationScreen';
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { DesignDetailScreen } from '../screens/DesignDetailScreen';
-import { AccountScreen } from '../screens/AccountScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PlantIdentifyScreen } from '../screens/PlantIdentifyScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
 import { CreateEntryScreen } from '../screens/CreateEntryScreen';
 import { useAuth } from '../contexts/AuthContext';
@@ -100,8 +100,8 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         } else if (route.name === 'Library') {
           iconName = 'BookOpen';
           iconWeight = isFocused ? 'fill' : 'regular';
-        } else if (route.name === 'Account') {
-          iconName = 'User';
+        } else if (route.name === 'Favorites') {
+          iconName = 'Heart';
           iconWeight = isFocused ? 'fill' : 'regular';
         } else if (route.name === 'Settings') {
           iconName = 'Gear';
@@ -222,18 +222,10 @@ export function MainTabNavigator() {
     >
       <Tab.Screen name="Gallery" component={GalleryScreenWrapper} />
       <Tab.Screen name="Library" component={LibraryScreenWrapper} />
-      <Tab.Screen name="Account" component={AccountScreenWrapper} />
+      <Tab.Screen name="Favorites" component={FavoritesScreenWrapper} />
       <Tab.Screen name="Settings" component={SettingsScreenWrapper} />
     </Tab.Navigator>
   );
-}
-
-function AccountScreenWrapper({ navigation }: TabScreenProps<'Account'>) {
-  const handleUpgradePress = () => {
-    navigation.getParent()?.navigate('Subscription');
-  };
-
-  return <AccountScreen onUpgradePress={handleUpgradePress} />;
 }
 
 function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
@@ -250,6 +242,18 @@ function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {
   }, [navigation]);
 
   return <LibraryScreen onPlantSelect={handlePlantSelect} />;
+}
+
+function FavoritesScreenWrapper({ navigation }: TabScreenProps<'Favorites'>) {
+  const handleDesignSelect = useCallback((
+    design: SavedDesign,
+    designs: SavedDesign[],
+    initialIndex: number
+  ) => {
+    navigation.getParent()?.navigate('DesignDetail', { design, designs, initialIndex });
+  }, [navigation]);
+
+  return <FavoritesScreen onDesignSelect={handleDesignSelect} />;
 }
 
 export function OnboardingScreenWrapper({

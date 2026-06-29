@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   Image,
   Alert,
   RefreshControl,
-  ScrollView,
+  Modal,
   Platform,
   useWindowDimensions,
+  Pressable,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +27,7 @@ import { CollectionPickerModal } from '../components/CollectionPickerModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { requestPhotoSavePermission, saveDesignImageToDevice } from '../utils/imageSave';
+import { AccountScreen } from './AccountScreen';
 
 const GALLERY_HINTS_SEEN_KEY = '@planterior_gallery_hints_seen';
 
@@ -152,11 +155,11 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 }) => {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
   const [collectionTargetIds, setCollectionTargetIds] = useState<string[]>([]);
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(new Set());
   const [showGalleryHints, setShowGalleryHints] = useState(false);
+  const [isAccountSheetMounted, setIsAccountSheetMounted] = useState(false);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -166,6 +169,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const { user } = useAuth();
   const { showToast } = useToast();
   const { width, height } = useWindowDimensions();
+  const accountSheetProgress = useRef(new Animated.Value(0)).current;
 
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
   const numColumns = isTablet ? (width >= 1180 ? 4 : 3) : 2;
@@ -207,17 +211,19 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     loadCollections();
   }, [loadDesigns, loadCollections]);
 
-  const filteredDesigns = useMemo(
-    () =>
-      selectedCollectionId
-        ? designs.filter((d) => d.collectionId === selectedCollectionId)
-        : designs,
-    [designs, selectedCollectionId]
-  );
   const selectedCount = selectedDesignIds.size;
   const isSelectionMode = selectedCount > 0;
   const selectedDesigns = designs.filter((d) => selectedDesignIds.has(d.id));
   const estimatedRowHeight = itemSize + 44;
+  const accountSheetWidth = Math.min(width - 12, isTablet ? 430 : width * 0.88);
+  const accountSheetTranslateX = accountSheetProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [accountSheetWidth, 0],
+  });
+  const accountSheetBackdropOpacity = accountSheetProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
 
   const getItemLayout = useCallback(
     (_: ArrayLike<SavedDesign> | null | undefined, index: number) => ({
@@ -258,6 +264,20 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     loadGalleryHintsStatus();
   }, []);
 
+  useEffect(() => {
+    if (!isAccountSheetMounted) {
+      return;
+    }
+
+    Animated.spring(accountSheetProgress, {
+      toValue: 1,
+      useNativeDriver: true,
+      damping: 24,
+      stiffness: 260,
+      mass: 0.9,
+    }).start();
+  }, [accountSheetProgress, isAccountSheetMounted]);
+
   const toggleDesignSelection = (designId: string) => {
     setSelectedDesignIds((prev) => {
       const next = new Set(prev);
@@ -290,6 +310,23 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     }
     onIdentifyPlant();
   };
+
+  const openAccountSheet = useCallback(() => {
+    if (showGalleryHints) {
+      dismissGalleryHints();
+    }
+    setIsAccountSheetMounted(true);
+  }, [dismissGalleryHints, showGalleryHints]);
+
+  const closeAccountSheet = useCallback(() => {
+    Animated.timing(accountSheetProgress, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsAccountSheetMounted(false);
+    });
+  }, [accountSheetProgress]);
 
   const clearSelection = () => {
     setSelectedDesignIds(new Set());
@@ -490,6 +527,38 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         </View>
       ) : (
         <>
+          <View style={styles.topBar}>
+            <View style={styles.topBarCopy}>
+              <Text style={styles.topBarTitle}>Gallery</Text>
+              <Text style={styles.topBarSubtitle}>
+                {designs.length === 0
+                  ? 'Your saved room previews will show up here'
+                  : `${designs.length} saved ${designs.length === 1 ? 'design' : 'designs'}`}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={openAccountSheet}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Open account"
+              accessibilityHint="Show account and subscription options"
+              style={styles.accountButton}
+            >
+              {user?.picture ? (
+                <Image source={{ uri: user.picture }} style={styles.accountAvatarImage} />
+              ) : (
+                <View style={styles.accountAvatarFallback}>
+                  <AppIcon
+                    name={user?.provider === 'apple' ? 'AppleLogo' : 'GoogleLogo'}
+                    size={20}
+                    color={theme.colors.text}
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {showGalleryHints && (
             <View style={styles.galleryHints}>
               <View style={styles.galleryHintRow}>
@@ -521,64 +590,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         </>
       )}
 
-      <View style={styles.collectionsSection}>
-        <View style={styles.collectionsHeader}>
-          <Text style={styles.collectionsTitle}>Collections</Text>
-          <TouchableOpacity
-            onPress={() => {
-              setCollectionTargetIds([]);
-              setShowCollectionsModal(true);
-            }}
-            style={styles.manageCollectionsButton}
-            activeOpacity={0.8}
-          >
-            <AppIcon name="FolderPlus" size={16} color={theme.colors.primary} />
-            <Text style={styles.manageCollectionsText}>Manage</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.collectionRail}
-        >
-          <TouchableOpacity
-            onPress={() => setSelectedCollectionId(null)}
-            style={[styles.collectionCard, !selectedCollectionId && styles.collectionCardActive]}
-            activeOpacity={0.9}
-          >
-            <Text
-              style={[styles.collectionCardTitle, !selectedCollectionId && styles.collectionCardTitleActive]}
-              numberOfLines={1}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-
-          {collections.map((c) => {
-            const isActive = selectedCollectionId === c.id;
-            return (
-              <TouchableOpacity
-                key={c.id}
-                onPress={() => setSelectedCollectionId(c.id)}
-                style={[styles.collectionCard, isActive && styles.collectionCardActive]}
-                activeOpacity={0.9}
-              >
-                <Text
-                  style={[styles.collectionCardTitle, isActive && styles.collectionCardTitleActive]}
-                  numberOfLines={1}
-                >
-                  {c.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       <FlatList
         key={`gallery-${numColumns}`}
-        data={filteredDesigns}
+        data={designs}
         renderItem={renderDesignItem}
         keyExtractor={keyExtractor}
         numColumns={numColumns}
@@ -620,7 +634,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         selectedCollectionId={
           collectionTargetIds.length === 1
             ? designs.find((d) => d.id === collectionTargetIds[0])?.collectionId ?? null
-            : selectedCollectionId
+            : null
         }
         title={collectionTargetIds.length > 0 ? 'Add to Collection' : 'Collections'}
         allowNone
@@ -650,7 +664,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                 'success'
               );
             } else {
-              setSelectedCollectionId(created.id);
               setShowCollectionsModal(false);
               showToast(`Created ${created.name}`, 'success');
             }
@@ -662,9 +675,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         onSelect={async (collectionId) => {
           try {
             if (collectionTargetIds.length === 0) {
-              setSelectedCollectionId(collectionId);
               setShowCollectionsModal(false);
-              showToast(collectionId ? 'Collection filter applied' : 'Showing all designs', 'info');
               return;
             }
             await Promise.all(
@@ -693,6 +704,40 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           }
         }}
       />
+
+      <Modal
+        visible={isAccountSheetMounted}
+        transparent
+        animationType="none"
+        onRequestClose={closeAccountSheet}
+      >
+        <View style={styles.accountSheetModal}>
+          <Animated.View
+            style={[
+              styles.accountSheetBackdrop,
+              { opacity: accountSheetBackdropOpacity },
+            ]}
+          >
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={closeAccountSheet} />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.accountSheetPanel,
+              {
+                width: accountSheetWidth,
+                transform: [{ translateX: accountSheetTranslateX }],
+              },
+            ]}
+          >
+            <AccountScreen
+              presentation="sheet"
+              onClose={closeAccountSheet}
+              onUpgradePress={onUpgradePress}
+            />
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -827,76 +872,60 @@ const createStyles = (
     fontSize: 16,
     color: theme.colors.textSecondary,
   },
+  topBar: {
+    marginTop: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  topBarCopy: {
+    flex: 1,
+  },
+  topBarTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: theme.colors.text,
+    fontFamily: 'serif',
+  },
+  topBarSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  accountButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: theme.isDark ? 0.28 : 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  accountAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  accountAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f5',
+  },
   listContainer: {
     paddingHorizontal: listHorizontalPadding,
     paddingTop: 12,
     flexGrow: 1,
-  },
-  collectionsSection: {
-    marginTop: 10,
-    marginHorizontal: 16,
-    marginBottom: 4,
-    paddingTop: 10,
-    paddingBottom: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.65)',
-  },
-  collectionsHeader: {
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  collectionsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  manageCollectionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  manageCollectionsText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  collectionRail: {
-    paddingHorizontal: 12,
-    paddingBottom: 4,
-    gap: 8,
-  },
-  collectionCard: {
-    width: 116,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  collectionCardActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  collectionCardTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 1,
-  },
-  collectionCardTitleActive: {
-    color: theme.colors.surface,
   },
   row: {
     gap: interItemGap,
@@ -1037,6 +1066,27 @@ const createStyles = (
   },
   floatingActionLayer: {
     ...StyleSheet.absoluteFillObject,
+  },
+  accountSheetModal: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  accountSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,15,12,0.28)',
+  },
+  accountSheetPanel: {
+    flex: 1,
+    maxWidth: 430,
+    backgroundColor: theme.colors.background,
+    borderLeftWidth: 1,
+    borderLeftColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: -8, height: 0 },
+    shadowOpacity: theme.isDark ? 0.35 : 0.14,
+    shadowRadius: 20,
+    elevation: 16,
   },
   secondaryFloatingButton: {
     position: 'absolute',

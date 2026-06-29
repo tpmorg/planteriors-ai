@@ -7,11 +7,12 @@ import {
   PlacementType,
   SubscriptionData,
   FreeTrialUsage,
-  Collection
+  Collection,
+  IdentifiedDesignPlant
 } from '../types';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 
-const DB_VERSION = 6; // Current database version
+const DB_VERSION = 7; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -47,6 +48,7 @@ export class DatabaseService {
       this.db = await SQLite.openDatabaseAsync('plantai.db');
       await this.createTables();
       await this.runMigrations();
+      await this.reconcileSchema();
       await this.seedStaticPlants();
       console.log('Database initialized successfully');
     } catch (error) {
@@ -107,6 +109,7 @@ export class DatabaseService {
         individual_plant_size TEXT,
         individual_plant_placement TEXT,
         individual_plant_id TEXT,
+        generated_plants_json TEXT,
         custom_prompt TEXT,
         created_at INTEGER NOT NULL,
         is_favorite INTEGER DEFAULT 0
@@ -303,6 +306,37 @@ export class DatabaseService {
     }
   }
 
+  private async reconcileSchema(): Promise<void> {
+    if (!this.db) return;
+
+    await this.ensureTableColumn('saved_designs', 'individual_plant_id', 'TEXT');
+    await this.ensureTableColumn('saved_designs', 'generated_plants_json', 'TEXT');
+    await this.ensureTableColumn('saved_designs', 'collection_id', 'INTEGER');
+  }
+
+  private async ensureTableColumn(
+    tableName: string,
+    columnName: string,
+    columnDefinition: string
+  ): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      const columns = await this.db.getAllAsync<{ name: string }>(`PRAGMA table_info(${tableName})`);
+      const hasColumn = columns.some((column) => column.name === columnName);
+      if (hasColumn) {
+        return;
+      }
+
+      await this.db.execAsync(
+        `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition};`
+      );
+      console.log(`Added missing column ${tableName}.${columnName}`);
+    } catch (error) {
+      console.warn(`Failed to ensure column ${tableName}.${columnName}:`, error);
+    }
+  }
+
   async runMigrations(): Promise<void> {
     if (!this.db) return;
 
@@ -349,6 +383,13 @@ export class DatabaseService {
       console.log('Running migration to v6: Adding plant ID to individual design records');
       await this.migrateToV6();
       await this.setDbVersion(6);
+    }
+
+    // Migration from v6 to v7: Store generated multi-plant identification results
+    if (currentVersion < 7) {
+      console.log('Running migration to v7: Adding generated plant identification results');
+      await this.migrateToV7();
+      await this.setDbVersion(7);
     }
 
     console.log('Migrations complete. Database at version:', DB_VERSION);
@@ -642,6 +683,18 @@ export class DatabaseService {
       `);
     } catch {
       // Ignore backfill failures; column may not exist yet on unexpected schema state.
+    }
+  }
+
+  private async migrateToV7(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      await this.db.execAsync(`
+        ALTER TABLE saved_designs ADD COLUMN generated_plants_json TEXT;
+      `);
+    } catch {
+      // Column already exists
     }
   }
 
@@ -1143,6 +1196,7 @@ export class DatabaseService {
     individualPlantSize?: PlantSize;
     individualPlantPlacement?: PlacementType;
     individualPlantId?: string;
+    generatedPlants?: IdentifiedDesignPlant[];
     customPrompt?: string;
   }): Promise<SavedDesign> {
     await this.ensureConnection();
@@ -1176,8 +1230,9 @@ export class DatabaseService {
           individual_plant_name, individual_plant_scientific_name,
           individual_plant_size, individual_plant_placement,
           individual_plant_id,
+          generated_plants_json,
           custom_prompt, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           design.originalImageUri,
           design.generatedImageUri,
@@ -1193,6 +1248,7 @@ export class DatabaseService {
           toDbValue(design.individualPlantSize),
           toDbValue(design.individualPlantPlacement),
           toDbValue(design.individualPlantId),
+          design.generatedPlants ? JSON.stringify(design.generatedPlants) : null,
           design.customPrompt ?? '',
           Date.now(),
         ]
@@ -1214,6 +1270,7 @@ export class DatabaseService {
           name: design.plantStyleName,
           description: design.plantStyleDescription || '',
         } : undefined,
+        generatedPlants: design.generatedPlants,
         individualPlant: isSinglePlantMode && design.individualPlantName ? {
           id: toDbValue(design.individualPlantId) as string | undefined,
           name: design.individualPlantName,
@@ -1244,7 +1301,7 @@ export class DatabaseService {
         ORDER BY created_at DESC
       `);
 
-      return result.map(this.mapRowToSavedDesign);
+      return result.map((row) => this.mapRowToSavedDesign(row));
     } catch (error) {
       console.error('Failed to get designs:', error);
       throw error;
@@ -1298,6 +1355,24 @@ export class DatabaseService {
       return result ? this.mapRowToSavedDesign(result) : null;
     } catch (error) {
       console.error('Failed to get design by ID:', error);
+      throw error;
+    }
+  }
+
+  async updateGeneratedPlants(
+    designId: string,
+    generatedPlants: IdentifiedDesignPlant[]
+  ): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(
+        'UPDATE saved_designs SET generated_plants_json = ? WHERE id = ?',
+        [JSON.stringify(generatedPlants), designId]
+      );
+    } catch (error) {
+      console.error('Failed to update generated plants:', error);
       throw error;
     }
   }
@@ -1373,6 +1448,7 @@ export class DatabaseService {
     const resolvedId = typeof rowId === 'number' || typeof rowId === 'string'
       ? String(rowId)
       : '0';
+    const generatedPlants = this.parseGeneratedPlants(row.generated_plants_json);
 
     return {
       id: resolvedId,
@@ -1389,6 +1465,7 @@ export class DatabaseService {
         name: row.plant_style_name,
         description: row.plant_style_description || '',
       } : undefined,
+      generatedPlants,
       individualPlant: row.individual_plant_name ? {
         id: row.individual_plant_id || undefined,
         name: row.individual_plant_name,
@@ -1400,6 +1477,17 @@ export class DatabaseService {
       createdAt: new Date(row.created_at),
       isFavorite: Boolean(row.is_favorite),
     };
+  }
+
+  private parseGeneratedPlants(value?: string | null): IdentifiedDesignPlant[] | undefined {
+    if (!value) return undefined;
+
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed as IdentifiedDesignPlant[] : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   // ============================================

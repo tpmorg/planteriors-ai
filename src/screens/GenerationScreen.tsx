@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -753,6 +754,63 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     opacity: 0.95,
+  },
+  identificationBlock: {
+    marginTop: 12,
+    gap: 8,
+  },
+  identifyPlantsButton: {
+    alignSelf: "flex-start",
+    minHeight: 34,
+    borderRadius: 17,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "rgba(47,122,82,0.95)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  identifyPlantsButtonDisabled: {
+    opacity: 0.72,
+  },
+  identifyPlantsText: {
+    color: "white",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  identifiedPlantsCard: {
+    gap: 8,
+  },
+  identifiedPlantsTitle: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "700",
+    opacity: 0.86,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  identifiedPlantRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  identifiedPlantName: {
+    flex: 1,
+    color: "white",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  identifiedPlantMeta: {
+    maxWidth: "42%",
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+  identificationError: {
+    color: "#fecaca",
+    fontSize: 12,
+    lineHeight: 16,
   },
   resultActions: {
     flexDirection: "row",

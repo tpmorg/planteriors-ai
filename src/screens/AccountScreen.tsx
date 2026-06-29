@@ -21,9 +21,15 @@ import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface AccountScreenProps {
   onUpgradePress?: () => void;
+  presentation?: 'full' | 'sheet';
+  onClose?: () => void;
 }
 
-export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) => {
+export const AccountScreen: React.FC<AccountScreenProps> = ({
+  onUpgradePress,
+  presentation = 'full',
+  onClose,
+}) => {
   const { user, signOut } = useAuth();
   const requireNetwork = useNetworkGuard();
   const { handleScroll, tabBarHeight } = useTabBar();
@@ -38,6 +44,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
   const { suppressFreePlanWarnings } = useDebugPreferences();
   const styles = createStyles(theme);
   const showPaidLayout = subscription?.isActive || suppressFreePlanWarnings;
+  const isSheetPresentation = presentation === 'sheet';
 
   const [isRestoring, setRestoring] = React.useState(false);
 
@@ -128,18 +135,35 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onUpgradePress }) 
   };
 
   return (
-    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+    <SafeAreaView
+      edges={isSheetPresentation ? ['top', 'right', 'bottom'] : ['top', 'right', 'bottom', 'left']}
+      style={styles.container}
+    >
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+        contentContainerStyle={{ paddingBottom: isSheetPresentation ? 24 : tabBarHeight + 20 }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Account</Text>
-          <Text style={styles.subtitle}>Your plan, profile, and preferences</Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>Account</Text>
+              <Text style={styles.subtitle}>Your plan, profile, and preferences</Text>
+            </View>
+            {isSheetPresentation && onClose ? (
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close account"
+              >
+                <AppIcon name="X" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.userSection}>
@@ -314,6 +338,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 10,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerCopy: {
+    flex: 1,
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
@@ -325,6 +358,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: theme.colors.textSecondary,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   userSection: {
     backgroundColor: theme.colors.surface,

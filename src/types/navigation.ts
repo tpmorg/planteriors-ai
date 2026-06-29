@@ -35,7 +35,7 @@ export type DesignFlowStackParamList = {
 export type TabParamList = {
   Gallery: undefined;
   Library: undefined;
-  Account: undefined;
+  Favorites: undefined;
   Settings: undefined;
 };
 
