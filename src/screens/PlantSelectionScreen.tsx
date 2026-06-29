@@ -34,6 +34,7 @@ interface PlantSelectionScreenProps {
   imageUri: string;
   initialMode?: PlantSelectionMode;
   onPlantSelected: (request: Omit<GenerationRequest, 'imageUri'>) => void;
+  onChoosePlacement: (request: Omit<GenerationRequest, 'imageUri'>) => void;
   onBack: () => void;
 }
 
@@ -126,6 +127,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
   initialMode = 'multi-plant',
   onPlantSelected,
+  onChoosePlacement,
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
@@ -190,30 +192,44 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   };
 
   const handleContinue = () => {
-    if (mode === 'multi-plant') {
-      if (selectedPlantType && selectedStyle) {
-        const plantOptions: PlantOptions = {
-          potStyle: selectedPotStyle,
-          potColor: selectedPotColor,
-          usePlanterBox,
-          maintenanceLevel,
-          placementDensity,
-        };
-        onPlantSelected({
-          mode: 'multi-plant',
-          plantType: selectedPlantType,
-          plantStyle: selectedStyle,
-          plantOptions,
-        });
-      }
-    } else {
-      if (individualSelection) {
-        onPlantSelected({
-          mode,
-          individualPlant: individualSelection,
-        });
-      }
+    if (!isComplete) {
+      return;
     }
+
+    if (mode === 'multi-plant' && selectedPlantType && selectedStyle) {
+      const plantOptions: PlantOptions = {
+        potStyle: selectedPotStyle,
+        potColor: selectedPotColor,
+        usePlanterBox,
+        maintenanceLevel,
+        placementDensity,
+      };
+      onPlantSelected({
+        mode: 'multi-plant',
+        plantType: selectedPlantType,
+        plantStyle: selectedStyle,
+        plantOptions,
+      });
+      return;
+    }
+
+    if (individualSelection) {
+      onPlantSelected({
+        mode,
+        individualPlant: individualSelection,
+      });
+    }
+  };
+
+  const handleChoosePlacement = () => {
+    if (!individualSelection) {
+      return;
+    }
+
+    onChoosePlacement({
+      mode,
+      individualPlant: individualSelection,
+    });
   };
 
   const isComplete = mode === 'multi-plant'
@@ -614,21 +630,53 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                       : `${individualSelection?.plant.name} • ${individualSelection?.size}`}
                   </Text>
                 </View>
+                {isSinglePlantMode && (
+                  <Text style={styles.selectionPreviewMeta}>
+                    AI chooses the spot first. You can place it manually if you want.
+                  </Text>
+                )}
               </View>
             )}
-            <TouchableOpacity
-              style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
-              onPress={handleContinue}
-              disabled={!isComplete}
-            >
-              <Text style={styles.continueButtonText}>
-                {mode === 'multi-plant'
-                  ? 'Generate Design'
-                  : isReplaceMode
-                    ? 'Mark Plant to Replace'
-                    : 'Choose Placement'}
-              </Text>
-            </TouchableOpacity>
+            {isSinglePlantMode ? (
+              <View style={styles.singlePlantActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.secondaryActionButton,
+                    !isComplete && styles.secondaryActionButtonDisabled,
+                  ]}
+                  onPress={handleChoosePlacement}
+                  disabled={!isComplete}
+                >
+                  <Text
+                    style={[
+                      styles.secondaryActionText,
+                      !isComplete && styles.secondaryActionTextDisabled,
+                    ]}
+                  >
+                    Choose Exact Spot
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.continueButton,
+                    styles.primaryActionButton,
+                    !isComplete && styles.continueButtonDisabled,
+                  ]}
+                  onPress={handleContinue}
+                  disabled={!isComplete}
+                >
+                  <Text style={styles.continueButtonText}>Generate Preview</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.continueButton, !isComplete && styles.continueButtonDisabled]}
+                onPress={handleContinue}
+                disabled={!isComplete}
+              >
+                <Text style={styles.continueButtonText}>Generate Preview</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
@@ -1097,12 +1145,49 @@ const createStyles = (theme: any, isTablet: boolean) => {
     },
     selectionPreview: {
       marginBottom: 12,
+      gap: 6,
     },
     selectionPreviewText: {
       fontSize: 14,
       color: theme.colors.primary,
       fontWeight: '500',
       textAlign: 'center',
+    },
+    selectionPreviewMeta: {
+      fontSize: 12,
+      lineHeight: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    singlePlantActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    secondaryActionButton: {
+      flex: 1,
+      minHeight: 54,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+    },
+    secondaryActionButtonDisabled: {
+      opacity: 0.72,
+    },
+    secondaryActionText: {
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    secondaryActionTextDisabled: {
+      color: theme.colors.textSecondary,
+    },
+    primaryActionButton: {
+      flex: 1,
     },
     continueButton: {
       backgroundColor: theme.colors.primary,

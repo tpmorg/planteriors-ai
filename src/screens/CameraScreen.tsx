@@ -33,7 +33,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [showOptions, setShowOptions] = useState(mode === 'plant-id');
+  const [showOptions, setShowOptions] = useState(true);
   const [isCropping, setIsCropping] = useState(false);
   const [isSystemCropping, setIsSystemCropping] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -129,7 +129,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const retakePhoto = () => {
     setPreviewImage(null);
-    setShowOptions(isPlantIdMode);
+    setShowOptions(true);
   };
 
   useEffect(() => {

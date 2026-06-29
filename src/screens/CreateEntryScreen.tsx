@@ -61,9 +61,9 @@ export const CreateEntryScreen: React.FC<CreateEntryScreenProps> = ({
             </View>
             <View style={styles.optionCopy}>
               <Text style={styles.optionEyebrowPrimary}>Main Flow</Text>
-              <Text style={styles.optionTitlePrimary}>Use Camera</Text>
+              <Text style={styles.optionTitlePrimary}>New Room Photo</Text>
               <Text style={styles.optionSubtitlePrimary}>
-                Take a room photo and go straight into AI plant styling.
+                Take, import, or reuse a recent room photo for AI plant styling.
               </Text>
             </View>
             <AppIcon name="ArrowRight" size={20} color="white" />

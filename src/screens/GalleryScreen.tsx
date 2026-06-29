@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
@@ -35,6 +34,115 @@ interface GalleryScreenProps {
   onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
   onUpgradePress?: () => void;
 }
+
+interface DesignCardProps {
+  design: SavedDesign;
+  index: number;
+  itemSize: number;
+  isSelected: boolean;
+  isSelectionMode: boolean;
+  styles: any;
+  theme: any;
+  onPress: (design: SavedDesign, index: number) => void;
+  onLongPress: (designId: string) => void;
+  onToggleFavorite: (design: SavedDesign) => void;
+  onToggleSelection: (designId: string) => void;
+}
+
+const getImageUri = (design: SavedDesign) => design.localImagePath || design.generatedImageUri;
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+const DesignCard = React.memo(({
+  design,
+  index,
+  itemSize,
+  isSelected,
+  isSelectionMode,
+  styles,
+  theme,
+  onPress,
+  onLongPress,
+  onToggleFavorite,
+  onToggleSelection,
+}: DesignCardProps) => {
+  const isSinglePlantDesign =
+    (design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant;
+
+  return (
+    <TouchableOpacity
+      style={[styles.designItem, { width: itemSize }, isSelected && styles.designItemSelected]}
+      onPress={() => onPress(design, index)}
+      onLongPress={() => onLongPress(design.id)}
+      delayLongPress={450}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${isSinglePlantDesign ? design.individualPlant!.name : design.plantType?.name || 'Custom'}`}
+      accessibilityHint={isSelectionMode ? 'Toggles selection' : 'Opens design details'}
+    >
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: getImageUri(design) }}
+          style={styles.designImage}
+          resizeMode="cover"
+        />
+
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={() => {
+            if (isSelectionMode) {
+              onToggleSelection(design.id);
+              return;
+            }
+            onToggleFavorite(design);
+          }}
+        >
+          <AppIcon
+            name="Heart"
+            size={18}
+            color={design.isFavorite ? '#dc2626' : 'white'}
+            weight={design.isFavorite ? 'fill' : 'regular'}
+          />
+        </TouchableOpacity>
+
+        {isSelected && <View style={styles.selectedImageOverlay} />}
+
+        {isSelectionMode && (
+          <View style={[styles.selectionBadge, isSelected && styles.selectionBadgeSelected]}>
+            <AppIcon
+              name={isSelected ? 'Check' : 'Circle'}
+              size={18}
+              color={isSelected ? theme.colors.surface : 'white'}
+              weight={isSelected ? 'bold' : 'regular'}
+            />
+          </View>
+        )}
+
+        <View style={styles.infoOverlay}>
+          <Text style={styles.plantTypeText} numberOfLines={1}>
+            {isSinglePlantDesign
+              ? design.individualPlant!.name
+              : design.plantType?.name || 'Custom'}
+          </Text>
+          <Text style={styles.plantStyleText} numberOfLines={1}>
+            {isSinglePlantDesign
+              ? design.mode === 'replace-plant'
+                ? `${design.individualPlant!.size} • replacement`
+                : `${design.individualPlant!.size} • ${design.individualPlant!.placement}`
+              : design.plantStyle?.name || 'Design'}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.dateText}>{formatDate(design.createdAt)}</Text>
+    </TouchableOpacity>
+  );
+});
 
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onNewDesign,
@@ -98,13 +206,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     loadDesigns();
     loadCollections();
   }, [loadDesigns, loadCollections]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadDesigns();
-      loadCollections();
-    }, [loadDesigns, loadCollections])
-  );
 
   const filteredDesigns = useMemo(
     () =>
@@ -261,7 +362,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     }
   };
 
-  const toggleFavorite = async (design: SavedDesign) => {
+  const toggleFavorite = useCallback(async (design: SavedDesign) => {
     try {
       await databaseService.toggleFavorite(design.id);
       const nextFavorite = !design.isFavorite;
@@ -278,102 +379,30 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       console.error('Failed to toggle favorite:', error);
       showToast('Could not update favorite', 'error');
     }
-  };
+  }, [showToast]);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  const styles = useMemo(
+    () => createStyles(theme, isTablet, listHorizontalPadding, interItemGap),
+    [theme, isTablet, listHorizontalPadding, interItemGap]
+  );
 
-  const getImageUri = (design: SavedDesign) => {
-    // Use local path if available, otherwise use generated image URI
-    return design.localImagePath || design.generatedImageUri;
-  };
+  const renderDesignItem = useCallback(({ item, index }: { item: SavedDesign; index: number }) => (
+    <DesignCard
+      design={item}
+      index={index}
+      itemSize={itemSize}
+      isSelected={selectedDesignIds.has(item.id)}
+      isSelectionMode={isSelectionMode}
+      styles={styles}
+      theme={theme}
+      onPress={handleDesignPress}
+      onLongPress={enterSelectionMode}
+      onToggleFavorite={toggleFavorite}
+      onToggleSelection={toggleDesignSelection}
+    />
+  ), [enterSelectionMode, handleDesignPress, isSelectionMode, itemSize, selectedDesignIds, styles, theme, toggleFavorite]);
 
-  const renderDesignItem = ({ item, index }: { item: SavedDesign; index: number }) => {
-    const isSelected = selectedDesignIds.has(item.id);
-    const isSinglePlantDesign =
-      (item.mode === 'individual' || item.mode === 'replace-plant') && item.individualPlant;
-
-    return (
-    <TouchableOpacity
-      style={[styles.designItem, { width: itemSize }, isSelected && styles.designItemSelected]}
-      onPress={() => handleDesignPress(item, index)}
-      onLongPress={() => enterSelectionMode(item.id)}
-      delayLongPress={450}
-      activeOpacity={0.8}
-      accessibilityRole="button"
-      accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${isSinglePlantDesign ? item.individualPlant!.name : item.plantType?.name || 'Custom'}`}
-      accessibilityHint={isSelectionMode ? 'Toggles selection' : 'Opens design details'}
-    >
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: getImageUri(item) }}
-          style={styles.designImage}
-          resizeMode="cover"
-        />
-
-        {/* Favorite button */}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => {
-            if (isSelectionMode) {
-              toggleDesignSelection(item.id);
-              return;
-            }
-            toggleFavorite(item);
-          }}
-        >
-          <AppIcon
-            name="Heart"
-            size={18}
-            color={item.isFavorite ? '#dc2626' : 'white'}
-            weight={item.isFavorite ? 'fill' : 'regular'}
-          />
-        </TouchableOpacity>
-
-        {isSelected && <View style={styles.selectedImageOverlay} />}
-
-        {isSelectionMode && (
-          <View style={[styles.selectionBadge, isSelected && styles.selectionBadgeSelected]}>
-            <AppIcon
-              name={isSelected ? 'Check' : 'Circle'}
-              size={18}
-              color={isSelected ? theme.colors.surface : 'white'}
-              weight={isSelected ? 'bold' : 'regular'}
-            />
-          </View>
-        )}
-
-        {/* Plant info overlay */}
-        <View style={styles.infoOverlay}>
-          <Text style={styles.plantTypeText} numberOfLines={1}>
-            {isSinglePlantDesign
-              ? item.individualPlant!.name
-              : item.plantType?.name || 'Custom'}
-          </Text>
-          <Text style={styles.plantStyleText} numberOfLines={1}>
-            {isSinglePlantDesign
-              ? item.mode === 'replace-plant'
-                ? `${item.individualPlant!.size} • replacement`
-                : `${item.individualPlant!.size} • ${item.individualPlant!.placement}`
-              : item.plantStyle?.name || 'Design'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Date */}
-      <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
-    </TouchableOpacity>
-    );
-  };
-
-  const styles = createStyles(theme, isTablet, listHorizontalPadding, interItemGap);
-
-  const renderEmptyState = () => (
+  const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconRing}>
         <AppIcon name="Leaf" size={40} color={theme.colors.primary} />
@@ -387,7 +416,16 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <Text style={styles.emptyCreateText}>Start With A Photo</Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [startNewDesign, styles, theme.colors.primary]);
+
+  const listContentStyle = useMemo(() => [
+    styles.listContainer,
+    { paddingBottom: tabBarHeight + 20 },
+  ], [styles, tabBarHeight]);
+
+  const columnWrapperStyle = useMemo(() => styles.row, [styles]);
+
+  const keyExtractor = useCallback((item: SavedDesign) => item.id, []);
 
   if (isLoading) {
     return (
@@ -457,7 +495,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
               <View style={styles.galleryHintRow}>
                 <AppIcon name="Plus" size={16} color={theme.colors.primary} />
                 <Text style={styles.galleryHintText}>
-                  Use the plus button above the tabs to start a room design or identify a plant
+                  Use the plus button above the tabs for a new room photo, or the search button beside it to identify a plant
                 </Text>
               </View>
               <View style={styles.galleryHintRow}>
@@ -542,10 +580,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         key={`gallery-${numColumns}`}
         data={filteredDesigns}
         renderItem={renderDesignItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         numColumns={numColumns}
-        contentContainerStyle={[styles.listContainer, { paddingBottom: tabBarHeight + 20 }]}
-        columnWrapperStyle={styles.row}
+        contentContainerStyle={listContentStyle}
+        columnWrapperStyle={columnWrapperStyle}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -560,6 +598,21 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         }
         ListEmptyComponent={renderEmptyState}
       />
+
+      {!isSelectionMode && (
+        <View pointerEvents="box-none" style={styles.floatingActionLayer}>
+          <TouchableOpacity
+            onPress={startPlantIdentification}
+            activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Identify plant"
+            accessibilityHint="Open plant identification"
+            style={[styles.secondaryFloatingButton, { bottom: tabBarHeight + 26 }]}
+          >
+            <AppIcon name="MagnifyingGlass" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <CollectionPickerModal
         visible={showCollectionsModal}
@@ -981,5 +1034,25 @@ const createStyles = (
     fontSize: 15,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  floatingActionLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  secondaryFloatingButton: {
+    position: 'absolute',
+    right: 108,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.34 : 0.16,
+    shadowRadius: 14,
+    elevation: 10,
   },
 });

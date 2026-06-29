@@ -137,8 +137,10 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       Keyboard.dismiss();
       setIsSearchFocused(false);
       setSelectedPlant(plant);
-      // Auto-select first available size and placement
-      const defaultSize = plant.availableSizes[0];
+      // Default to medium when available so one tap reaches a sensible preview state.
+      const defaultSize = plant.availableSizes.includes('medium')
+        ? 'medium'
+        : plant.availableSizes[0];
       const defaultPlacement: PlacementType = 'auto';
       setSelectedSize(defaultSize);
       setSelectedPlacement(defaultPlacement);

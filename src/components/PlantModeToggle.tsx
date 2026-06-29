@@ -20,7 +20,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
       ? 'Fill your space with a curated plant arrangement'
       : mode === 'replace-plant'
         ? 'Swap a current plant for a new alternative'
-        : 'Place a specific plant in your room';
+        : 'Preview a specific plant in your room';
 
   return (
     <View style={styles.container}>
@@ -44,7 +44,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'multi-plant' && styles.toggleTextActive,
             ]}
           >
-            Style
+            Restyle
           </Text>
         </TouchableOpacity>
 
@@ -67,7 +67,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'individual' && styles.toggleTextActive,
             ]}
           >
-            Add
+            Add Plant
           </Text>
         </TouchableOpacity>
 
@@ -90,7 +90,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'replace-plant' && styles.toggleTextActive,
             ]}
           >
-            Replace
+            Replace Plant
           </Text>
         </TouchableOpacity>
       </View>

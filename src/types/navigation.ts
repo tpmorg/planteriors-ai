@@ -27,6 +27,7 @@ export type DesignFlowStackParamList = {
   PlantLocation: {
     imageUri: string;
     request: Omit<GenerationRequest, 'imageUri' | 'location'>;
+    initialPlacementMode?: 'choose' | 'auto';
   };
   Generation: { request: GenerationRequest };
 };

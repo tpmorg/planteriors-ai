@@ -50,7 +50,10 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const handleOpenCreateEntry = () => {
-    navigation.getParent()?.navigate('CreateEntry');
+    navigation.getParent()?.navigate('DesignFlow', {
+      screen: 'Camera',
+      params: { mode: 'room' },
+    });
   };
 
   return (
@@ -181,7 +184,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           activeOpacity={0.9}
           accessibilityRole="button"
           accessibilityLabel="Start with a photo"
-          accessibilityHint="Opens options to create a design or identify a plant"
+          accessibilityHint="Open the room photo flow"
           style={{
             position: 'absolute',
             bottom: 90 + Math.max(insets.bottom, 8),
@@ -356,15 +359,19 @@ function PlantSelectionScreenWrapper({
   const { imageUri, initialMode } = route.params;
 
   const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
-    if (selectionData.mode === 'individual' || selectionData.mode === 'replace-plant') {
-      navigation.navigate('PlantLocation', { imageUri, request: selectionData });
-    } else {
-      const request: GenerationRequest = {
-        imageUri,
-        ...selectionData,
-      };
-      navigation.navigate('Generation', { request });
-    }
+    const request: GenerationRequest = {
+      imageUri,
+      ...selectionData,
+    };
+    navigation.navigate('Generation', { request });
+  };
+
+  const handleChoosePlacement = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
+    navigation.navigate('PlantLocation', {
+      imageUri,
+      request: selectionData,
+      initialPlacementMode: 'choose',
+    });
   };
 
   const handleBack = () => {
@@ -376,6 +383,7 @@ function PlantSelectionScreenWrapper({
       imageUri={imageUri}
       initialMode={initialMode}
       onPlantSelected={handlePlantSelected}
+      onChoosePlacement={handleChoosePlacement}
       onBack={handleBack}
     />
   );
@@ -385,7 +393,7 @@ function PlantLocationScreenWrapper({
   route,
   navigation,
 }: DesignFlowScreenProps<'PlantLocation'>) {
-  const { imageUri, request } = route.params;
+  const { imageUri, request, initialPlacementMode } = route.params;
 
   const handleLocationSelected = (location: PlantLocation | null) => {
     const fullRequest: GenerationRequest = location
@@ -404,6 +412,7 @@ function PlantLocationScreenWrapper({
       request={request}
       onLocationSelected={handleLocationSelected}
       onBack={handleBack}
+      initialPlacementMode={initialPlacementMode}
     />
   );
 }
@@ -441,7 +450,10 @@ function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
   const { refreshStatus } = useSubscription();
 
   const handleNewDesign = () => {
-    navigation.getParent()?.navigate('CreateEntry');
+    navigation.getParent()?.navigate('DesignFlow', {
+      screen: 'Camera',
+      params: { mode: 'room' },
+    });
   };
 
   const handleIdentifyPlant = async () => {
