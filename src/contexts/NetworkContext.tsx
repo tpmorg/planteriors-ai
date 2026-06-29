@@ -1,11 +1,27 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import { Alert } from 'react-native';
-import { useToast } from './ToastContext';
+import { NetworkBanner } from '../components/NetworkBanner';
+import { isLikelyNetworkError } from '../utils/networkErrorUtils';
+
+type BannerState = 'offline' | 'degraded' | null;
 
 interface NetworkContextType {
   isConnected: boolean | null;
   isInternetReachable: boolean | null;
   type: string | null;
+  isOffline: boolean;
+  isDegraded: boolean;
+  reportNetworkIssue: (source: string, error?: unknown) => void;
+  reportNetworkSuccess: (source?: string) => void;
 }
 
 interface NetInfoLikeState {
@@ -21,6 +37,11 @@ interface NetInfoLike {
 
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
+const OFFLINE_BANNER_DELAY_MS = 1200;
+const DEGRADED_FAILURE_WINDOW_MS = 45000;
+const DEGRADED_FAILURE_THRESHOLD = 2;
+const DEGRADED_RECOVERY_DELAY_MS = 6000;
+
 export const useNetwork = () => {
   const context = useContext(NetworkContext);
   if (!context) {
@@ -29,19 +50,19 @@ export const useNetwork = () => {
   return context;
 };
 
-const isOnlineState = (state: NetworkContextType) =>
-  state.isConnected !== false && state.isInternetReachable !== false;
+const computeIsOffline = (state: NetInfoLikeState) =>
+  state.isConnected === false || state.isInternetReachable === false;
 
 export const useNetworkGuard = () => {
   const network = useNetwork();
 
   return useCallback((message = 'Please check your internet connection and try again.') => {
-    if (!isOnlineState(network)) {
+    if (network.isOffline) {
       Alert.alert('No Connection', message);
       return false;
     }
     return true;
-  }, [network]);
+  }, [network.isOffline]);
 };
 
 interface NetworkProviderProps {
@@ -49,14 +70,54 @@ interface NetworkProviderProps {
 }
 
 export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) => {
-  const { showToast } = useToast();
-  const [networkState, setNetworkState] = useState<NetworkContextType>({
-    isConnected: null,
-    isInternetReachable: null,
-    type: null,
-  });
-  const isFirstLoad = useRef(true);
-  const previousConnected = useRef<boolean | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [isInternetReachable, setIsInternetReachable] = useState<boolean | null>(null);
+  const [type, setType] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isDegraded, setIsDegraded] = useState(false);
+  const [bannerState, setBannerState] = useState<BannerState>(null);
+
+  const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recoveryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recentIssueTimestampsRef = useRef<number[]>([]);
+  const currentOfflineRef = useRef(false);
+  const currentDegradedRef = useRef(false);
+
+  const clearOfflineTimer = useCallback(() => {
+    if (offlineTimerRef.current) {
+      clearTimeout(offlineTimerRef.current);
+      offlineTimerRef.current = null;
+    }
+  }, []);
+
+  const clearRecoveryTimer = useCallback(() => {
+    if (recoveryTimerRef.current) {
+      clearTimeout(recoveryTimerRef.current);
+      recoveryTimerRef.current = null;
+    }
+  }, []);
+
+  const activateDegraded = useCallback(() => {
+    clearRecoveryTimer();
+    currentDegradedRef.current = true;
+    setIsDegraded(true);
+    setBannerState((currentOfflineRef.current ? 'offline' : 'degraded'));
+  }, [clearRecoveryTimer]);
+
+  const clearDegraded = useCallback(() => {
+    clearRecoveryTimer();
+    recentIssueTimestampsRef.current = [];
+    currentDegradedRef.current = false;
+    setIsDegraded(false);
+    setBannerState((currentOfflineRef.current ? 'offline' : null));
+  }, [clearRecoveryTimer]);
+
+  const scheduleOfflineBanner = useCallback(() => {
+    clearOfflineTimer();
+    offlineTimerRef.current = setTimeout(() => {
+      setBannerState('offline');
+    }, OFFLINE_BANNER_DELAY_MS);
+  }, [clearOfflineTimer]);
 
   useEffect(() => {
     const getNetInfoModule = (): NetInfoLike | null => {
@@ -74,30 +135,23 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       return () => {};
     }
 
-    const applyState = (state: NetInfoLikeState, fromInitialFetch = false) => {
-      const nowConnected = state.isConnected;
-      const wasConnected = previousConnected.current;
+    const applyState = (state: NetInfoLikeState) => {
+      const nextOffline = computeIsOffline(state);
 
-      setNetworkState({
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-        type: state.type,
-      });
+      setIsConnected(state.isConnected);
+      setIsInternetReachable(state.isInternetReachable);
+      setType(state.type);
+      setIsOffline(nextOffline);
+      currentOfflineRef.current = nextOffline;
 
-      if (!isFirstLoad.current && wasConnected !== nowConnected) {
-        if (nowConnected === false) {
-          showToast('No internet connection', 'error', 3000);
-        } else if (nowConnected === true && wasConnected === false) {
-          showToast('Internet connection restored', 'success', 2000);
-        }
+      if (nextOffline) {
+        clearRecoveryTimer();
+        scheduleOfflineBanner();
+        return;
       }
 
-      if (fromInitialFetch && nowConnected === false) {
-        showToast('You are currently offline', 'info', 3000);
-      }
-
-      previousConnected.current = nowConnected;
-      isFirstLoad.current = false;
+      clearOfflineTimer();
+      setBannerState(currentDegradedRef.current ? 'degraded' : null);
     };
 
     const unsubscribe = netInfo.addEventListener((state: NetInfoLikeState) => {
@@ -105,17 +159,70 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
     });
 
     netInfo.fetch().then((state) => {
-      applyState(state, true);
+      applyState(state);
     });
 
     return () => {
+      clearOfflineTimer();
+      clearRecoveryTimer();
       unsubscribe();
     };
-  }, [showToast]);
+  }, [clearOfflineTimer, clearRecoveryTimer, scheduleOfflineBanner]);
+
+  const reportNetworkIssue = useCallback((source: string, error?: unknown) => {
+    if (currentOfflineRef.current || !isLikelyNetworkError(error)) {
+      return;
+    }
+
+    const now = Date.now();
+    const filtered = recentIssueTimestampsRef.current.filter(
+      (timestamp) => now - timestamp <= DEGRADED_FAILURE_WINDOW_MS
+    );
+    filtered.push(now);
+    recentIssueTimestampsRef.current = filtered;
+
+    console.log(
+      `Network issue reported from ${source}; recent count=${filtered.length}`
+    );
+
+    if (filtered.length >= DEGRADED_FAILURE_THRESHOLD) {
+      activateDegraded();
+    }
+  }, [activateDegraded]);
+
+  const reportNetworkSuccess = useCallback((_source?: string) => {
+    if (currentOfflineRef.current || !currentDegradedRef.current) {
+      return;
+    }
+
+    clearRecoveryTimer();
+    recoveryTimerRef.current = setTimeout(() => {
+      clearDegraded();
+    }, DEGRADED_RECOVERY_DELAY_MS);
+  }, [clearDegraded, clearRecoveryTimer]);
+
+  const value = useMemo<NetworkContextType>(() => ({
+    isConnected,
+    isInternetReachable,
+    type,
+    isOffline,
+    isDegraded,
+    reportNetworkIssue,
+    reportNetworkSuccess,
+  }), [
+    isConnected,
+    isInternetReachable,
+    type,
+    isOffline,
+    isDegraded,
+    reportNetworkIssue,
+    reportNetworkSuccess,
+  ]);
 
   return (
-    <NetworkContext.Provider value={networkState}>
+    <NetworkContext.Provider value={value}>
       {children}
+      {bannerState ? <NetworkBanner variant={bannerState} /> : null}
     </NetworkContext.Provider>
   );
 };

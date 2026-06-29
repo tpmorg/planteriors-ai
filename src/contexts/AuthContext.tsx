@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { onAuthStateChanged } from 'firebase/auth';
 import * as Sentry from '@sentry/react-native';
 import { AuthState, User } from '../types';
+import { useNetwork } from './NetworkContext';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
 import { auth } from '../config/firebase';
 import { env } from '../utils/env';
@@ -65,6 +66,7 @@ const syncSentryUser = (user: User | null) => {
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const { reportNetworkIssue, reportNetworkSuccess } = useNetwork();
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -124,9 +126,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('Signing in to Firebase with Google ID token...');
       await FirebaseAuthService.signInWithGoogleIdToken(idToken);
+      reportNetworkSuccess('google_sign_in');
       // onAuthStateChanged will update authState automatically
     } catch (error: any) {
       console.error('Error signing in with Google:', error);
+      reportNetworkIssue('google_sign_in', error);
 
       // Handle specific error cases
       if (error.code === 'SIGN_IN_CANCELLED') {
@@ -173,9 +177,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         credential.identityToken,
         rawNonce
       );
+      reportNetworkSuccess('apple_sign_in');
       // onAuthStateChanged will update authState automatically
     } catch (error) {
       console.error('Error signing in with Apple:', error);
+      reportNetworkIssue('apple_sign_in', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   };

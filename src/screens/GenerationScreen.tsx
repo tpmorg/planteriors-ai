@@ -19,7 +19,7 @@ import { useSubscription } from "../contexts/SubscriptionContext";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { subscriptionService } from "../services/subscriptionService";
 import { PaywallModal } from "../components/PaywallModal";
-import { useNetworkGuard } from "../contexts/NetworkContext";
+import { useNetwork, useNetworkGuard } from "../contexts/NetworkContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 
@@ -42,6 +42,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const { refreshStatus } = useSubscription();
   const { theme } = useTheme();
   const requireNetwork = useNetworkGuard();
+  const { reportNetworkIssue, reportNetworkSuccess } = useNetwork();
   const { showToast } = useToast();
   const { width, height } = useWindowDimensions();
   const isTablet = Platform.OS === "ios" && Math.min(width, height) >= 768;
@@ -173,6 +174,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   }, [generatedImageUri, fadeAnim, scaleAnim]);
 
   const startGeneration = async () => {
+    let apiProgressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
       // Phase 1: Initial preparation steps
       setCurrentStatus("Preparing...");
@@ -196,7 +199,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       // Simulate API progress steps while the real call is happening
       let apiStepIndex = 0;
-      const apiProgressInterval = setInterval(() => {
+      apiProgressInterval = setInterval(() => {
         if (apiStepIndex < apiSteps.length) {
           const totalSteps = initialSteps.length + apiSteps.length;
           const currentProgress =
@@ -211,9 +214,12 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
       // Wait for the actual API call to complete
       const { imageUri: generatedUri, isGenerated } = await apiPromise;
+      reportNetworkSuccess('generation');
 
       // Clear the interval
-      clearInterval(apiProgressInterval);
+      if (apiProgressInterval) {
+        clearInterval(apiProgressInterval);
+      }
 
       // Complete the progress
       setProgress(1);
@@ -230,7 +236,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         );
       }
     } catch (err) {
+      if (apiProgressInterval) {
+        clearInterval(apiProgressInterval);
+      }
       console.error("Generation error:", err);
+      reportNetworkIssue('generation', err);
       setError(err instanceof Error ? err.message : "Failed to generate image");
       setIsGenerating(false);
     }

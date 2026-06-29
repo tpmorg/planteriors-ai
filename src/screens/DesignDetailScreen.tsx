@@ -850,6 +850,20 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           </View>
         </View>
 
+        <View style={[styles.primaryActionRail, { top: insets.top + 68 }]}>
+          <TouchableOpacity
+            onPress={startPlantReplacement}
+            style={styles.replacePlantPill}
+            activeOpacity={0.86}
+            accessibilityRole="button"
+            accessibilityLabel="Replace plant"
+            accessibilityHint="Choose a different plant for this room image"
+          >
+            <AppIcon name="ArrowsClockwise" size={17} color="white" weight="bold" />
+            <Text style={styles.replacePlantPillText}>Replace Plant</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Full-screen zoomable image */}
         <View style={styles.imageContainer}>
           <GestureDetector
@@ -1360,6 +1374,38 @@ const createStyles = (theme: any) => StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  primaryActionRail: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  replacePlantPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    maxWidth: screenWidth - 32,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  replacePlantPillText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '800',
   },
   imageContainer: {
     flex: 1,

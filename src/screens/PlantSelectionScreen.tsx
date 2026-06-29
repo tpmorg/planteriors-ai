@@ -124,7 +124,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
-  initialMode = 'individual',
+  initialMode = 'multi-plant',
   onPlantSelected,
   onBack,
 }) => {
@@ -140,8 +140,14 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   const [isPlantSearchActive, setIsPlantSearchActive] = useState(false);
 
   // Multi-plant selection state
-  const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<PlantStyle | null>(null);
+  const defaultPlantType = PLANT_TYPES[1];
+  const defaultPlantStyle = defaultPlantType.styles[1];
+  const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(
+    initialMode === 'multi-plant' ? defaultPlantType : null
+  );
+  const [selectedStyle, setSelectedStyle] = useState<PlantStyle | null>(
+    initialMode === 'multi-plant' ? defaultPlantStyle : null
+  );
 
   // Options state
   const [selectedPotStyle, setSelectedPotStyle] = useState<PotStyle>(POT_STYLES[0]);
@@ -262,7 +268,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
           <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isSinglePlantMode ? 'Choose Plant' : 'Choose Style'}
+          {isSinglePlantMode ? 'Choose Plant' : 'AI Design'}
         </Text>
         <View style={styles.placeholder} />
       </View>
@@ -327,8 +333,8 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             </View>
             <View style={styles.heroContent}>
               <Text style={styles.heroDescription}>
-                Customize your plant design by selecting the type of plants, pot styles, and
-                placement preferences.
+                AI will start with a balanced tropical design. Adjust the style, pots, or density
+                if you want more control.
               </Text>
             </View>
           </View>

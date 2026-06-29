@@ -19,6 +19,7 @@ import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
 import {
+  CreateEntryScreenWrapper,
   DesignDetailScreenWrapper,
   DesignFlowNavigator,
   MainTabNavigator,
@@ -179,6 +180,14 @@ function AppContent() {
           >
             <Stack.Screen name="Onboarding" component={OnboardingScreenWrapper} />
             <Stack.Screen name="MainApp" component={MainTabNavigator} />
+            <Stack.Screen
+              name="CreateEntry"
+              component={CreateEntryScreenWrapper}
+              options={{
+                presentation: "modal",
+                headerShown: false,
+              }}
+            />
             <Stack.Screen
               name="DesignFlow"
               component={DesignFlowNavigator}

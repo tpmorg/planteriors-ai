@@ -33,7 +33,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [showOptions, setShowOptions] = useState(true);
+  const [showOptions, setShowOptions] = useState(mode === 'plant-id');
   const [isCropping, setIsCropping] = useState(false);
   const [isSystemCropping, setIsSystemCropping] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -129,7 +129,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const retakePhoto = () => {
     setPreviewImage(null);
-    setShowOptions(true);
+    setShowOptions(isPlantIdMode);
   };
 
   useEffect(() => {
@@ -336,7 +336,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       <View style={styles.instructions}>
         <Text style={styles.instructionText}>
-          💡 Tip: Take a clear photo of your room interior for best AI results
+          Take a clear photo of your room interior for best AI results
         </Text>
       </View>
     </SafeAreaView>

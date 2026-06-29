@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppIcon } from '../components/AppIcon';
 import { Collection, SavedDesign } from '../types';
@@ -53,7 +53,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { subscription, freeGenerationsRemaining, refreshStatus } = useSubscription();
   const { user } = useAuth();
@@ -385,7 +384,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       </Text>
       <TouchableOpacity style={styles.emptyCreateButton} onPress={startNewDesign}>
         <AppIcon name="Plus" size={18} color="white" />
-        <Text style={styles.emptyCreateText}>Create Your First Design</Text>
+        <Text style={styles.emptyCreateText}>Start With A Photo</Text>
       </TouchableOpacity>
     </View>
   );
@@ -395,21 +394,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.backdropBlobA} />
         <View style={styles.backdropBlobB} />
-        <TouchableOpacity
-          onPress={startNewDesign}
-          style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
-          accessibilityLabel="New design"
-        >
-          <AppIcon name="Plus" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={startPlantIdentification}
-          style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
-          accessibilityLabel="Identify plant"
-          accessibilityHint="Opens the plant identification flow"
-        >
-          <AppIcon name="MagnifyingGlass" size={22} color="white" />
-        </TouchableOpacity>
 
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading your images...</Text>
@@ -422,21 +406,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
-      <TouchableOpacity
-        onPress={startNewDesign}
-        style={[styles.newDesignButton, { position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }]}
-        accessibilityLabel="New design"
-      >
-        <AppIcon name="Plus" size={24} color="white" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={startPlantIdentification}
-        style={[styles.identifyPlantButton, { position: 'absolute', top: insets.top + 8, right: 68, zIndex: 20 }]}
-        accessibilityLabel="Identify plant"
-        accessibilityHint="Opens the plant identification flow"
-      >
-        <AppIcon name="MagnifyingGlass" size={22} color="white" />
-      </TouchableOpacity>
 
       <View style={[styles.floatingButtonOffset, isSelectionMode && styles.selectionFloatingButtonOffset]} />
 
@@ -487,11 +456,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
             <View style={styles.galleryHints}>
               <View style={styles.galleryHintRow}>
                 <AppIcon name="Plus" size={16} color={theme.colors.primary} />
-                <Text style={styles.galleryHintText}>Create designs</Text>
-              </View>
-              <View style={styles.galleryHintRow}>
-                <AppIcon name="MagnifyingGlass" size={16} color={theme.colors.primary} />
-                <Text style={styles.galleryHintText}>Identify plants</Text>
+                <Text style={styles.galleryHintText}>
+                  Use the plus button above the tabs to start a room design or identify a plant
+                </Text>
               </View>
               <View style={styles.galleryHintRow}>
                 <AppIcon name="CursorClick" size={16} color={theme.colors.primary} />
@@ -705,34 +672,8 @@ const createStyles = (
     bottom: -120,
     right: -80,
   },
-  newDesignButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 22,
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  identifyPlantButton: {
-    backgroundColor: theme.isDark ? '#2e6a4f' : '#2f7a52',
-    borderRadius: 22,
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
   floatingButtonOffset: {
-    height: 34,
+    height: 44,
   },
   selectionFloatingButtonOffset: {
     height: 62,

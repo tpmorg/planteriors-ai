@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -19,6 +19,7 @@ import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PlantIdentifyScreen } from '../screens/PlantIdentifyScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
+import { CreateEntryScreen } from '../screens/CreateEntryScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTabBar } from '../contexts/TabBarContext';
@@ -48,40 +49,44 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { tabBarStyle } = useTabBar();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const handleOpenCreateEntry = () => {
+    navigation.getParent()?.navigate('CreateEntry');
+  };
 
   return (
-    <Animated.View
-      style={[
-        {
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: theme.colors.tabBarBackground,
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 12,
-          height: 65 + Math.max(insets.bottom, 8),
-          shadowColor: theme.colors.shadow,
-          shadowOffset: {
-            width: 0,
-            height: -2,
+    <>
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: theme.colors.tabBarBackground,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingBottom: Math.max(insets.bottom, 8),
+            paddingTop: 12,
+            height: 65 + Math.max(insets.bottom, 8),
+            shadowColor: theme.colors.shadow,
+            shadowOffset: {
+              width: 0,
+              height: -2,
+            },
+            shadowOpacity: theme.isDark ? 0.34 : 0.1,
+            shadowRadius: theme.isDark ? 14 : 8,
+            elevation: 8,
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            alignItems: 'flex-start',
+            paddingHorizontal: 0,
           },
-          shadowOpacity: theme.isDark ? 0.34 : 0.1,
-          shadowRadius: theme.isDark ? 14 : 8,
-          elevation: 8,
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'flex-start',
-          paddingHorizontal: 0,
-        },
-        tabBarStyle,
-      ]}
-    >
-      {state.routes.map((route, index) => {
+          tabBarStyle,
+        ]}
+      >
+        {state.routes.map((route, index) => {
         const isFocused = state.index === index;
 
         let iconName: string;
@@ -167,8 +172,40 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             />
           </TouchableOpacity>
         );
-      })}
-    </Animated.View>
+        })}
+      </Animated.View>
+
+      <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
+        <TouchableOpacity
+          onPress={handleOpenCreateEntry}
+          activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="Start with a photo"
+          accessibilityHint="Opens options to create a design or identify a plant"
+          style={{
+            position: 'absolute',
+            bottom: 90 + Math.max(insets.bottom, 8),
+            right: 18,
+            width: 74,
+            height: 74,
+            borderRadius: 37,
+            backgroundColor: theme.colors.primary,
+            borderWidth: 5,
+            borderColor: theme.colors.tabBarBackground,
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: theme.isDark ? 0.42 : 0.22,
+            shadowRadius: 16,
+            elevation: 12,
+          }}
+        >
+          <AppIcon name="Plus" size={31} color="white" weight="bold" />
+        </TouchableOpacity>
+      </View>
+    </>
   );
 }
 
@@ -232,6 +269,33 @@ export function OnboardingScreenWrapper({
   return <OnboardingScreen fromSettings={fromSettings} onComplete={handleComplete} />;
 }
 
+export function CreateEntryScreenWrapper({
+  navigation,
+}: RootStackScreenProps<'CreateEntry'>) {
+  const handleClose = () => {
+    navigation.goBack();
+  };
+
+  const handleCreateDesign = () => {
+    navigation.replace('DesignFlow', {
+      screen: 'Camera',
+      params: { mode: 'room' },
+    });
+  };
+
+  const handleIdentifyPlant = () => {
+    navigation.replace('PlantIdentify');
+  };
+
+  return (
+    <CreateEntryScreen
+      onClose={handleClose}
+      onCreateDesign={handleCreateDesign}
+      onIdentifyPlant={handleIdentifyPlant}
+    />
+  );
+}
+
 export function DesignFlowNavigator() {
   return (
     <DesignFlowStack.Navigator screenOptions={{ headerShown: false }}>
@@ -268,7 +332,7 @@ function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camer
   }, [user?.id]);
 
   const handleImageTaken = (imageUri: string) => {
-    navigation.navigate('PlantSelection', { imageUri });
+    navigation.navigate('PlantSelection', { imageUri, initialMode: 'multi-plant' });
   };
 
   const handleClose = () => {
@@ -377,7 +441,7 @@ function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
   const { refreshStatus } = useSubscription();
 
   const handleNewDesign = () => {
-    navigation.getParent()?.navigate('DesignFlow', { screen: 'Camera' });
+    navigation.getParent()?.navigate('CreateEntry');
   };
 
   const handleIdentifyPlant = async () => {
