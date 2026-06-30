@@ -96,12 +96,52 @@ interface PlantCardProps {
   theme: Theme;
 }
 
+function formatLightLabel(lightRequirement: string) {
+  switch (lightRequirement) {
+    case 'low':
+      return 'Low light';
+    case 'low-to-bright':
+      return 'Flexible light';
+    case 'bright-direct':
+      return 'Direct sun';
+    case 'bright-indirect':
+      return 'Bright indirect';
+    default:
+      return lightRequirement;
+  }
+}
+
+function formatCareLabel(careLevel: string) {
+  switch (careLevel) {
+    case 'easy':
+      return 'Easy care';
+    case 'moderate':
+      return 'Moderate care';
+    case 'difficult':
+      return 'Advanced care';
+    default:
+      return careLevel;
+  }
+}
+
 const PlantCard = React.memo(({ plant, itemSize, onPress, theme }: PlantCardProps) => {
   const imageSource = getPlantImageSource(plant);
+  const metadata = plant.petSafe
+    ? ['Pet safe', formatLightLabel(plant.lightRequirement)]
+    : [formatCareLabel(plant.careLevel), formatLightLabel(plant.lightRequirement)];
 
   return (
     <TouchableOpacity
-      style={[styles.plantCard, { width: itemSize }]}
+      style={[
+        styles.plantCard,
+        {
+          width: itemSize,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          shadowColor: theme.colors.shadow,
+          shadowOpacity: theme.isDark ? 0.24 : 0.08,
+        },
+      ]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityLabel={`Open ${plant.name}`}
@@ -132,15 +172,39 @@ const PlantCard = React.memo(({ plant, itemSize, onPress, theme }: PlantCardProp
         )}
       </View>
 
-      <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
-        {plant.name}
-      </Text>
-      <Text
-        style={[styles.scientificName, { color: theme.colors.textSecondary }]}
-        numberOfLines={1}
-      >
-        {plant.scientificName}
-      </Text>
+      <View style={styles.plantCardBody}>
+        <Text style={[styles.plantCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+          {plant.category}
+        </Text>
+        <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
+          {plant.name}
+        </Text>
+        <Text
+          style={[styles.scientificName, { color: theme.colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {plant.scientificName}
+        </Text>
+
+        <View style={styles.metadataRow}>
+          {metadata.map((label) => (
+            <View
+              key={`${plant.id}-${label}`}
+              style={[
+                styles.metadataChip,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f4',
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.metadataChipText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                {label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 });
@@ -166,6 +230,10 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   );
   const activeFilterChips = useMemo(() => getActiveFilterChips(filters), [filters]);
   const activeFilterCount = activeFilterChips.length;
+  const importedCount = useMemo(
+    () => plants.filter((plant) => plant.userAdded).length,
+    [plants]
+  );
 
   const loadPlants = useCallback(async () => {
     try {
@@ -341,7 +409,15 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
         </View>
 
         {showFilters && (
-          <View style={[styles.filterPanel, { borderColor: theme.colors.border }]}>
+          <View
+            style={[
+              styles.filterPanel,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
             <TouchableOpacity
               style={[
                 styles.petSafePill,
@@ -411,6 +487,30 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
             )}
           </View>
         )}
+
+        <View style={styles.resultsSummaryRow}>
+          <Text style={[styles.resultsSummaryText, { color: theme.colors.textSecondary }]}>
+            {searchQuery.trim().length > 0 || activeFilterCount > 0
+              ? `${plants.length} matching ${plants.length === 1 ? 'plant' : 'plants'}`
+              : `${plantCount} plants to browse`}
+          </Text>
+
+          {importedCount > 0 && (
+            <View
+              style={[
+                styles.resultsBadge,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f4',
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.resultsBadgeText, { color: theme.colors.text }]}>
+                {importedCount} imported
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {isLoading && !refreshing ? (
@@ -520,6 +620,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
+    fontFamily: 'serif',
   },
   headerSubtitle: {
     fontSize: 15,
@@ -588,8 +689,33 @@ const styles = StyleSheet.create({
   },
   filterPanel: {
     marginTop: 10,
-    borderTopWidth: 1,
-    paddingTop: 10,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+  },
+  resultsSummaryRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  resultsSummaryText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  resultsBadge: {
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultsBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   petSafePill: {
     alignSelf: 'flex-start',
@@ -645,14 +771,30 @@ const styles = StyleSheet.create({
   },
   plantCard: {
     minWidth: 0,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 4,
   },
   plantImageFrame: {
-    aspectRatio: 1,
-    borderRadius: 14,
-    borderWidth: 1,
+    aspectRatio: 0.94,
+    borderBottomWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  plantCardBody: {
+    paddingHorizontal: 12,
+    paddingTop: 11,
+    paddingBottom: 12,
+  },
+  plantCategory: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   plantImage: {
     width: '100%',
@@ -675,7 +817,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   plantName: {
-    marginTop: 8,
+    marginTop: 4,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -683,6 +825,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  metadataChip: {
+    maxWidth: '100%',
+    minHeight: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    justifyContent: 'center',
+  },
+  metadataChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,
