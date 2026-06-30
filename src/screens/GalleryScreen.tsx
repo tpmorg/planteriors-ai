@@ -722,22 +722,21 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           setCollectionTargetIds([]);
         }}
         onCreate={async (name) => {
+          const targetIds = [...collectionTargetIds];
           try {
             const created = await databaseService.createCollection(name, user?.id);
             setCollections((prev) => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
-            if (collectionTargetIds.length > 0) {
-              await Promise.all(
-                collectionTargetIds.map((id) => databaseService.setDesignCollection(id, created.id))
-              );
+            if (targetIds.length > 0) {
+              await Promise.all(targetIds.map((id) => databaseService.setDesignCollection(id, created.id)));
               setDesigns((prev) =>
-                prev.map((d) => (collectionTargetIds.includes(d.id) ? { ...d, collectionId: created.id } : d))
+                prev.map((d) => (targetIds.includes(d.id) ? { ...d, collectionId: created.id } : d))
               );
               setShowCollectionsModal(false);
               clearSelection();
               showToast(
-                collectionTargetIds.length === 1
+                targetIds.length === 1
                   ? `Added to ${created.name}`
-                  : `Added ${collectionTargetIds.length} designs to ${created.name}`,
+                  : `Added ${targetIds.length} designs to ${created.name}`,
                 'success'
               );
             } else {
@@ -750,20 +749,19 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           }
         }}
         onSelect={async (collectionId) => {
+          const targetIds = [...collectionTargetIds];
           try {
-            if (collectionTargetIds.length === 0) {
+            if (targetIds.length === 0) {
               setShowCollectionsModal(false);
               return;
             }
-            await Promise.all(
-              collectionTargetIds.map((id) => databaseService.setDesignCollection(id, collectionId))
-            );
+            await Promise.all(targetIds.map((id) => databaseService.setDesignCollection(id, collectionId)));
             const selectedCollection = collections.find((c) => c.id === collectionId);
             setDesigns((prev) =>
-              prev.map((d) => (collectionTargetIds.includes(d.id) ? { ...d, collectionId } : d))
+              prev.map((d) => (targetIds.includes(d.id) ? { ...d, collectionId } : d))
             );
             setShowCollectionsModal(false);
-            const movedCount = collectionTargetIds.length;
+            const movedCount = targetIds.length;
             clearSelection();
             showToast(
               collectionId

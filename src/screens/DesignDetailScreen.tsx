@@ -902,14 +902,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
         <View style={[styles.bottomDock, { bottom: insets.bottom + 14 }]}>
           <TouchableOpacity
             onPress={startPlantReplacement}
-            style={styles.bottomPrimaryAction}
+            style={styles.bottomUtilityAction}
             activeOpacity={0.86}
             accessibilityRole="button"
             accessibilityLabel="Replace plant"
             accessibilityHint="Choose a different plant for this room image"
           >
-            <AppIcon name="ArrowsClockwise" size={18} color="white" weight="bold" />
-            <Text style={styles.bottomPrimaryActionText}>Replace Plant</Text>
+            <AppIcon name="ArrowsClockwise" size={16} color="white" weight="bold" />
+            <Text style={styles.bottomUtilityActionText}>Replace Plant</Text>
           </TouchableOpacity>
 
           <View style={styles.bottomActionBar}>
@@ -1509,30 +1509,30 @@ const createStyles = (theme: any) => StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 3,
-    gap: 12,
+    gap: 10,
   },
-  bottomPrimaryAction: {
-    alignSelf: 'center',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary,
+  bottomUtilityAction: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 17,
+    backgroundColor: theme.isDark ? 'rgba(26,26,26,0.92)' : 'rgba(18,18,18,0.76)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.22)',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  bottomPrimaryActionText: {
+  bottomUtilityActionText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
   },
   bottomActionBar: {
     flexDirection: 'row',

@@ -28,7 +28,26 @@ jest.mock('../../components/UsageIndicator', () => ({
 }));
 
 jest.mock('../../components/CollectionPickerModal', () => ({
-  CollectionPickerModal: () => null,
+  CollectionPickerModal: ({
+    visible,
+    onSelect,
+  }: {
+    visible: boolean;
+    onSelect: (collectionId: string | null) => void;
+  }) => {
+    if (!visible) {
+      return null;
+    }
+    const { View, Text, Pressable } = require('react-native');
+    return (
+      <View>
+        <Text>Collection modal</Text>
+        <Pressable accessibilityLabel="Select mock collection" onPress={() => onSelect('collection-1')}>
+          <Text>Select collection</Text>
+        </Pressable>
+      </View>
+    );
+  },
 }));
 
 jest.mock('../AccountScreen', () => ({
@@ -118,6 +137,24 @@ const mockDesign = {
   isFavorite: false,
 } as const;
 
+const mockDesignTwo = {
+  id: 'design-2',
+  originalImageUri: 'file://original-2.png',
+  generatedImageUri: 'file://generated-2.png',
+  localImagePath: 'file://generated-2.png',
+  mode: 'multi-plant',
+  plantType: {
+    name: 'Palms',
+    description: 'Tall and airy',
+  },
+  plantStyle: {
+    name: 'Organic',
+    description: 'Soft',
+  },
+  createdAt: new Date('2026-05-01T13:00:00Z'),
+  isFavorite: false,
+} as const;
+
 const renderGallery = (overrides = {}) => {
   const props = {
     onNewDesign: jest.fn(),
@@ -143,7 +180,7 @@ describe('GalleryScreen', () => {
   it('opens the account sheet from the top-right profile button', async () => {
     const { findByText, getByLabelText } = renderGallery();
 
-    await findByText('No designs yet');
+    expect(await findByText('No designs yet')).toBeOnTheScreen();
 
     fireEvent.press(getByLabelText('Open account'));
 
@@ -193,5 +230,26 @@ describe('GalleryScreen', () => {
     expect(getByLabelText('Add selected designs to collection')).toBeOnTheScreen();
     expect(getByLabelText('Save selected designs to device')).toBeOnTheScreen();
     expect(getByLabelText('Delete selected designs')).toBeOnTheScreen();
+  });
+
+  it('adds multiple selected designs to a collection', async () => {
+    (databaseService.getAllDesigns as jest.Mock).mockResolvedValue([mockDesign, mockDesignTwo]);
+    (databaseService.getCollections as jest.Mock).mockResolvedValue([
+      { id: 'collection-1', name: 'Living Room', createdAt: new Date('2026-05-01T10:00:00Z') },
+    ]);
+
+    const { findAllByLabelText, getByLabelText } = renderGallery();
+
+    const designCards = await findAllByLabelText(/Design /);
+    fireEvent(designCards[0], 'longPress');
+    fireEvent.press(designCards[1]);
+    fireEvent.press(getByLabelText('Add selected designs to collection'));
+    fireEvent.press(getByLabelText('Select mock collection'));
+
+    await waitFor(() => {
+      expect(databaseService.setDesignCollection).toHaveBeenCalledTimes(2);
+      expect(databaseService.setDesignCollection).toHaveBeenCalledWith('design-1', 'collection-1');
+      expect(databaseService.setDesignCollection).toHaveBeenCalledWith('design-2', 'collection-1');
+    });
   });
 });

@@ -3,14 +3,12 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
   ImageSourcePropType,
 } from 'react-native';
@@ -91,7 +89,6 @@ function getPlantImageSource(plant: PlantSearchResult): ImageSourcePropType | un
 
 interface PlantCardProps {
   plant: PlantSearchResult;
-  itemSize: number;
   onPress: () => void;
   theme: Theme;
 }
@@ -124,7 +121,7 @@ function formatCareLabel(careLevel: string) {
   }
 }
 
-const PlantCard = React.memo(({ plant, itemSize, onPress, theme }: PlantCardProps) => {
+const PlantCard = React.memo(({ plant, onPress, theme }: PlantCardProps) => {
   const imageSource = getPlantImageSource(plant);
   const metadata = plant.petSafe
     ? ['Pet safe', formatLightLabel(plant.lightRequirement)]
@@ -135,7 +132,6 @@ const PlantCard = React.memo(({ plant, itemSize, onPress, theme }: PlantCardProp
       style={[
         styles.plantCard,
         {
-          width: itemSize,
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
           shadowColor: theme.colors.shadow,
@@ -219,15 +215,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   const [plantCount, setPlantCount] = useState(0);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
-  const { width, height } = useWindowDimensions();
-
-  const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
-  const numColumns = isTablet ? (width >= 1180 ? 5 : 4) : 2;
-  const listHorizontalPadding = isTablet ? 24 : 16;
-  const interItemGap = isTablet ? 14 : 12;
-  const itemSize = Math.floor(
-    (width - listHorizontalPadding * 2 - interItemGap * (numColumns - 1)) / numColumns
-  );
+  const listHorizontalPadding = 16;
   const activeFilterChips = useMemo(() => getActiveFilterChips(filters), [filters]);
   const activeFilterCount = activeFilterChips.length;
   const importedCount = useMemo(
@@ -287,14 +275,18 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
     }));
   }, []);
 
-  const renderPlantCard = useCallback(({ item }: { item: PlantSearchResult }) => (
-    <PlantCard
-      plant={item}
-      itemSize={itemSize}
-      onPress={() => onPlantSelect(item)}
-      theme={theme}
-    />
-  ), [itemSize, onPlantSelect, theme]);
+  const renderPlantCard = useCallback(
+    ({ item }: { item: PlantSearchResult }) => (
+      <View style={styles.rowItem}>
+        <PlantCard
+          plant={item}
+          onPress={() => onPlantSelect(item)}
+          theme={theme}
+        />
+      </View>
+    ),
+    [onPlantSelect, theme]
+  );
 
   const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
@@ -317,8 +309,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
       paddingBottom: tabBarHeight + 16,
     },
   ], [listHorizontalPadding, tabBarHeight]);
-
-  const columnWrapperStyle = useMemo(() => ({ gap: interItemGap }), [interItemGap]);
 
   const keyExtractor = useCallback((item: PlantSearchResult) => item.id, []);
 
@@ -519,13 +509,11 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
         </View>
       ) : (
         <FlatList
-          key={`library-${numColumns}`}
           data={plants}
           renderItem={renderPlantCard}
           keyExtractor={keyExtractor}
-          numColumns={numColumns}
           contentContainerStyle={listContentStyle}
-          columnWrapperStyle={columnWrapperStyle}
+          ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
@@ -767,28 +755,38 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 4,
-    rowGap: 20,
+  },
+  rowItem: {
+    width: '100%',
+  },
+  listSeparator: {
+    height: 12,
   },
   plantCard: {
-    minWidth: 0,
     borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'stretch',
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 16,
     elevation: 4,
   },
   plantImageFrame: {
-    aspectRatio: 0.94,
-    borderBottomWidth: 1,
+    width: 104,
+    height: 104,
+    borderRightWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   plantCardBody: {
-    paddingHorizontal: 12,
-    paddingTop: 11,
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingTop: 12,
     paddingBottom: 12,
+    justifyContent: 'center',
   },
   plantCategory: {
     fontSize: 11,
@@ -818,12 +816,12 @@ const styles = StyleSheet.create({
   },
   plantName: {
     marginTop: 4,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   scientificName: {
     marginTop: 2,
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: 'italic',
   },
   metadataRow: {

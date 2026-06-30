@@ -49,6 +49,8 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { tabBarStyle } = useTabBar();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const activeRouteName = state.routes[state.index]?.name;
+  const showCreateEntryButton = activeRouteName === 'Gallery';
   const handleOpenCreateEntry = () => {
     navigation.getParent()?.navigate('DesignFlow', {
       screen: 'Camera',
@@ -178,36 +180,38 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         })}
       </Animated.View>
 
-      <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
-        <TouchableOpacity
-          onPress={handleOpenCreateEntry}
-          activeOpacity={0.9}
-          accessibilityRole="button"
-          accessibilityLabel="Start with a photo"
-          accessibilityHint="Open the room photo flow"
-          style={{
-            position: 'absolute',
-            bottom: 90 + Math.max(insets.bottom, 8),
-            right: 18,
-            width: 74,
-            height: 74,
-            borderRadius: 37,
-            backgroundColor: theme.colors.primary,
-            borderWidth: 5,
-            borderColor: theme.colors.tabBarBackground,
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 10,
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: theme.isDark ? 0.42 : 0.22,
-            shadowRadius: 16,
-            elevation: 12,
-          }}
-        >
-          <AppIcon name="Plus" size={31} color="white" weight="bold" />
-        </TouchableOpacity>
-      </View>
+      {showCreateEntryButton ? (
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
+          <TouchableOpacity
+            onPress={handleOpenCreateEntry}
+            activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Start with a photo"
+            accessibilityHint="Open the room photo flow"
+            style={{
+              position: 'absolute',
+              bottom: 90 + Math.max(insets.bottom, 8),
+              right: 18,
+              width: 74,
+              height: 74,
+              borderRadius: 37,
+              backgroundColor: theme.colors.primary,
+              borderWidth: 5,
+              borderColor: theme.colors.tabBarBackground,
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 10,
+              shadowColor: theme.colors.shadow,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: theme.isDark ? 0.42 : 0.22,
+              shadowRadius: 16,
+              elevation: 12,
+            }}
+          >
+            <AppIcon name="Plus" size={31} color="white" weight="bold" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </>
   );
 }

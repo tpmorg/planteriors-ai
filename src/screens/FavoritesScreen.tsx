@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Platform,
@@ -7,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -89,7 +91,9 @@ const DesignCard = React.memo(({ design, itemSize, onPress, theme, styles }: Des
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect }) => {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [isSavingCollection, setIsSavingCollection] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
@@ -114,17 +118,6 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
 
       setDesigns(savedDesigns);
       setCollections(savedCollections);
-      setSelectedCollectionId((current) => {
-        if (current && savedCollections.some((collection) => collection.id === current)) {
-          return current;
-        }
-
-        const firstCollectionWithDesigns = savedCollections.find((collection) =>
-          savedDesigns.some((design) => design.collectionId === collection.id)
-        );
-
-        return firstCollectionWithDesigns?.id ?? savedCollections[0]?.id ?? null;
-      });
     } catch (error) {
       console.error('Failed to load favorites data:', error);
       Alert.alert('Error', 'Failed to load favorites');
@@ -157,20 +150,44 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
     [collections, designs]
   );
 
-  const selectedCollectionSummary = useMemo(
-    () => collectionSummaries.find((summary) => summary.collection.id === selectedCollectionId) ?? null,
-    [collectionSummaries, selectedCollectionId]
-  );
-
   const favoriteRows = useMemo(
     () => chunkDesigns(favoriteDesigns, numColumns),
     [favoriteDesigns, numColumns]
   );
 
-  const selectedCollectionRows = useMemo(
-    () => chunkDesigns(selectedCollectionSummary?.designs ?? [], numColumns),
-    [numColumns, selectedCollectionSummary]
-  );
+  const handleStartCollection = useCallback(() => {
+    setIsCreatingCollection(true);
+  }, []);
+
+  const handleCancelCollection = useCallback(() => {
+    if (isSavingCollection) {
+      return;
+    }
+
+    setIsCreatingCollection(false);
+    setNewCollectionName('');
+  }, [isSavingCollection]);
+
+  const handleCreateCollection = useCallback(async () => {
+    const trimmedName = newCollectionName.trim();
+    if (!trimmedName) {
+      Alert.alert('Collection name required', 'Give your collection a short name.');
+      return;
+    }
+
+    try {
+      setIsSavingCollection(true);
+      const created = await databaseService.createCollection(trimmedName, user?.id);
+      setCollections((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewCollectionName('');
+      setIsCreatingCollection(false);
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+      Alert.alert('Could not create collection', 'Try a different name and try again.');
+    } finally {
+      setIsSavingCollection(false);
+    }
+  }, [newCollectionName, user?.id]);
 
   const styles = useMemo(() => createStyles(theme, isTablet), [theme, isTablet]);
 
@@ -202,20 +219,6 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
         <View style={styles.header}>
           <Text style={styles.title}>Favorites</Text>
           <Text style={styles.subtitle}>Your favorite designs and saved collections</Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <AppIcon name="Heart" size={20} color={theme.colors.primary} weight="fill" />
-            <Text style={styles.summaryValue}>{favoriteDesigns.length}</Text>
-            <Text style={styles.summaryLabel}>Favorite designs</Text>
-          </View>
-
-          <View style={styles.summaryCard}>
-            <AppIcon name="Folders" size={20} color={theme.colors.primary} />
-            <Text style={styles.summaryValue}>{collections.length}</Text>
-            <Text style={styles.summaryLabel}>Collections</Text>
-          </View>
         </View>
 
         <View style={styles.section}>
@@ -260,122 +263,141 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Collections</Text>
-            {collections.length > 0 ? (
-              <Text style={styles.sectionMeta}>Open a set to browse it</Text>
-            ) : null}
+            <TouchableOpacity
+              onPress={handleStartCollection}
+              activeOpacity={0.85}
+              style={styles.createCollectionButton}
+              accessibilityRole="button"
+              accessibilityLabel="Create collection"
+            >
+              <AppIcon name="Plus" size={16} color={theme.colors.primary} weight="bold" />
+              <Text style={styles.createCollectionButtonText}>New</Text>
+            </TouchableOpacity>
           </View>
+
+          {isCreatingCollection ? (
+            <View style={styles.createCollectionCard}>
+              <View style={styles.createCollectionHeader}>
+                <View>
+                  <Text style={styles.createCollectionTitle}>New collection</Text>
+                  <Text style={styles.createCollectionSubtitle}>Group favorite designs into sets.</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={handleCancelCollection}
+                  disabled={isSavingCollection}
+                  style={styles.createCollectionClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel collection creation"
+                >
+                  <AppIcon name="X" size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.createCollectionInput}
+                value={newCollectionName}
+                onChangeText={setNewCollectionName}
+                placeholder="Collection name"
+                placeholderTextColor={theme.colors.textSecondary}
+                returnKeyType="done"
+                onSubmitEditing={handleCreateCollection}
+                editable={!isSavingCollection}
+                accessibilityLabel="Collection name"
+              />
+
+              <View style={styles.createCollectionActions}>
+                <TouchableOpacity
+                  onPress={handleCancelCollection}
+                  disabled={isSavingCollection}
+                  style={styles.createCollectionSecondaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                >
+                  <Text style={styles.createCollectionSecondaryButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleCreateCollection}
+                  disabled={isSavingCollection}
+                  style={[
+                    styles.createCollectionPrimaryButton,
+                    isSavingCollection && styles.createCollectionPrimaryButtonDisabled,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create collection"
+                >
+                  {isSavingCollection ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.createCollectionPrimaryButtonText}>Create</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
 
           {collections.length === 0 ? (
             <EmptyStateCard
               icon="Folders"
               title="No collections yet"
-              body="Collections you create from saved designs will show up here."
+              body="Create a collection to organize your saved design ideas."
               styles={styles}
               theme={theme}
             />
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.collectionRail}
-            >
-              {collectionSummaries.map((summary) => {
-                const isActive = summary.collection.id === selectedCollectionId;
-                const previewDesigns = summary.designs.slice(0, 3);
-                return (
-                  <TouchableOpacity
-                    key={summary.collection.id}
-                    onPress={() => setSelectedCollectionId(summary.collection.id)}
-                    activeOpacity={0.88}
-                    style={[styles.collectionCard, isActive && styles.collectionCardActive]}
-                  >
-                    <View style={styles.collectionCardHeader}>
-                      <Text
-                        style={[styles.collectionCardTitle, isActive && styles.collectionCardTitleActive]}
-                        numberOfLines={1}
-                      >
-                        {summary.collection.name}
-                      </Text>
-                      <Text
-                        style={[styles.collectionCardCount, isActive && styles.collectionCardCountActive]}
-                      >
-                        {summary.designs.length}
-                      </Text>
-                    </View>
+            collectionSummaries.map((summary) => {
+              const collectionRows = chunkDesigns(summary.designs, numColumns);
 
-                    <View style={styles.collectionPreviewRow}>
-                      {previewDesigns.length > 0 ? (
-                        previewDesigns.map((design, index) => (
-                          <Image
+              return (
+                <View
+                  key={summary.collection.id}
+                  style={styles.collectionSection}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>{summary.collection.name}</Text>
+                    <Text style={styles.sectionMeta}>
+                      {summary.designs.length} item{summary.designs.length === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+
+                  {summary.designs.length === 0 ? (
+                    <EmptyStateCard
+                      icon="FolderOpen"
+                      title="Collection is empty"
+                      body="Add saved designs to this collection from the gallery or detail view."
+                      styles={styles}
+                      theme={theme}
+                    />
+                  ) : (
+                    collectionRows.map((row, rowIndex) => (
+                      <View
+                        key={`${summary.collection.id}-row-${rowIndex}`}
+                        style={[styles.designRow, rowIndex > 0 && styles.designRowSpaced]}
+                      >
+                        {row.map((design, itemIndex) => (
+                          <DesignCard
                             key={design.id}
-                            source={{ uri: getImageUri(design) }}
-                            style={[
-                              styles.collectionPreviewImage,
-                              index > 0 && styles.collectionPreviewImageOffset,
-                            ]}
+                            design={design}
+                            itemSize={itemSize}
+                            onPress={() =>
+                              onDesignSelect(
+                                design,
+                                summary.designs,
+                                rowIndex * numColumns + itemIndex
+                              )
+                            }
+                            theme={theme}
+                            styles={styles}
                           />
-                        ))
-                      ) : (
-                        <View style={styles.collectionEmptyPreview}>
-                          <AppIcon
-                            name="ImageSquare"
-                            size={20}
-                            color={isActive ? theme.colors.surface : theme.colors.textSecondary}
-                          />
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                        ))}
+                      </View>
+                    ))
+                  )}
+                </View>
+              );
+            })
           )}
         </View>
-
-        {selectedCollectionSummary ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{selectedCollectionSummary.collection.name}</Text>
-              <Text style={styles.sectionMeta}>
-                {selectedCollectionSummary.designs.length} item{selectedCollectionSummary.designs.length === 1 ? '' : 's'}
-              </Text>
-            </View>
-
-            {selectedCollectionSummary.designs.length === 0 ? (
-              <EmptyStateCard
-                icon="FolderOpen"
-                title="Collection is empty"
-                body="Add saved designs to this collection from the gallery or detail view."
-                styles={styles}
-                theme={theme}
-              />
-            ) : (
-              selectedCollectionRows.map((row, rowIndex) => (
-                <View
-                  key={`collection-row-${rowIndex}`}
-                  style={[styles.designRow, rowIndex > 0 && styles.designRowSpaced]}
-                >
-                  {row.map((design, itemIndex) => (
-                    <DesignCard
-                      key={design.id}
-                      design={design}
-                      itemSize={itemSize}
-                      onPress={() =>
-                        onDesignSelect(
-                          design,
-                          selectedCollectionSummary.designs,
-                          rowIndex * numColumns + itemIndex
-                        )
-                      }
-                      theme={theme}
-                      styles={styles}
-                    />
-                  ))}
-                </View>
-              ))
-            )}
-          </View>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -465,36 +487,6 @@ const createStyles = (theme: any, isTablet: boolean) =>
       fontSize: 14,
       color: theme.colors.textSecondary,
     },
-    summaryRow: {
-      marginHorizontal: 16,
-      flexDirection: 'row',
-      gap: 12,
-    },
-    summaryCard: {
-      flex: 1,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme.isDark ? 0.22 : 0.08,
-      shadowRadius: 14,
-      elevation: 4,
-    },
-    summaryValue: {
-      marginTop: 12,
-      fontSize: 28,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    summaryLabel: {
-      marginTop: 4,
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-    },
     section: {
       marginTop: 22,
     },
@@ -514,6 +506,107 @@ const createStyles = (theme: any, isTablet: boolean) =>
     sectionMeta: {
       fontSize: 13,
       color: theme.colors.textSecondary,
+    },
+    createCollectionButton: {
+      height: 34,
+      borderRadius: 17,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    createCollectionButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.colors.primary,
+    },
+    createCollectionCard: {
+      marginHorizontal: 16,
+      marginBottom: 14,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      padding: 16,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.22 : 0.08,
+      shadowRadius: 14,
+      elevation: 4,
+    },
+    createCollectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    createCollectionTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    createCollectionSubtitle: {
+      marginTop: 4,
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+    },
+    createCollectionClose: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
+    },
+    createCollectionInput: {
+      height: 48,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+      marginTop: 14,
+      paddingHorizontal: 14,
+      fontSize: 15,
+      color: theme.colors.text,
+    },
+    createCollectionActions: {
+      marginTop: 14,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 10,
+    },
+    createCollectionSecondaryButton: {
+      height: 40,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
+    },
+    createCollectionSecondaryButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    createCollectionPrimaryButton: {
+      minWidth: 92,
+      height: 40,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.primary,
+    },
+    createCollectionPrimaryButtonDisabled: {
+      opacity: 0.7,
+    },
+    createCollectionPrimaryButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#ffffff',
     },
     emptyCard: {
       marginHorizontal: 16,
@@ -545,83 +638,8 @@ const createStyles = (theme: any, isTablet: boolean) =>
       lineHeight: 20,
       color: theme.colors.textSecondary,
     },
-    collectionRail: {
-      paddingHorizontal: 16,
-      gap: 12,
-    },
-    collectionCard: {
-      width: isTablet ? 260 : 220,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-      padding: 14,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme.isDark ? 0.22 : 0.08,
-      shadowRadius: 14,
-      elevation: 4,
-    },
-    collectionCardActive: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-    },
-    collectionCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-    },
-    collectionCardTitle: {
-      flex: 1,
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    collectionCardTitleActive: {
-      color: theme.colors.surface,
-    },
-    collectionCardCount: {
-      minWidth: 28,
-      textAlign: 'center',
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.colors.primary,
-      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-      borderRadius: 999,
-      paddingVertical: 5,
-      paddingHorizontal: 8,
-    },
-    collectionCardCountActive: {
-      color: theme.colors.primaryDark,
-      backgroundColor: theme.colors.surface,
-    },
-    collectionPreviewRow: {
-      marginTop: 14,
-      minHeight: 72,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    collectionPreviewImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 14,
-      borderWidth: 2,
-      borderColor: theme.colors.surface,
-      backgroundColor: theme.colors.card,
-    },
-    collectionPreviewImageOffset: {
-      marginLeft: -14,
-    },
-    collectionEmptyPreview: {
-      width: 72,
-      height: 72,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.isDark ? 'rgba(255,255,255,0.18)' : theme.colors.border,
-      backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : theme.colors.borderLight,
-      alignItems: 'center',
-      justifyContent: 'center',
+    collectionSection: {
+      marginTop: 10,
     },
     designRow: {
       marginHorizontal: 16,
