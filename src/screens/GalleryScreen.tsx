@@ -52,14 +52,39 @@ interface DesignCardProps {
   onToggleSelection: (designId: string) => void;
 }
 
+type GalleryListItem =
+  | {
+      type: 'section';
+      key: string;
+      title: string;
+    }
+  | {
+      type: 'row';
+      key: string;
+      items: SavedDesign[];
+      indexes: number[];
+    };
+
 const getImageUri = (design: SavedDesign) => design.localImagePath || design.generatedImageUri;
 
-const formatDate = (date: Date) =>
-  date.toLocaleDateString('en-US', {
+const formatSectionDate = (date: Date) => {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const dateKey = date.toDateString();
+  if (dateKey === today.toDateString()) return 'Today';
+  if (dateKey === yesterday.toDateString()) return 'Yesterday';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
   });
+};
+
+const getDayKey = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
 
 const DesignCard = React.memo(({
   design,
@@ -141,8 +166,6 @@ const DesignCard = React.memo(({
           </Text>
         </View>
       </View>
-
-      <Text style={styles.dateText}>{formatDate(design.createdAt)}</Text>
     </TouchableOpacity>
   );
 });
@@ -214,7 +237,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const selectedCount = selectedDesignIds.size;
   const isSelectionMode = selectedCount > 0;
   const selectedDesigns = designs.filter((d) => selectedDesignIds.has(d.id));
-  const estimatedRowHeight = itemSize + 44;
   const accountSheetWidth = Math.min(width - 12, isTablet ? 430 : width * 0.88);
   const accountSheetTranslateX = accountSheetProgress.interpolate({
     inputRange: [0, 1],
@@ -224,15 +246,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     inputRange: [0, 1],
     outputRange: [0, 1],
   });
-
-  const getItemLayout = useCallback(
-    (_: ArrayLike<SavedDesign> | null | undefined, index: number) => ({
-      length: estimatedRowHeight,
-      offset: estimatedRowHeight * Math.floor(index / numColumns),
-      index,
-    }),
-    [estimatedRowHeight, numColumns]
-  );
 
   const handleDesignPress = (design: SavedDesign, index: number) => {
     if (isSelectionMode) {
@@ -423,22 +436,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     [theme, isTablet, listHorizontalPadding, interItemGap]
   );
 
-  const renderDesignItem = useCallback(({ item, index }: { item: SavedDesign; index: number }) => (
-    <DesignCard
-      design={item}
-      index={index}
-      itemSize={itemSize}
-      isSelected={selectedDesignIds.has(item.id)}
-      isSelectionMode={isSelectionMode}
-      styles={styles}
-      theme={theme}
-      onPress={handleDesignPress}
-      onLongPress={enterSelectionMode}
-      onToggleFavorite={toggleFavorite}
-      onToggleSelection={toggleDesignSelection}
-    />
-  ), [enterSelectionMode, handleDesignPress, isSelectionMode, itemSize, selectedDesignIds, styles, theme, toggleFavorite]);
-
   const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconRing}>
@@ -460,9 +457,92 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     { paddingBottom: tabBarHeight + 20 },
   ], [styles, tabBarHeight]);
 
-  const columnWrapperStyle = useMemo(() => styles.row, [styles]);
+  const galleryItems = useMemo<GalleryListItem[]>(() => {
+    const grouped = new Map<string, { date: Date; items: SavedDesign[]; indexes: number[] }>();
 
-  const keyExtractor = useCallback((item: SavedDesign) => item.id, []);
+    designs.forEach((design, index) => {
+      const key = getDayKey(design.createdAt);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.items.push(design);
+        existing.indexes.push(index);
+        return;
+      }
+      grouped.set(key, {
+        date: design.createdAt,
+        items: [design],
+        indexes: [index],
+      });
+    });
+
+    return Array.from(grouped.entries()).flatMap(([key, value]) => {
+      const rows: GalleryListItem[] = [
+        {
+          type: 'section',
+          key: `section-${key}`,
+          title: formatSectionDate(value.date),
+        },
+      ];
+
+      for (let i = 0; i < value.items.length; i += numColumns) {
+        rows.push({
+          type: 'row',
+          key: `row-${key}-${i}`,
+          items: value.items.slice(i, i + numColumns),
+          indexes: value.indexes.slice(i, i + numColumns),
+        });
+      }
+
+      return rows;
+    });
+  }, [designs, numColumns]);
+
+  const renderGalleryItem = useCallback(({ item }: { item: GalleryListItem }) => {
+    if (item.type === 'section') {
+      return (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionHeaderText}>{item.title}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.row}>
+        {item.items.map((design, rowIndex) => (
+          <DesignCard
+            key={design.id}
+            design={design}
+            index={item.indexes[rowIndex]}
+            itemSize={itemSize}
+            isSelected={selectedDesignIds.has(design.id)}
+            isSelectionMode={isSelectionMode}
+            styles={styles}
+            theme={theme}
+            onPress={handleDesignPress}
+            onLongPress={enterSelectionMode}
+            onToggleFavorite={toggleFavorite}
+            onToggleSelection={toggleDesignSelection}
+          />
+        ))}
+        {item.items.length < numColumns &&
+          Array.from({ length: numColumns - item.items.length }).map((_, fillerIndex) => (
+            <View key={`filler-${item.key}-${fillerIndex}`} style={{ width: itemSize }} />
+          ))}
+      </View>
+    );
+  }, [
+    enterSelectionMode,
+    handleDesignPress,
+    isSelectionMode,
+    itemSize,
+    numColumns,
+    selectedDesignIds,
+    styles,
+    theme,
+    toggleFavorite,
+  ]);
+
+  const galleryKeyExtractor = useCallback((item: GalleryListItem) => item.key, []);
 
   if (isLoading) {
     return (
@@ -592,21 +672,18 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
       <FlatList
         key={`gallery-${numColumns}`}
-        data={designs}
-        renderItem={renderDesignItem}
-        keyExtractor={keyExtractor}
-        numColumns={numColumns}
+        data={galleryItems}
+        renderItem={renderGalleryItem}
+        keyExtractor={galleryKeyExtractor}
         contentContainerStyle={listContentStyle}
-        columnWrapperStyle={columnWrapperStyle}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         removeClippedSubviews={Platform.OS === 'android'}
         maxToRenderPerBatch={10}
         windowSize={7}
-        initialNumToRender={numColumns * 3}
+        initialNumToRender={Math.max(8, numColumns * 4)}
         updateCellsBatchingPeriod={50}
-        getItemLayout={getItemLayout}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -930,9 +1007,20 @@ const createStyles = (
   row: {
     gap: interItemGap,
     justifyContent: 'flex-start',
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    paddingTop: 4,
+    paddingBottom: 10,
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
   },
   designItem: {
-    marginBottom: 24,
+    marginBottom: 0,
   },
   designItemSelected: {
     transform: [{ scale: 0.985 }],
@@ -1011,12 +1099,6 @@ const createStyles = (
     fontSize: isTablet ? 12 : 11,
     opacity: 0.9,
     marginTop: 2,
-  },
-  dateText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 8,
-    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
