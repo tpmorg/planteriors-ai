@@ -647,13 +647,18 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                   onPress={handleChoosePlacement}
                   disabled={!isComplete}
                 >
+                  <AppIcon
+                    name="MapPin"
+                    size={16}
+                    color={!isComplete ? theme.colors.textSecondary : theme.colors.text}
+                  />
                   <Text
                     style={[
                       styles.secondaryActionText,
                       !isComplete && styles.secondaryActionTextDisabled,
                     ]}
                   >
-                    Choose Exact Spot
+                    Place
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -665,7 +670,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                   onPress={handleContinue}
                   disabled={!isComplete}
                 >
-                  <Text style={styles.continueButtonText}>Generate Preview</Text>
+                  <Text style={styles.continueButtonText}>Preview</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -674,7 +679,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
                 onPress={handleContinue}
                 disabled={!isComplete}
               >
-                <Text style={styles.continueButtonText}>Generate Preview</Text>
+                <Text style={styles.continueButtonText}>Preview</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1135,7 +1140,9 @@ const createStyles = (theme: any, isTablet: boolean) => {
       paddingBottom: 24,
     },
     footerContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 12,
     },
     footerHint: {
       fontSize: 13,
@@ -1144,6 +1151,12 @@ const createStyles = (theme: any, isTablet: boolean) => {
       marginBottom: 12,
     },
     selectionPreview: {
+      borderRadius: 14,
+      backgroundColor: theme.colors.borderLight,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       marginBottom: 12,
       gap: 6,
     },
@@ -1165,22 +1178,29 @@ const createStyles = (theme: any, isTablet: boolean) => {
     },
     secondaryActionButton: {
       flex: 1,
-      minHeight: 54,
-      borderRadius: 14,
+      minHeight: 50,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.borderLight,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 12,
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 14,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: theme.isDark ? 0.12 : 0.05,
+      shadowRadius: 8,
+      elevation: 2,
     },
     secondaryActionButtonDisabled: {
-      opacity: 0.72,
+      opacity: 0.58,
     },
     secondaryActionText: {
       color: theme.colors.text,
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
       textAlign: 'center',
     },
     secondaryActionTextDisabled: {
@@ -1191,9 +1211,10 @@ const createStyles = (theme: any, isTablet: boolean) => {
     },
     continueButton: {
       backgroundColor: theme.colors.primary,
-      paddingVertical: 17,
+      minHeight: 50,
+      paddingVertical: 14,
       paddingHorizontal: 24,
-      borderRadius: 14,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: theme.colors.shadow,
@@ -1203,12 +1224,12 @@ const createStyles = (theme: any, isTablet: boolean) => {
       elevation: 8,
     },
     continueButtonDisabled: {
-      backgroundColor: '#9ca3af',
+      backgroundColor: theme.isDark ? '#4b5563' : '#9ca3af',
     },
     continueButtonText: {
       color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
     },
   });
 };

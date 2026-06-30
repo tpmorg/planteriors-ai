@@ -339,8 +339,13 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
                 onPress={handleReset}
                 disabled={!hasSelection}
               >
+                <AppIcon
+                  name="ArrowCounterClockwise"
+                  size={16}
+                  color={!hasSelection ? theme.colors.textSecondary : theme.colors.text}
+                />
                 <Text style={[styles.retryButtonText, !hasSelection && styles.retryButtonTextDisabled]}>
-                  Retry
+                  Reset
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -351,7 +356,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
                 onPress={handleContinue}
                 disabled={!hasSelection}
               >
-                <Text style={styles.continueButtonText}>Generate Preview</Text>
+                <Text style={styles.continueButtonText}>Preview</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -359,7 +364,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               style={styles.continueButton}
               onPress={handleContinue}
             >
-              <Text style={styles.continueButtonText}>Generate Preview</Text>
+              <Text style={styles.continueButtonText}>Preview</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -577,6 +582,12 @@ const createStyles = (theme: any) =>
       marginBottom: 8,
     },
     selectionPreview: {
+      borderRadius: 14,
+      backgroundColor: theme.colors.borderLight,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       marginBottom: 12,
     },
     selectionPreviewText: {
@@ -587,19 +598,25 @@ const createStyles = (theme: any) =>
     },
     continueButton: {
       backgroundColor: theme.colors.primary,
+      minHeight: 50,
       paddingVertical: 12,
       paddingHorizontal: 20,
-      borderRadius: 12,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.28 : 0.14,
+      shadowRadius: 10,
+      elevation: 4,
     },
     continueButtonDisabled: {
-      backgroundColor: '#9ca3af',
+      backgroundColor: theme.isDark ? '#4b5563' : '#9ca3af',
     },
     continueButtonText: {
       color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
     },
     placementActions: {
       flexDirection: 'row',
@@ -609,16 +626,18 @@ const createStyles = (theme: any) =>
       flex: 1,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      borderRadius: 12,
-      paddingVertical: 12,
+      borderRadius: 16,
+      minHeight: 50,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.surface,
+      flexDirection: 'row',
+      gap: 8,
+      backgroundColor: theme.colors.borderLight,
     },
     retryButtonText: {
       color: theme.colors.text,
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
     },
     retryButtonTextDisabled: {
       color: theme.colors.textSecondary,

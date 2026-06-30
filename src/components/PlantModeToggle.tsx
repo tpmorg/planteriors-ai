@@ -67,7 +67,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'individual' && styles.toggleTextActive,
             ]}
           >
-            Add Plant
+            Add
           </Text>
         </TouchableOpacity>
 
@@ -90,7 +90,7 @@ export const PlantModeToggle: React.FC<PlantModeToggleProps> = ({
               mode === 'replace-plant' && styles.toggleTextActive,
             ]}
           >
-            Replace Plant
+            Replace
           </Text>
         </TouchableOpacity>
       </View>
@@ -111,30 +111,33 @@ const createStyles = (theme: any) => StyleSheet.create({
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: theme.colors.borderLight,
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 16,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   toggleButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 48,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     gap: 6,
   },
   toggleButtonActive: {
     backgroundColor: theme.colors.surface,
     shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: theme.isDark ? 0.18 : 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
   toggleText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   toggleTextActive: {

@@ -347,7 +347,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             style={styles.backToSelectionButton}
             onPress={onBack}
           >
-            <Text style={styles.backToSelectionText}>Back to Selection</Text>
+            <Text style={styles.backToSelectionText}>Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -390,14 +390,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
               onPress={handleRetry}
             >
               <AppIcon name="ArrowClockwise" size={20} color="white" />
-              <Text style={styles.generateAgainText}>Generate Another</Text>
+              <Text style={styles.generateAgainText}>Again</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.useResultButton}
               onPress={handleUseResult}
             >
-              <Text style={styles.useResultText}>Save Design</Text>
+              <Text style={styles.useResultText}>Save</Text>
               <AppIcon name="Check" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -686,25 +686,39 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   },
   retryButton: {
     backgroundColor: theme.colors.primary,
+    minHeight: 50,
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    justifyContent: "center",
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.28 : 0.14,
+    shadowRadius: 10,
+    elevation: 4,
   },
   retryButtonText: {
     color: "white",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     marginLeft: 8,
   },
   backToSelectionButton: {
-    padding: 12,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: theme.colors.borderLight,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   backToSelectionText: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.text,
     fontSize: 14,
+    fontWeight: "700",
   },
   resultContainer: {
     flex: 1,
@@ -828,15 +842,15 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   generateAgainButton: {
     flex: 1,
     height: 50,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.16)",
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: "rgba(255,255,255,0.24)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -844,9 +858,9 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     elevation: 6,
   },
   generateAgainText: {
-    color: theme.colors.primaryDark,
+    color: "white",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     marginLeft: 8,
   },
   useResultButton: {
@@ -855,7 +869,7 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -868,7 +882,7 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   useResultText: {
     color: "white",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     marginRight: 8,
   },
   placeholderInfo: {
