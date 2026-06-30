@@ -222,6 +222,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const displayText = getDesignDisplayText(design);
+  const createdDate = new Date(design.createdAt);
+  const headerDate = createdDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+  const headerSubtitle = displayText.subtitle;
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -826,78 +833,19 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-        {/* Header with overlay - positioned below status bar */}
-        <View style={[styles.header, { top: insets.top }]}>
-          <TouchableOpacity onPress={onBack} style={styles.headerButton}>
+        <View style={[styles.detailHeader, { top: insets.top + 6 }]}>
+          <TouchableOpacity onPress={onBack} style={styles.headerBackButton}>
             <AppIcon name="ArrowLeft" size={24} color="white" />
           </TouchableOpacity>
-
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={showModal}
-              style={styles.headerButton}
-            >
-              <AppIcon name="Info" size={24} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={openCollections} style={styles.headerButton}>
-              <AppIcon name="FolderPlus" size={24} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={toggleFavorite}
-              style={styles.headerButton}
-            >
-              <AppIcon
-                name="Heart"
-                size={24}
-                color={design.isFavorite ? '#dc2626' : 'white'}
-                weight={design.isFavorite ? 'fill' : 'regular'}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={shareDesign}
-              style={styles.headerButton}
-              disabled={isSharing}
-            >
-              <AppIcon
-                name={isSharing ? 'Hourglass' : 'ShareNetwork'}
-                size={24}
-                color="white"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={saveDesignToDevice}
-              style={styles.headerButton}
-              disabled={isSavingToDevice}
-            >
-              <AppIcon
-                name={isSavingToDevice ? 'Hourglass' : 'DownloadSimple'}
-                size={24}
-                color="white"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={deleteDesign} style={styles.headerButton}>
-            <AppIcon name="Trash" size={24} color="white" />
-            </TouchableOpacity>
+          <View style={styles.detailHeaderText}>
+            <Text style={styles.detailHeaderTitle} numberOfLines={1}>
+              {headerDate}
+            </Text>
+            <Text style={styles.detailHeaderSubtitle} numberOfLines={1}>
+              {headerSubtitle}
+            </Text>
           </View>
-        </View>
-
-        <View style={[styles.primaryActionRail, { top: insets.top + 68 }]}>
-          <TouchableOpacity
-            onPress={startPlantReplacement}
-            style={styles.replacePlantPill}
-            activeOpacity={0.86}
-            accessibilityRole="button"
-            accessibilityLabel="Replace plant"
-            accessibilityHint="Choose a different plant for this room image"
-          >
-            <AppIcon name="ArrowsClockwise" size={17} color="white" weight="bold" />
-            <Text style={styles.replacePlantPillText}>Replace Plant</Text>
-          </TouchableOpacity>
+          <View style={styles.detailHeaderSpacer} />
         </View>
 
         {/* Full-screen zoomable image */}
@@ -919,14 +867,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 resizeMode="contain"
               />
               {design.collectionId && (
-                <View style={styles.collectionBadge}>
+                <View style={[styles.collectionBadge, { bottom: insets.bottom + 138 }]}>
                   <Text style={styles.collectionBadgeText} numberOfLines={1}>
                     {activeCollectionName || 'Collection'}
                   </Text>
                 </View>
               )}
               {designList.length > 1 && (
-                <View style={styles.imageCounter}>
+                <View style={[styles.imageCounter, { bottom: insets.bottom + 138 }]}>
                   <Text style={styles.imageCounterText}>
                     {currentIndex + 1} / {designList.length}
                   </Text>
@@ -949,6 +897,75 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
               )}
             </Animated.View>
           </GestureDetector>
+        </View>
+
+        <View style={[styles.bottomDock, { bottom: insets.bottom + 14 }]}>
+          <TouchableOpacity
+            onPress={startPlantReplacement}
+            style={styles.bottomPrimaryAction}
+            activeOpacity={0.86}
+            accessibilityRole="button"
+            accessibilityLabel="Replace plant"
+            accessibilityHint="Choose a different plant for this room image"
+          >
+            <AppIcon name="ArrowsClockwise" size={18} color="white" weight="bold" />
+            <Text style={styles.bottomPrimaryActionText}>Replace Plant</Text>
+          </TouchableOpacity>
+
+          <View style={styles.bottomActionBar}>
+            <TouchableOpacity onPress={showModal} style={styles.bottomActionButton} activeOpacity={0.8}>
+              <AppIcon name="Info" size={22} color="white" />
+              <Text style={styles.bottomActionLabel}>Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={openCollections} style={styles.bottomActionButton} activeOpacity={0.8}>
+              <AppIcon name="FolderPlus" size={22} color="white" />
+              <Text style={styles.bottomActionLabel}>Collect</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={toggleFavorite} style={styles.bottomActionButton} activeOpacity={0.8}>
+              <AppIcon
+                name="Heart"
+                size={22}
+                color={design.isFavorite ? '#ef4444' : 'white'}
+                weight={design.isFavorite ? 'fill' : 'regular'}
+              />
+              <Text style={styles.bottomActionLabel}>Favorite</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={shareDesign}
+              style={styles.bottomActionButton}
+              activeOpacity={0.8}
+              disabled={isSharing}
+            >
+              <AppIcon
+                name={isSharing ? 'Hourglass' : 'ShareNetwork'}
+                size={22}
+                color="white"
+              />
+              <Text style={styles.bottomActionLabel}>Share</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={saveDesignToDevice}
+              style={styles.bottomActionButton}
+              activeOpacity={0.8}
+              disabled={isSavingToDevice}
+            >
+              <AppIcon
+                name={isSavingToDevice ? 'Hourglass' : 'DownloadSimple'}
+                size={22}
+                color="white"
+              />
+              <Text style={styles.bottomActionLabel}>Save</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={deleteDesign} style={styles.bottomActionButton} activeOpacity={0.8}>
+              <AppIcon name="Trash" size={22} color="white" />
+              <Text style={styles.bottomActionLabel}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Custom Animated Modal */}
@@ -1449,61 +1466,104 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.34)',
+  detailHeader: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
+    left: 16,
+    right: 16,
+    zIndex: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  headerButton: {
-    padding: 9,
+  headerBackButton: {
+    width: 44,
+    height: 44,
     borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(16,16,16,0.52)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
+  detailHeaderText: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
-  primaryActionRail: {
+  detailHeaderTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  detailHeaderSubtitle: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  detailHeaderSpacer: {
+    width: 44,
+    height: 44,
+  },
+  bottomDock: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    left: 12,
+    right: 12,
+    zIndex: 3,
+    gap: 12,
   },
-  replacePlantPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    maxWidth: screenWidth - 32,
-    minHeight: 40,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
+  bottomPrimaryAction: {
+    alignSelf: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 22,
     backgroundColor: theme.colors.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderColor: 'rgba(255,255,255,0.24)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 10,
   },
-  replacePlantPillText: {
+  bottomPrimaryActionText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '800',
+  },
+  bottomActionBar: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 24,
+    backgroundColor: 'rgba(10,10,10,0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  bottomActionButton: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 2,
+    paddingVertical: 8,
+  },
+  bottomActionLabel: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
   },
   imageContainer: {
     flex: 1,
@@ -1516,7 +1576,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   imageCounter: {
     position: 'absolute',
-    bottom: 30,
     alignSelf: 'center',
     backgroundColor: 'rgba(16,16,16,0.6)',
     paddingHorizontal: 14,
@@ -1562,7 +1621,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   collectionBadge: {
     position: 'absolute',
-    bottom: 88,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
