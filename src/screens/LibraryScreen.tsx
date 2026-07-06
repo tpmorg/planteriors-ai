@@ -346,9 +346,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Library</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
-          Try these in your space.
-        </Text>
       </View>
 
       <View style={[styles.searchContainer, { paddingHorizontal: listHorizontalPadding }]}>
