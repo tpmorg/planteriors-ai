@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  ImageBackground,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -129,78 +130,107 @@ const PlantCard = React.memo(({ plant, onPress, theme }: PlantCardProps) => {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.plantCard,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          shadowColor: theme.colors.shadow,
-          shadowOpacity: theme.isDark ? 0.24 : 0.08,
-        },
-      ]}
+      style={styles.plantCard}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityLabel={`Open ${plant.name}`}
     >
-      <View
-        style={[
-          styles.plantImageFrame,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
-        {imageSource ? (
-          <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
-        ) : (
+      {imageSource ? (
+        <ImageBackground source={imageSource} style={styles.plantImageFrame} imageStyle={styles.plantImage}>
+          <View style={styles.imageOverlay} />
+          {plant.userAdded && (
+            <View style={styles.userAddedBadge}>
+              <Text style={styles.userAddedBadgeText}>Imported</Text>
+            </View>
+          )}
+          <View style={styles.plantCardBody}>
+            <Text style={styles.plantCategory} numberOfLines={1}>
+              {plant.category}
+            </Text>
+            <Text style={styles.plantName} numberOfLines={1}>
+              {plant.name}
+            </Text>
+            <Text style={styles.scientificName} numberOfLines={1}>
+              {plant.scientificName}
+            </Text>
+
+            <View style={styles.metadataRow}>
+              {metadata.map((label) => (
+                <View
+                  key={`${plant.id}-${label}`}
+                  style={[
+                    styles.metadataChip,
+                    {
+                      backgroundColor: 'rgba(0, 0, 0, 0.36)',
+                      borderColor: 'rgba(255,255,255,0.18)',
+                    },
+                  ]}
+                >
+                  <Text style={styles.metadataChipText} numberOfLines={1}>
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ImageBackground>
+      ) : (
+        <View
+          style={[
+            styles.plantImageFrame,
+            styles.plantFallbackFrame,
+            { backgroundColor: theme.colors.surface },
+          ]}
+        >
           <AppIcon
             name={plant.icon || 'Leaf'}
-            size={42}
+            size={56}
             color={theme.colors.primary}
             weight="fill"
           />
-        )}
-        {plant.userAdded && (
-          <View style={styles.userAddedBadge}>
-            <Text style={styles.userAddedBadgeText}>Imported</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.plantCardBody}>
-        <Text style={[styles.plantCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-          {plant.category}
-        </Text>
-        <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
-          {plant.name}
-        </Text>
-        <Text
-          style={[styles.scientificName, { color: theme.colors.textSecondary }]}
-          numberOfLines={1}
-        >
-          {plant.scientificName}
-        </Text>
-
-        <View style={styles.metadataRow}>
-          {metadata.map((label) => (
-            <View
-              key={`${plant.id}-${label}`}
-              style={[
-                styles.metadataChip,
-                {
-                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f4',
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Text style={[styles.metadataChipText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                {label}
-              </Text>
+          {plant.userAdded && (
+            <View style={styles.userAddedBadge}>
+              <Text style={styles.userAddedBadgeText}>Imported</Text>
             </View>
-          ))}
+          )}
+          <View style={styles.plantCardBody}>
+            <Text style={[styles.plantCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+              {plant.category}
+            </Text>
+            <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
+              {plant.name}
+            </Text>
+            <Text
+              style={[styles.scientificName, { color: theme.colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {plant.scientificName}
+            </Text>
+
+            <View style={styles.metadataRow}>
+              {metadata.map((label) => (
+                <View
+                  key={`${plant.id}-${label}`}
+                  style={[
+                    styles.metadataChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f4',
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.metadataChipText, { color: theme.colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
-      </View>
+      )}
     </TouchableOpacity>
   );
 });
@@ -315,47 +345,51 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Plant Library</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Library</Text>
         <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
-          Plants used in interiors. Try these in your space.
+          Try these in your space.
         </Text>
       </View>
 
       <View style={[styles.searchContainer, { paddingHorizontal: listHorizontalPadding }]}>
-        <View
-          style={[
-            styles.searchInputContainer,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <AppIcon name="MagnifyingGlass" size={20} color={theme.colors.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.colors.text }]}
-            placeholder="Search plants..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear plant search">
-              <AppIcon name="XCircle" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <View style={styles.searchRow}>
+          <View
+            style={[
+              styles.searchInputContainer,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                shadowColor: theme.colors.shadow,
+                shadowOpacity: theme.isDark ? 0.18 : 0.08,
+              },
+            ]}
+          >
+            <AppIcon name="MagnifyingGlass" size={20} color={theme.colors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              placeholder="Search plants"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear plant search">
+                <AppIcon name="XCircle" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        <View style={styles.filterSummaryRow}>
           <TouchableOpacity
             style={[
               styles.filterButton,
               {
                 backgroundColor: showFilters ? theme.colors.primary : theme.colors.surface,
                 borderColor: showFilters ? theme.colors.primary : theme.colors.border,
+                shadowColor: theme.colors.shadow,
+                shadowOpacity: theme.isDark ? 0.18 : 0.08,
               },
             ]}
             onPress={() => setShowFilters((visible) => !visible)}
@@ -368,35 +402,37 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
               color={showFilters ? '#ffffff' : theme.colors.text}
               weight="bold"
             />
-            <Text style={[styles.filterButtonText, { color: showFilters ? '#ffffff' : theme.colors.text }]}>
-              Filters{activeFilterCount > 0 ? ` ${activeFilterCount}` : ''}
-            </Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterCountBadge}>
+                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-
-          {activeFilterCount > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.activeChipsContent}
-              style={styles.activeChipsScroll}
-            >
-              {activeFilterChips.map((chip) => (
-                <TouchableOpacity
-                  key={chip.key}
-                  style={[styles.activeChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                  onPress={() => removeFilter(chip.key)}
-                  accessibilityLabel={`Remove ${chip.label} filter`}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[styles.activeChipText, { color: theme.colors.text }]} numberOfLines={1}>
-                    {chip.label}
-                  </Text>
-                  <AppIcon name="X" size={12} color={theme.colors.textSecondary} weight="bold" />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
         </View>
+
+        {activeFilterCount > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activeChipsContent}
+            style={styles.activeChipsScroll}
+          >
+            {activeFilterChips.map((chip) => (
+              <TouchableOpacity
+                key={chip.key}
+                style={[styles.activeChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                onPress={() => removeFilter(chip.key)}
+                accessibilityLabel={`Remove ${chip.label} filter`}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.activeChipText, { color: theme.colors.text }]} numberOfLines={1}>
+                  {chip.label}
+                </Text>
+                <AppIcon name="X" size={12} color={theme.colors.textSecondary} weight="bold" />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {showFilters && (
           <View
@@ -602,7 +638,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
   headerTitle: {
@@ -615,46 +651,64 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   searchContainer: {
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 10,
   },
-  searchInputContainer: {
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    gap: 10,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 48,
     gap: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    height: 44,
+    height: 48,
     paddingVertical: 0,
   },
-  filterSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-    minHeight: 34,
-  },
   filterButton: {
-    height: 34,
-    borderRadius: 17,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    elevation: 3,
   },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
+  filterCountBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterCountText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#111111',
   },
   activeChipsScroll: {
-    flex: 1,
+    marginTop: -2,
   },
   activeChipsContent: {
     gap: 8,
@@ -760,52 +814,48 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   listSeparator: {
-    height: 12,
+    height: 10,
   },
   plantCard: {
-    borderRadius: 20,
-    borderWidth: 1,
     overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 4,
   },
   plantImageFrame: {
-    width: 104,
-    height: 104,
-    borderRightWidth: 1,
+    width: '100%',
+    minHeight: 220,
     overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+    justifyContent: 'flex-end',
+  },
+  plantFallbackFrame: {
+    alignItems: 'flex-start',
   },
   plantCardBody: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
-    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 48,
+    paddingBottom: 18,
+    justifyContent: 'flex-end',
   },
   plantCategory: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.2,
+    color: '#f3f5f2',
   },
   plantImage: {
     width: '100%',
     height: '100%',
   },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+  },
   userAddedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    borderRadius: 10,
+    top: 12,
+    right: 12,
+    borderRadius: 12,
     backgroundColor: 'rgba(47,122,82,0.92)',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -816,13 +866,15 @@ const styles = StyleSheet.create({
   },
   plantName: {
     marginTop: 4,
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#ffffff',
   },
   scientificName: {
     marginTop: 2,
-    fontSize: 13,
+    fontSize: 14,
     fontStyle: 'italic',
+    color: 'rgba(255,255,255,0.82)',
   },
   metadataRow: {
     flexDirection: 'row',
@@ -842,6 +894,7 @@ const styles = StyleSheet.create({
   metadataChipText: {
     fontSize: 11,
     fontWeight: '700',
+    color: '#ffffff',
   },
   loadingContainer: {
     flex: 1,

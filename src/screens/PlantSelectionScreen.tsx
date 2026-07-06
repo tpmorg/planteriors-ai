@@ -33,6 +33,7 @@ import { useTheme } from '../contexts/ThemeContext';
 interface PlantSelectionScreenProps {
   imageUri: string;
   initialMode?: PlantSelectionMode;
+  initialIndividualSelection?: IndividualPlantSelection;
   onPlantSelected: (request: Omit<GenerationRequest, 'imageUri'>) => void;
   onChoosePlacement: (request: Omit<GenerationRequest, 'imageUri'>) => void;
   onBack: () => void;
@@ -126,6 +127,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   imageUri,
   initialMode = 'multi-plant',
+  initialIndividualSelection,
   onPlantSelected,
   onChoosePlacement,
   onBack,
@@ -138,7 +140,9 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
   const [mode, setMode] = useState<PlantSelectionMode>(initialMode);
 
   // Individual plant selection state
-  const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(null);
+  const [individualSelection, setIndividualSelection] = useState<IndividualPlantSelection | null>(
+    initialIndividualSelection || null
+  );
   const [isPlantSearchActive, setIsPlantSearchActive] = useState(false);
 
   // Multi-plant selection state

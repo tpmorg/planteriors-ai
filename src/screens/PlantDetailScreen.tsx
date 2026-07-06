@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -18,26 +17,21 @@ import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
 interface PlantDetailScreenProps {
   plant: PlantSearchResult;
   onBack: () => void;
+  onPlaceInRoom: () => void;
 }
 
 export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
   plant,
   onBack,
+  onPlaceInRoom,
 }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const imageSource = getPlantImageSource(plant);
+  const backButtonTop = insets.top + 12;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <AppIcon name="ArrowLeft" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <View style={styles.backButton} />
-      </View>
-
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['left', 'right']}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -46,7 +40,36 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
-        <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View
+          style={[
+            styles.plantImageFrame,
+            { backgroundColor: theme.colors.surface },
+          ]}
+        >
+          {imageSource ? (
+            <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
+          ) : (
+            <Text style={[styles.plantImageFallback, { color: theme.colors.textSecondary }]}>
+              No image
+            </Text>
+          )}
+
+          <TouchableOpacity
+            onPress={onBack}
+            style={[
+              styles.backButton,
+              {
+                top: backButtonTop,
+                backgroundColor: theme.isDark ? 'rgba(12, 15, 12, 0.72)' : 'rgba(255, 255, 255, 0.88)',
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,17,17,0.08)',
+              },
+            ]}
+          >
+            <AppIcon name="ArrowLeft" size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.heroContent}>
           <View style={styles.heroText}>
             <Text style={[styles.plantName, { color: theme.colors.text }]}>
               {plant.name}
@@ -54,15 +77,6 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
             <Text style={[styles.scientificName, { color: theme.colors.textSecondary }]}>
               {plant.scientificName}
             </Text>
-          </View>
-          <View style={[styles.plantImageFrame, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.plantImage} resizeMode="cover" />
-            ) : (
-              <Text style={[styles.plantImageFallback, { color: theme.colors.textSecondary }]}>
-                No image
-              </Text>
-            )}
           </View>
           <View style={styles.heroMeta}>
             <View style={styles.categoryTag}>
@@ -76,6 +90,14 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
               </Text>
             </View>
           </View>
+          <TouchableOpacity
+            style={[styles.placeButton, { backgroundColor: theme.colors.primary }]}
+            onPress={onPlaceInRoom}
+            activeOpacity={0.9}
+          >
+            <AppIcon name="Armchair" size={18} color="#ffffff" />
+            <Text style={styles.placeButtonText}>Place in My Room</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Description */}
@@ -316,36 +338,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
   backButton: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
     gap: 16,
-  },
-  heroCard: {
-    gap: 14,
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
   },
   plantImageFrame: {
     width: '100%',
     aspectRatio: 1.25,
-    borderRadius: 18,
-    borderWidth: 1,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
@@ -357,6 +365,10 @@ const styles = StyleSheet.create({
   plantImageFallback: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  heroContent: {
+    paddingHorizontal: 16,
+    gap: 10,
   },
   heroText: {
     gap: 5,
@@ -382,7 +394,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  placeButton: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  placeButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
   section: {
+    marginHorizontal: 16,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,

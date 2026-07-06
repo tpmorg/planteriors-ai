@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
 import { onboardingService } from '../services/onboardingService';
 import { usageTrackingService } from '../services/usageTrackingService';
@@ -35,11 +36,18 @@ import type {
   TabScreenProps,
 } from '../types/navigation';
 import type {
+  CareLevel,
   GeneratedImage,
   GenerationRequest,
+  IndividualPlant,
+  IndividualPlantSelection,
+  LightRequirement,
   PlantLocation,
+  PlantCategoryType,
   PlantSearchResult,
+  PlantSize,
   SavedDesign,
+  WaterRequirement,
 } from '../types';
 
 const DesignFlowStack = createStackNavigator<DesignFlowStackParamList>();
@@ -320,7 +328,7 @@ export function DesignFlowNavigator() {
 
 function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camera'>) {
   const { user } = useAuth();
-  const { mode } = route.params || {};
+  const { mode, initialMode, initialIndividualSelection } = route.params || {};
   const [recentSourceImages, setRecentSourceImages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -343,7 +351,11 @@ function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camer
   }, [user?.id]);
 
   const handleImageTaken = (imageUri: string) => {
-    navigation.navigate('PlantSelection', { imageUri, initialMode: 'multi-plant' });
+    navigation.navigate('PlantSelection', {
+      imageUri,
+      initialMode: initialMode || 'multi-plant',
+      initialIndividualSelection,
+    });
   };
 
   const handleClose = () => {
@@ -364,7 +376,7 @@ function PlantSelectionScreenWrapper({
   route,
   navigation,
 }: DesignFlowScreenProps<'PlantSelection'>) {
-  const { imageUri, initialMode } = route.params;
+  const { imageUri, initialMode, initialIndividualSelection } = route.params;
   const { user } = useAuth();
   const { refreshStatus } = useSubscription();
 
@@ -415,6 +427,7 @@ function PlantSelectionScreenWrapper({
     <PlantSelectionScreen
       imageUri={imageUri}
       initialMode={initialMode}
+      initialIndividualSelection={initialIndividualSelection}
       onPlantSelected={handlePlantSelected}
       onChoosePlacement={handleChoosePlacement}
       onBack={handleBack}
@@ -790,10 +803,111 @@ export function PlantDetailScreenWrapper({
     navigation.goBack();
   };
 
+  const handlePlaceInRoom = () => {
+    navigation.navigate('DesignFlow', {
+      screen: 'Camera',
+      params: {
+        mode: 'room',
+        initialMode: 'individual',
+        initialIndividualSelection: createInitialSelectionFromPlant(plant),
+      },
+    });
+  };
+
   return (
     <PlantDetailScreen
       plant={plant}
       onBack={handleBack}
+      onPlaceInRoom={handlePlaceInRoom}
     />
   );
+}
+
+function createInitialSelectionFromPlant(plant: PlantSearchResult): IndividualPlantSelection {
+  const curatedPlant = INDIVIDUAL_PLANTS.find((candidate) => candidate.id === plant.id);
+  const individualPlant = curatedPlant || convertSearchPlantToIndividualPlant(plant);
+
+  return {
+    plant: individualPlant,
+    size: getDefaultPlantSize(individualPlant.availableSizes),
+    placement: 'auto',
+  };
+}
+
+function convertSearchPlantToIndividualPlant(plant: PlantSearchResult): IndividualPlant {
+  return {
+    id: plant.id,
+    name: plant.name,
+    scientificName: plant.scientificName,
+    description: plant.description || `A ${plant.category} plant for interior styling.`,
+    icon: plant.icon || 'Leaf',
+    category: toPlantCategory(plant.category),
+    lightRequirement: toLightRequirement(plant.lightRequirement),
+    waterRequirement: toWaterRequirement(plant.waterRequirement),
+    availableSizes: plant.availableSizes?.length ? plant.availableSizes : ['medium'],
+    suitablePlacements: plant.suitablePlacements?.length ? plant.suitablePlacements : ['floor', 'shelf'],
+    careLevel: toCareLevel(plant.careLevel),
+    growthRate: 'moderate',
+    petSafe: plant.petSafe,
+  };
+}
+
+function getDefaultPlantSize(sizes: PlantSize[]): PlantSize {
+  if (sizes.includes('medium')) {
+    return 'medium';
+  }
+
+  return sizes[0] || 'medium';
+}
+
+function toPlantCategory(category?: string): PlantCategoryType {
+  const normalizedCategory = (category || '').toLowerCase();
+  switch (normalizedCategory) {
+    case 'tropical':
+    case 'succulent':
+    case 'flowering':
+    case 'fern':
+    case 'palm':
+    case 'vine':
+      return normalizedCategory as PlantCategoryType;
+    default:
+      return 'tropical';
+  }
+}
+
+function toCareLevel(level?: string): CareLevel {
+  const normalizedLevel = (level || '').toLowerCase();
+  switch (normalizedLevel) {
+    case 'easy':
+    case 'moderate':
+    case 'difficult':
+      return normalizedLevel as CareLevel;
+    default:
+      return 'moderate';
+  }
+}
+
+function toLightRequirement(requirement?: string): LightRequirement {
+  const normalizedRequirement = (requirement || '').toLowerCase();
+  switch (normalizedRequirement) {
+    case 'low':
+    case 'low-to-bright':
+    case 'bright-indirect':
+    case 'bright-direct':
+      return normalizedRequirement as LightRequirement;
+    default:
+      return 'bright-indirect';
+  }
+}
+
+function toWaterRequirement(requirement?: string): WaterRequirement {
+  const normalizedRequirement = (requirement || '').toLowerCase();
+  switch (normalizedRequirement) {
+    case 'low':
+    case 'moderate':
+    case 'high':
+      return normalizedRequirement as WaterRequirement;
+    default:
+      return 'moderate';
+  }
 }

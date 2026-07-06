@@ -93,6 +93,12 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   }, [petSafeOnly, selectedPlant]);
 
   useEffect(() => {
+    setSelectedPlant(selection?.plant || null);
+    setSelectedSize(selection?.size || null);
+    setSelectedPlacement(selection?.placement || 'auto');
+  }, [selection]);
+
+  useEffect(() => {
     if (!onSearchActiveChange) {
       return;
     }

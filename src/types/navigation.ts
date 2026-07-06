@@ -4,6 +4,7 @@ import type { StackScreenProps } from '@react-navigation/stack';
 
 import type {
   GenerationRequest,
+  IndividualPlantSelection,
   PlantSearchResult,
   SavedDesign,
 } from './index';
@@ -22,8 +23,16 @@ export type RootStackParamList = {
 };
 
 export type DesignFlowStackParamList = {
-  Camera: { mode?: 'room' | 'plant-id' } | undefined;
-  PlantSelection: { imageUri: string; initialMode?: GenerationRequest['mode'] };
+  Camera: {
+    mode?: 'room' | 'plant-id';
+    initialMode?: GenerationRequest['mode'];
+    initialIndividualSelection?: IndividualPlantSelection;
+  } | undefined;
+  PlantSelection: {
+    imageUri: string;
+    initialMode?: GenerationRequest['mode'];
+    initialIndividualSelection?: IndividualPlantSelection;
+  };
   PlantLocation: {
     imageUri: string;
     request: Omit<GenerationRequest, 'imageUri' | 'location'>;
