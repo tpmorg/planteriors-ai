@@ -204,8 +204,6 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               height: 74,
               borderRadius: 37,
               backgroundColor: theme.colors.primary,
-              borderWidth: 5,
-              borderColor: theme.colors.tabBarBackground,
               justifyContent: 'center',
               alignItems: 'center',
               zIndex: 10,
