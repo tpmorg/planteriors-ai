@@ -317,7 +317,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Plant Library</Text>
         <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
-          {plantCount > 0 ? `${plantCount} plants` : 'Browse & search plants'}
+          Plants used in interiors. Try these in your space.
         </Text>
       </View>
 

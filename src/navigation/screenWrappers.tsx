@@ -365,13 +365,38 @@ function PlantSelectionScreenWrapper({
   navigation,
 }: DesignFlowScreenProps<'PlantSelection'>) {
   const { imageUri, initialMode } = route.params;
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
+
+  const navigateToGenerationIfAllowed = useCallback(
+    async (request: GenerationRequest) => {
+      try {
+        if (!user?.id) {
+          navigation.navigate('Generation', { request });
+          return;
+        }
+
+        const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
+        if (!canGenerate) {
+          await refreshStatus();
+          navigation.getParent()?.navigate('Subscription');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to verify generation access from plant selection:', error);
+      }
+
+      navigation.navigate('Generation', { request });
+    },
+    [navigation, refreshStatus, user?.id]
+  );
 
   const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
     const request: GenerationRequest = {
       imageUri,
       ...selectionData,
     };
-    navigation.navigate('Generation', { request });
+    void navigateToGenerationIfAllowed(request);
   };
 
   const handleChoosePlacement = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
@@ -402,12 +427,37 @@ function PlantLocationScreenWrapper({
   navigation,
 }: DesignFlowScreenProps<'PlantLocation'>) {
   const { imageUri, request, initialPlacementMode } = route.params;
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
+
+  const navigateToGenerationIfAllowed = useCallback(
+    async (fullRequest: GenerationRequest) => {
+      try {
+        if (!user?.id) {
+          navigation.navigate('Generation', { request: fullRequest });
+          return;
+        }
+
+        const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
+        if (!canGenerate) {
+          await refreshStatus();
+          navigation.getParent()?.navigate('Subscription');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to verify generation access from location selection:', error);
+      }
+
+      navigation.navigate('Generation', { request: fullRequest });
+    },
+    [navigation, refreshStatus, user?.id]
+  );
 
   const handleLocationSelected = (location: PlantLocation | null) => {
     const fullRequest: GenerationRequest = location
       ? { imageUri, ...request, location }
       : { imageUri, ...request };
-    navigation.navigate('Generation', { request: fullRequest });
+    void navigateToGenerationIfAllowed(fullRequest);
   };
 
   const handleBack = () => {
@@ -440,7 +490,9 @@ function GenerationScreenWrapper({
   };
 
   const handleUpgradePress = () => {
-    navigation.getParent()?.navigate('Subscription');
+    const parentNavigation = navigation.getParent();
+    navigation.goBack();
+    parentNavigation?.navigate('Subscription');
   };
 
   return (
@@ -574,6 +626,8 @@ export function DesignDetailScreenWrapper({
   navigation,
 }: RootStackScreenProps<'DesignDetail'>) {
   const { design, designs, initialIndex } = route.params;
+  const { user } = useAuth();
+  const { refreshStatus } = useSubscription();
 
   const handleBack = () => {
     navigation.goBack();
@@ -582,6 +636,29 @@ export function DesignDetailScreenWrapper({
   const handleDesignDeleted = () => {
     navigation.navigate('MainApp', { screen: 'Gallery' });
   };
+
+  const navigateToGenerationIfAllowed = useCallback(
+    async (request: GenerationRequest) => {
+      try {
+        if (!user?.id) {
+          navigation.navigate('DesignFlow', { screen: 'Generation', params: { request } });
+          return;
+        }
+
+        const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
+        if (!canGenerate) {
+          await refreshStatus();
+          navigation.navigate('Subscription');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to verify generation access from design detail:', error);
+      }
+
+      navigation.navigate('DesignFlow', { screen: 'Generation', params: { request } });
+    },
+    [navigation, refreshStatus, user?.id]
+  );
 
   const handleRefineDesign = (currentDesign: SavedDesign, refinementPrompt: string) => {
     const imageUri = currentDesign.localImagePath || currentDesign.generatedImageUri;
@@ -639,7 +716,7 @@ export function DesignDetailScreenWrapper({
         prompt,
       };
 
-      navigation.navigate('DesignFlow', { screen: 'Generation', params: { request } });
+      void navigateToGenerationIfAllowed(request);
       return;
     }
 
@@ -674,7 +751,7 @@ export function DesignDetailScreenWrapper({
       prompt,
     };
 
-    navigation.navigate('DesignFlow', { screen: 'Generation', params: { request } });
+    void navigateToGenerationIfAllowed(request);
   };
 
   const handleReplacePlant = (currentDesign: SavedDesign) => {
