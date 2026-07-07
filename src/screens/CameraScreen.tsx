@@ -41,6 +41,7 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const isPlantIdMode = mode === 'plant-id';
+  const showLeadingBackButton = isPlantIdMode;
 
   const copy = {
     addTitle: isPlantIdMode ? 'Add Plant Photo' : 'Add Room Photo',
@@ -187,11 +188,26 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <AppIcon name="ArrowLeft" size={24} color="white" />
-          </TouchableOpacity>
+          {showLeadingBackButton ? (
+            <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+              <AppIcon name="ArrowLeft" size={24} color="white" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerButtonPlaceholder} />
+          )}
           <Text style={styles.headerTitle}>{copy.addTitle}</Text>
-          <View style={styles.placeholder} />
+          {isPlantIdMode ? (
+            <View style={styles.headerButtonPlaceholder} />
+          ) : (
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close add room photo"
+            >
+              <AppIcon name="X" size={20} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.optionsContainer}>
@@ -249,8 +265,13 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
             <AppIcon name="ArrowLeft" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Preview</Text>
-          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <AppIcon name="X" size={24} color="white" />
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close photo preview"
+          >
+            <AppIcon name="X" size={20} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -299,16 +320,31 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-          <AppIcon name="ArrowLeft" size={24} color="white" />
-        </TouchableOpacity>
+        {showLeadingBackButton ? (
+          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+            <AppIcon name="ArrowLeft" size={24} color="white" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerButtonPlaceholder} />
+        )}
         <Text style={styles.headerTitle}>{copy.takeTitle}</Text>
-        <TouchableOpacity
-          onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
-          style={styles.headerButton}
-        >
-          <AppIcon name="CameraRotate" size={24} color="white" />
-        </TouchableOpacity>
+        {isPlantIdMode ? (
+          <TouchableOpacity
+            onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+            style={styles.headerButton}
+          >
+            <AppIcon name="CameraRotate" size={24} color="white" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close add room photo"
+          >
+            <AppIcon name="X" size={20} color="white" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.cameraContainer}>
@@ -372,10 +408,24 @@ const createStyles = (theme: any) => StyleSheet.create({
   headerButton: {
     padding: 8,
   },
+  headerButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: 'white',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
   },
   cameraContainer: {
     flex: 1,

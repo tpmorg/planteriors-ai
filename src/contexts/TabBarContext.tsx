@@ -27,10 +27,15 @@ export const TabBarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const tabBarHeight = 65 + Math.max(insets.bottom, 8);
 
-  const setTabBarVisible = (visible: boolean) => {
+  const setTabBarVisible = useCallback((visible: boolean) => {
+    if (visible) {
+      isScrollingDown.current = false;
+      lastScrollY.current = 0;
+    }
+
     setIsTabBarVisible(visible);
     scrollY.value = withTiming(visible ? 0 : 100, { duration: 200 });
-  };
+  }, [scrollY]);
 
   const handleScroll = useCallback((event: any) => {
     const currentScrollY = event.nativeEvent.contentOffset.y;
@@ -54,7 +59,7 @@ export const TabBarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     lastScrollY.current = currentScrollY;
-  }, [isTabBarVisible]);
+  }, [isTabBarVisible, setTabBarVisible]);
 
   const tabBarStyle = useAnimatedStyle(() => {
     const translateY = interpolate(

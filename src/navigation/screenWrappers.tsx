@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -238,7 +239,19 @@ export function MainTabNavigator() {
   );
 }
 
+function useRestoreTabBarOnFocus() {
+  const { setTabBarVisible } = useTabBar();
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabBarVisible(true);
+    }, [setTabBarVisible])
+  );
+}
+
 function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
+  useRestoreTabBarOnFocus();
+
   const handleOpenOnboarding = () => {
     navigation.getParent()?.navigate('Onboarding', { fromSettings: true });
   };
@@ -247,6 +260,8 @@ function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
 }
 
 function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {
+  useRestoreTabBarOnFocus();
+
   const handlePlantSelect = useCallback((plant: PlantSearchResult) => {
     navigation.getParent()?.navigate('PlantDetail', { plant });
   }, [navigation]);
@@ -255,6 +270,8 @@ function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {
 }
 
 function FavoritesScreenWrapper({ navigation }: TabScreenProps<'Favorites'>) {
+  useRestoreTabBarOnFocus();
+
   const handleDesignSelect = useCallback((
     design: SavedDesign,
     designs: SavedDesign[],
@@ -517,6 +534,7 @@ function GenerationScreenWrapper({
 }
 
 function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
+  useRestoreTabBarOnFocus();
   const { user } = useAuth();
   const { refreshStatus } = useSubscription();
 
