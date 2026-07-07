@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,9 @@ import {
   NativeScrollEvent,
   LayoutChangeEvent,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { AppIcon } from './AppIcon';
 import {
   IndividualPlant,
@@ -25,6 +27,7 @@ import {
 } from '../types';
 import { INDIVIDUAL_PLANTS, PLANT_SIZE_OPTIONS } from '../data/plantDatabase';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface IndividualPlantSelectorProps {
   onSelectionChange: (selection: IndividualPlantSelection | null) => void;
@@ -48,6 +51,8 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isVoiceSearchStarting, setIsVoiceSearchStarting] = useState(false);
+  const [isVoiceSearchListening, setIsVoiceSearchListening] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<IndividualPlant | null>(
     selection?.plant || null
   );
@@ -66,6 +71,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   const lastSearchActiveRef = useRef(false);
 
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const gridColumns = isTablet ? 2 : 2;
   const styles = createStyles(theme, isTablet);
 
@@ -84,6 +90,11 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
             plant.category.toLowerCase().includes(lowerQuery)
         );
   }, [searchQuery, petSafeOnly]);
+  const voiceSearchContext = useMemo(
+    () => Array.from(new Set(filteredPlants.map((plant) => plant.name))).slice(0, 24),
+    [filteredPlants]
+  );
+  const isVoiceSearchBusy = isVoiceSearchStarting || isVoiceSearchListening;
 
   useEffect(() => {
     if (!petSafeOnly || !selectedPlant || selectedPlant.petSafe) {
@@ -118,6 +129,55 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
       }
     };
   }, [onSearchActiveChange]);
+
+  useSpeechRecognitionEvent('start', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(true);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+  });
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results[0]?.transcript?.trim();
+    if (transcript) {
+      setSearchQuery(transcript);
+    }
+  });
+
+  useSpeechRecognitionEvent('nomatch', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+    showToast('No plant name came through. Try again.', 'info');
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+
+    if (event.error === 'aborted') {
+      return;
+    }
+
+    if (event.error === 'no-speech' || event.error === 'speech-timeout') {
+      showToast('No speech detected. Try again.', 'info');
+      return;
+    }
+
+    if (event.error === 'not-allowed') {
+      showToast('Microphone permission is required for voice search.', 'error');
+      return;
+    }
+
+    if (event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
+      showToast('Voice search is unavailable on this device right now.', 'error');
+      return;
+    }
+
+    showToast(event.message || 'Voice search failed to start.', 'error');
+  });
 
   // Update parent when selection changes
   const updateSelection = (
@@ -180,6 +240,59 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     setViewMode(viewMode === 'grid' ? 'list' : 'grid');
   };
 
+  const isVoiceSearchAvailable = useCallback(() => {
+    try {
+      return ExpoSpeechRecognitionModule?.isRecognitionAvailable?.() ?? false;
+    } catch (error) {
+      console.warn('Speech recognition availability check failed:', error);
+      return false;
+    }
+  }, []);
+
+  const handleVoiceSearchPress = useCallback(async () => {
+    const speechRecognitionModule = ExpoSpeechRecognitionModule;
+
+    if (isVoiceSearchBusy) {
+      speechRecognitionModule?.stop?.();
+      return;
+    }
+
+    if (!speechRecognitionModule || !isVoiceSearchAvailable()) {
+      showToast('Voice search is unavailable on this device right now.', 'error');
+      return;
+    }
+
+    setIsVoiceSearchStarting(true);
+
+    try {
+      const permission = await speechRecognitionModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        setIsVoiceSearchStarting(false);
+        showToast(
+          permission.canAskAgain
+            ? 'Allow microphone access to search by voice.'
+            : 'Microphone access for voice search is disabled in Settings.',
+          'error'
+        );
+        return;
+      }
+
+      speechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        addsPunctuation: false,
+        iosTaskHint: 'search',
+        contextualStrings: voiceSearchContext,
+      });
+    } catch (error) {
+      console.error('Failed to start voice search:', error);
+      setIsVoiceSearchStarting(false);
+      showToast('Voice search failed to start.', 'error');
+    }
+  }, [isVoiceSearchAvailable, isVoiceSearchBusy, showToast, voiceSearchContext]);
+
   useEffect(() => {
     if (!shouldRestoreScroll || selectedPlant) {
       return;
@@ -222,15 +335,22 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
     }
   };
 
+  const formatPlantCategory = (category: string) =>
+    category
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
   const renderPlantItem: ListRenderItem<IndividualPlant> = ({ item: plant }) => {
     const isSelected = selectedPlant?.id === plant.id;
+    const isGridView = viewMode === 'grid';
 
     return (
       <TouchableOpacity
         key={plant.id}
         style={[
           styles.plantCard,
-          viewMode === 'grid' && styles.plantCardGrid,
+          isGridView ? styles.plantCardGrid : styles.plantCardList,
           isSelected && styles.plantCardSelected,
         ]}
         onPress={() => handlePlantSelect(plant)}
@@ -239,27 +359,54 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
         {plant.imageUrl ? (
           <View
             style={
-              viewMode === 'grid'
+              isGridView
                 ? styles.plantCardImageFrameGrid
-                : styles.plantCardImageFrame
+                : styles.plantCardImageFrameList
             }
           >
             <Image source={plant.imageUrl} style={styles.plantCardImageFill} resizeMode="cover" />
           </View>
         ) : (
-          <AppIcon
-            name={plant.icon}
-            size={viewMode === 'grid' ? 32 : 44}
-            color={theme.colors.primary}
-            style={styles.plantCardIcon}
-          />
+          <View style={isGridView ? styles.plantCardIconFrameGrid : styles.plantCardIconFrameList}>
+            <AppIcon
+              name={plant.icon}
+              size={isGridView ? 28 : 30}
+              color={theme.colors.primary}
+              style={styles.plantCardIcon}
+            />
+          </View>
         )}
-        <Text style={styles.plantCardName} numberOfLines={1} ellipsizeMode="tail">
-          {plant.name}
-        </Text>
-        <View style={styles.plantCardBadges}>
-          {plant.petSafe && (
-            <AppIcon name="Heart" size={12} color={theme.colors.primary} weight="fill" />
+
+        <View style={[styles.plantCardBody, isGridView && styles.plantCardBodyGrid]}>
+          <View style={styles.plantCardHeader}>
+            <Text
+              style={[styles.plantCardName, isGridView ? styles.plantCardNameGrid : styles.plantCardNameList]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {plant.name}
+            </Text>
+            {plant.petSafe && (
+              <View style={styles.plantCardPetSafeBadge}>
+                <AppIcon name="Heart" size={11} color={theme.colors.primary} weight="fill" />
+                {!isGridView ? <Text style={styles.plantCardPetSafeText}>Pet safe</Text> : null}
+              </View>
+            )}
+          </View>
+
+          {!isGridView ? (
+            <>
+              <Text style={styles.plantCardScientificName} numberOfLines={1}>
+                {plant.scientificName}
+              </Text>
+              <Text style={styles.plantCardMeta} numberOfLines={1}>
+                {formatPlantCategory(plant.category)} • {plant.careLevel} care
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.plantCardMetaGrid} numberOfLines={1}>
+              {formatPlantCategory(plant.category)}
+            </Text>
           )}
         </View>
       </TouchableOpacity>
@@ -318,8 +465,33 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
                   onBlur={() => setIsSearchFocused(false)}
                   returnKeyType="search"
                 />
+                <TouchableOpacity
+                  onPress={handleVoiceSearchPress}
+                  accessibilityLabel={isVoiceSearchBusy ? 'Stop voice search' : 'Start voice search'}
+                  activeOpacity={0.85}
+                  style={[
+                    styles.voiceSearchButton,
+                    {
+                      backgroundColor: isVoiceSearchBusy ? theme.colors.primary : 'transparent',
+                    },
+                  ]}
+                >
+                  {isVoiceSearchStarting ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <AppIcon
+                      name="Microphone"
+                      size={18}
+                      color={isVoiceSearchBusy ? '#ffffff' : theme.colors.textSecondary}
+                      weight={isVoiceSearchBusy ? 'fill' : 'regular'}
+                    />
+                  )}
+                </TouchableOpacity>
                 {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    accessibilityLabel="Clear plant search"
+                  >
                     <AppIcon name="X" size={18} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
                 )}
@@ -478,7 +650,7 @@ const createStyles = (theme: any, isTablet: boolean) => {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.borderLight,
-      borderRadius: 14,
+      borderRadius: 10,
       paddingHorizontal: 12,
       height: 44,
       borderWidth: 1,
@@ -487,7 +659,7 @@ const createStyles = (theme: any, isTablet: boolean) => {
     viewToggleButton: {
       width: 44,
       height: 44,
-      borderRadius: 14,
+      borderRadius: 10,
       backgroundColor: theme.colors.borderLight,
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -501,6 +673,15 @@ const createStyles = (theme: any, isTablet: boolean) => {
       flex: 1,
       fontSize: 15,
       color: theme.colors.text,
+    },
+    voiceSearchButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 6,
+      marginRight: 4,
     },
     gridLabel: {
       fontSize: 13,
@@ -531,77 +712,126 @@ const createStyles = (theme: any, isTablet: boolean) => {
       width: '100%',
       maxWidth: isTablet ? 420 : undefined,
       alignSelf: 'center',
-      backgroundColor: theme.colors.borderLight,
-      borderRadius: 16,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 4,
       marginBottom: 12,
-      padding: 12,
-      alignItems: 'center',
+      alignItems: 'stretch',
       justifyContent: 'flex-start',
       borderWidth: 1,
       borderColor: theme.colors.border,
-      paddingBottom: 14,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: theme.isDark ? 0.12 : 0.05,
-      shadowRadius: 10,
-      elevation: 2,
+      overflow: 'hidden',
     },
     plantCardGrid: {
       flex: 1,
       maxWidth: undefined,
       alignSelf: 'stretch',
       marginBottom: 0,
-      paddingHorizontal: isTablet ? 12 : 10,
-      paddingTop: isTablet ? 10 : 12,
-      paddingBottom: isTablet ? 12 : 14,
+    },
+    plantCardList: {
+      flexDirection: 'row',
+      minHeight: 104,
     },
     plantCardSelected: {
       backgroundColor: selectedBg,
       borderColor: theme.colors.primary,
-      shadowOpacity: theme.isDark ? 0.18 : 0.1,
     },
     plantCardIcon: {
       fontSize: 44,
-      marginBottom: 8,
-      marginTop: 8,
     },
-    plantCardImageFrame: {
-      width: isTablet ? 300 : '100%',
-      alignSelf: 'center',
+    plantCardIconFrameGrid: {
+      width: '100%',
       aspectRatio: 1,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginBottom: 10,
-      marginTop: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.borderLight,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
     },
     plantCardImageFrameGrid: {
-      width: isTablet ? '70%' : '100%',
-      alignSelf: 'center',
+      width: '100%',
       aspectRatio: 1,
-      borderRadius: 10,
-      overflow: 'hidden',
-      marginBottom: 8,
-      marginTop: 4,
+      backgroundColor: theme.colors.card,
+    },
+    plantCardIconFrameList: {
+      width: 92,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.borderLight,
+      borderRightWidth: 1,
+      borderRightColor: theme.colors.border,
+    },
+    plantCardImageFrameList: {
+      width: 92,
+      backgroundColor: theme.colors.card,
     },
     plantCardImageFill: {
       width: '100%',
       height: '100%',
     },
+    plantCardBody: {
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      gap: 4,
+    },
+    plantCardBodyGrid: {
+      paddingHorizontal: isTablet ? 12 : 10,
+      paddingTop: 10,
+      paddingBottom: 12,
+      minHeight: 74,
+      justifyContent: 'space-between',
+    },
+    plantCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     plantCardName: {
-      fontSize: isTablet ? 12 : 13,
       fontWeight: '600',
       color: theme.colors.text,
-      textAlign: 'center',
-      marginBottom: 2,
-      width: '100%',
+      flex: 1,
     },
-    plantCardBadges: {
+    plantCardNameGrid: {
+      fontSize: isTablet ? 13 : 14,
+      textAlign: 'left',
+    },
+    plantCardNameList: {
+      fontSize: 15,
+      textAlign: 'left',
+    },
+    plantCardScientificName: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      fontStyle: 'italic',
+    },
+    plantCardMeta: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      textTransform: 'capitalize',
+    },
+    plantCardMetaGrid: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    plantCardPetSafeBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      paddingHorizontal: 7,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.12)' : '#ecfdf5',
+      borderWidth: 1,
+      borderColor: theme.isDark ? 'rgba(134, 239, 172, 0.28)' : '#bbf7d0',
     },
-    plantCardBadge: {
-      fontSize: 10,
+    plantCardPetSafeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.colors.primary,
     },
     // Selected Panel
     selectedPanel: {

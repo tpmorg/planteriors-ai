@@ -13,10 +13,12 @@ import {
   View,
   ImageSourcePropType,
 } from 'react-native';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme, Theme } from '../contexts/ThemeContext';
+import { useToast } from '../contexts/ToastContext';
 import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
 import { CareLevel, LightRequirement, PlacementType, PlantSearchResult, WaterRequirement } from '../types';
@@ -240,11 +242,14 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<LibraryFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [isVoiceSearchStarting, setIsVoiceSearchStarting] = useState(false);
+  const [isVoiceSearchListening, setIsVoiceSearchListening] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [plantCount, setPlantCount] = useState(0);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const listHorizontalPadding = 16;
   const activeFilterChips = useMemo(() => getActiveFilterChips(filters), [filters]);
   const activeFilterCount = activeFilterChips.length;
@@ -252,6 +257,69 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
     () => plants.filter((plant) => plant.userAdded).length,
     [plants]
   );
+  const voiceSearchContext = useMemo(
+    () => Array.from(new Set(plants.map((plant) => plant.name))).slice(0, 24),
+    [plants]
+  );
+  const isVoiceSearchBusy = isVoiceSearchStarting || isVoiceSearchListening;
+
+  useSpeechRecognitionEvent('start', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(true);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+  });
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results[0]?.transcript?.trim();
+    if (transcript) {
+      setSearchQuery(transcript);
+    }
+  });
+
+  useSpeechRecognitionEvent('nomatch', () => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+    showToast('No plant name came through. Try again.', 'info');
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    setIsVoiceSearchStarting(false);
+    setIsVoiceSearchListening(false);
+
+    if (event.error === 'aborted') {
+      return;
+    }
+
+    if (event.error === 'no-speech' || event.error === 'speech-timeout') {
+      showToast('No speech detected. Try again.', 'info');
+      return;
+    }
+
+    if (event.error === 'not-allowed') {
+      showToast('Microphone permission is required for voice search.', 'error');
+      return;
+    }
+
+    if (event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
+      showToast('Voice search is unavailable on this device right now.', 'error');
+      return;
+    }
+
+    showToast(event.message || 'Voice search failed to start.', 'error');
+  });
+
+  const isVoiceSearchAvailable = useCallback(() => {
+    try {
+      return ExpoSpeechRecognitionModule?.isRecognitionAvailable?.() ?? false;
+    } catch (error) {
+      console.warn('Speech recognition availability check failed:', error);
+      return false;
+    }
+  }, []);
 
   const loadPlants = useCallback(async () => {
     try {
@@ -342,6 +410,50 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
 
   const keyExtractor = useCallback((item: PlantSearchResult) => item.id, []);
 
+  const handleVoiceSearchPress = useCallback(async () => {
+    const speechRecognitionModule = ExpoSpeechRecognitionModule;
+
+    if (isVoiceSearchBusy) {
+      speechRecognitionModule?.stop?.();
+      return;
+    }
+
+    if (!speechRecognitionModule || !isVoiceSearchAvailable()) {
+      showToast('Voice search is unavailable on this device right now.', 'error');
+      return;
+    }
+
+    setIsVoiceSearchStarting(true);
+
+    try {
+      const permission = await speechRecognitionModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        setIsVoiceSearchStarting(false);
+        showToast(
+          permission.canAskAgain
+            ? 'Allow microphone access to search by voice.'
+            : 'Microphone access for voice search is disabled in Settings.',
+          'error'
+        );
+        return;
+      }
+
+      speechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        addsPunctuation: false,
+        iosTaskHint: 'search',
+        contextualStrings: voiceSearchContext,
+      });
+    } catch (error) {
+      console.error('Failed to start voice search:', error);
+      setIsVoiceSearchStarting(false);
+      showToast('Voice search failed to start.', 'error');
+    }
+  }, [isVoiceSearchAvailable, isVoiceSearchBusy, showToast, voiceSearchContext]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
@@ -372,6 +484,28 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
               autoCorrect={false}
               returnKeyType="search"
             />
+            <TouchableOpacity
+              onPress={handleVoiceSearchPress}
+              accessibilityLabel={isVoiceSearchBusy ? 'Stop voice search' : 'Start voice search'}
+              activeOpacity={0.85}
+              style={[
+                styles.voiceSearchButton,
+                {
+                  backgroundColor: isVoiceSearchBusy ? theme.colors.primary : 'transparent',
+                },
+              ]}
+            >
+              {isVoiceSearchStarting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <AppIcon
+                  name="Microphone"
+                  size={18}
+                  color={isVoiceSearchBusy ? '#ffffff' : theme.colors.textSecondary}
+                  weight={isVoiceSearchBusy ? 'fill' : 'regular'}
+                />
+              )}
+            </TouchableOpacity>
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear plant search">
                 <AppIcon name="XCircle" size={20} color={theme.colors.textSecondary} />
@@ -675,6 +809,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 48,
     paddingVertical: 0,
+  },
+  voiceSearchButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterButton: {
     width: 48,

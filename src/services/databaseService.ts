@@ -17,6 +17,24 @@ const DB_VERSION = 7; // Current database version
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private isInitializing: boolean = false;
+  private libraryChangeVersion = 0;
+  private libraryChangeListeners = new Set<() => void>();
+
+  subscribeToLibraryChanges(listener: () => void): () => void {
+    this.libraryChangeListeners.add(listener);
+    return () => {
+      this.libraryChangeListeners.delete(listener);
+    };
+  }
+
+  getLibraryChangeVersion(): number {
+    return this.libraryChangeVersion;
+  }
+
+  private notifyLibraryChanged(): void {
+    this.libraryChangeVersion += 1;
+    this.libraryChangeListeners.forEach((listener) => listener());
+  }
 
   private async resolveInsertRowId(result: { lastInsertRowId?: number | null }): Promise<number> {
     if (typeof result.lastInsertRowId === 'number' && Number.isFinite(result.lastInsertRowId)) {
@@ -1284,6 +1302,7 @@ export class DatabaseService {
       };
 
       console.log('Design saved to database with ID:', insertedId);
+      this.notifyLibraryChanged();
       return savedDesign;
     } catch (error) {
       console.error('Failed to save design:', error);
@@ -1371,6 +1390,7 @@ export class DatabaseService {
         'UPDATE saved_designs SET generated_plants_json = ? WHERE id = ?',
         [JSON.stringify(generatedPlants), designId]
       );
+      this.notifyLibraryChanged();
     } catch (error) {
       console.error('Failed to update generated plants:', error);
       throw error;
@@ -1387,6 +1407,7 @@ export class DatabaseService {
         [id]
       );
       console.log('Toggled favorite for design:', id);
+      this.notifyLibraryChanged();
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
       throw error;
@@ -1410,6 +1431,7 @@ export class DatabaseService {
 
       await this.db.runAsync('DELETE FROM saved_designs WHERE id = ?', [id]);
       console.log('Design deleted:', id);
+      this.notifyLibraryChanged();
     } catch (error) {
       console.error('Failed to delete design:', error);
       throw error;
@@ -1538,11 +1560,13 @@ export class DatabaseService {
       );
 
       const insertedId = await this.resolveInsertRowId(result);
-      return {
+      const collection = {
         id: insertedId.toString(),
         name: trimmed,
         createdAt: new Date(now),
       };
+      this.notifyLibraryChanged();
+      return collection;
     } catch (error) {
       console.error('Failed to create collection:', error);
       throw error;
@@ -1559,6 +1583,7 @@ export class DatabaseService {
         'UPDATE saved_designs SET collection_id = ? WHERE id = ?'
         , [value, Number(designId)]
       );
+      this.notifyLibraryChanged();
     } catch (error) {
       console.error('Failed to set design collection:', error);
       throw error;

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
@@ -169,7 +170,17 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         <View style={styles.userSection}>
           <View style={styles.userInfo}>
             <View style={styles.avatar}>
-              <AppIcon name="User" size={40} color={theme.colors.primary} />
+              {user?.picture ? (
+                <Image source={{ uri: user.picture }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <AppIcon
+                    name={user?.provider === 'apple' ? 'AppleLogo' : 'GoogleLogo'}
+                    size={30}
+                    color={theme.colors.text}
+                  />
+                </View>
+              )}
             </View>
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
@@ -185,8 +196,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         {/* Subscription Status Card */}
         <View style={styles.subscriptionSection}>
           <View style={styles.sectionHeader}>
-            <AppIcon name="StarFour" size={20} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Subscription</Text>
+            <Text style={styles.sectionTitle}>Subscriptions</Text>
           </View>
 
           {showPaidLayout ? (
@@ -246,7 +256,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         {usageStats && (
           <View style={styles.usageSection}>
             <View style={styles.sectionHeader}>
-              <AppIcon name="ChartBar" size={20} color={theme.colors.primary} />
               <Text style={styles.sectionTitle}>Usage Statistics</Text>
             </View>
             <View style={styles.usageCard}>
@@ -391,10 +400,27 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.borderLight,
+    marginRight: 16,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: theme.isDark ? 0.28 : 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f5',
   },
   userDetails: {
     flex: 1,
@@ -475,9 +501,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 4,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     marginBottom: 12,
   },
   sectionTitle: {

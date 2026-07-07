@@ -107,6 +107,8 @@ jest.mock('../../services/databaseService', () => ({
   databaseService: {
     getAllDesigns: jest.fn(),
     getCollections: jest.fn(),
+    getLibraryChangeVersion: jest.fn(() => 0),
+    subscribeToLibraryChanges: jest.fn(() => jest.fn()),
     toggleFavorite: jest.fn(),
     createCollection: jest.fn(),
     setDesignCollection: jest.fn(),

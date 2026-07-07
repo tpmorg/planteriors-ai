@@ -307,11 +307,11 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
             <>
               {/* Hero Section with Explanation */}
               {(!isPlantSearchActive || individualSelection) && (
-                <View style={styles.heroSection}>
+                <View style={[styles.heroSection, styles.singlePlantHeroSection]}>
                   <View style={styles.imageContainer}>
                     <Image source={{ uri: imageUri }} style={styles.previewImage} />
                   </View>
-                  <View style={styles.heroContent}>
+                  <View style={[styles.heroContent, styles.singlePlantHeroContent]}>
                     <Text style={styles.heroDescription}>
                       {isReplaceMode
                         ? 'Choose the plant you want to see in place of your current one.'
@@ -763,6 +763,16 @@ const createStyles = (theme: any, isTablet: boolean) => {
       shadowRadius: 14,
       elevation: 8,
     },
+    singlePlantHeroSection: {
+      marginHorizontal: isTablet ? 0 : 0,
+      borderRadius: isTablet ? 20 : 0,
+      borderLeftWidth: isTablet ? 1 : 0,
+      borderRightWidth: isTablet ? 1 : 0,
+      shadowOpacity: isTablet ? (theme.isDark ? 0.26 : 0.12) : 0,
+      shadowRadius: isTablet ? 14 : 0,
+      shadowOffset: isTablet ? { width: 0, height: 10 } : { width: 0, height: 0 },
+      elevation: isTablet ? 8 : 0,
+    },
     imageContainer: {
       height: 300,
       position: 'relative',
@@ -775,6 +785,12 @@ const createStyles = (theme: any, isTablet: boolean) => {
     },
     heroContent: {
       padding: 20,
+    },
+    singlePlantHeroContent: {
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
     },
     petSafeToggleRow: {
       width: isTablet ? '100%' : undefined,

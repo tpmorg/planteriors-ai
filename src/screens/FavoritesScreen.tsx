@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLibraryDataVersion } from '../hooks/useLibraryDataVersion';
 
 interface FavoritesScreenProps {
   onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
@@ -100,6 +101,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
   const { theme } = useTheme();
   const { user } = useAuth();
   const { width, height } = useWindowDimensions();
+  const libraryDataVersion = useLibraryDataVersion();
 
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
   const numColumns = isTablet ? (width >= 1180 ? 4 : 3) : 2;
@@ -128,7 +130,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, libraryDataVersion]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

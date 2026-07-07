@@ -6,6 +6,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Pressable,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +55,7 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
             </Text>
           )}
 
-          <TouchableOpacity
+          <Pressable
             onPress={onBack}
             style={[
               styles.backButton,
@@ -66,7 +67,7 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
             ]}
           >
             <AppIcon name="ArrowLeft" size={22} color={theme.colors.text} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.heroContent}>

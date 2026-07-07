@@ -47,6 +47,7 @@
     "expo-image-picker": "~17.0.11",
     "expo-media-library": "~18.2.1",
     "expo-sharing": "~14.0.8",
+    "expo-speech-recognition": "sdk-54",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.11",

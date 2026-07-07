@@ -29,6 +29,18 @@
         }
       ],
       [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Planterior AI to use your microphone for voice plant search.",
+          "speechRecognitionPermission": "Allow Planterior AI to convert your speech into plant searches.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts",
+            "com.google.android.as"
+          ]
+        }
+      ],
+      [
         "expo-media-library",
         {
           "photosPermission": "Allow Planterior AI to access your photos so you can save designs to your library.",
@@ -134,7 +146,6 @@
         "android.permission.INTERNET"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ]

@@ -28,6 +28,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { requestPhotoSavePermission, saveDesignImageToDevice } from '../utils/imageSave';
 import { AccountScreen } from './AccountScreen';
+import { useLibraryDataVersion } from '../hooks/useLibraryDataVersion';
 
 const GALLERY_HINTS_SEEN_KEY = '@planterior_gallery_hints_seen';
 
@@ -193,6 +194,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const { showToast } = useToast();
   const { width, height } = useWindowDimensions();
   const accountSheetProgress = useRef(new Animated.Value(0)).current;
+  const libraryDataVersion = useLibraryDataVersion();
 
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
   const numColumns = isTablet ? (width >= 1180 ? 4 : 3) : 2;
@@ -232,7 +234,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   useEffect(() => {
     loadDesigns();
     loadCollections();
-  }, [loadDesigns, loadCollections]);
+  }, [loadDesigns, loadCollections, libraryDataVersion]);
 
   const selectedCount = selectedDesignIds.size;
   const isSelectionMode = selectedCount > 0;
