@@ -796,6 +796,10 @@ export function DesignDetailScreenWrapper({
     });
   };
 
+  const handleOpenPlantDetail = (plant: PlantSearchResult) => {
+    navigation.navigate('PlantDetail', { plant });
+  };
+
   return (
     <DesignDetailScreen
       design={design}
@@ -805,6 +809,7 @@ export function DesignDetailScreenWrapper({
       onDesignDeleted={handleDesignDeleted}
       onRefineDesign={handleRefineDesign}
       onReplacePlant={handleReplacePlant}
+      onOpenPlantDetail={handleOpenPlantDetail}
     />
   );
 }
