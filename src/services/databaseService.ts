@@ -1970,6 +1970,42 @@ export class DatabaseService {
     );
   }
 
+  async getSyncPreflightCounts(userId: string): Promise<{
+    unsyncedDesigns: number;
+    unsyncedCollections: number;
+    totalLocalDesigns: number;
+    totalLocalCollections: number;
+  }> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const [unsyncedDesigns, unsyncedCollections, totalLocalDesigns, totalLocalCollections] = await Promise.all([
+      this.db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM saved_designs WHERE user_id = ? AND (remote_id IS NULL OR sync_status != 'synced') AND deleted_at IS NULL`,
+        [userId]
+      ),
+      this.db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM collections WHERE user_id = ? AND (remote_id IS NULL OR sync_status != 'synced') AND deleted_at IS NULL`,
+        [userId]
+      ),
+      this.db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM saved_designs WHERE user_id = ? AND deleted_at IS NULL`,
+        [userId]
+      ),
+      this.db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM collections WHERE user_id = ? AND deleted_at IS NULL`,
+        [userId]
+      ),
+    ]);
+
+    return {
+      unsyncedDesigns: unsyncedDesigns?.count || 0,
+      unsyncedCollections: unsyncedCollections?.count || 0,
+      totalLocalDesigns: totalLocalDesigns?.count || 0,
+      totalLocalCollections: totalLocalCollections?.count || 0,
+    };
+  }
+
   async markDesignSynced(localId: string, remoteId: string): Promise<void> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');

@@ -97,6 +97,34 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     }
   };
 
+  const runSyncNow = async () => {
+    if (!user) return;
+    setSyncingLibrary(true);
+    try {
+      const result = await firestoreSyncService.syncUserData(user);
+      Alert.alert('Sync complete', `Synced ${result.designs} design(s) and ${result.collections} collection(s).`);
+    } catch (error) {
+      console.error('Failed to sync library:', error);
+      Alert.alert('Sync failed', 'Could not sync your library right now.');
+    } finally {
+      setSyncingLibrary(false);
+    }
+  };
+
+  const runRestoreNow = async () => {
+    if (!user) return;
+    setSyncingLibrary(true);
+    try {
+      const result = await firestoreSyncService.restoreUserData(user.id);
+      Alert.alert('Restore complete', `Restored ${result.designs} design(s) and ${result.collections} collection(s).`);
+    } catch (error) {
+      console.error('Failed to restore library:', error);
+      Alert.alert('Restore failed', 'Could not restore your library right now.');
+    } finally {
+      setSyncingLibrary(false);
+    }
+  };
+
   const handleCloudSync = () => {
     if (!user) {
       Alert.alert('Sign in required', 'Please sign in to sync your library.');
@@ -110,15 +138,43 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           if (!requireNetwork('Please connect to the internet to sync your library.')) {
             return;
           }
-          setSyncingLibrary(true);
+
           try {
-            const result = await firestoreSyncService.syncUserData(user);
-            Alert.alert('Sync complete', `Synced ${result.designs} design(s) and ${result.collections} collection(s).`);
+            const preflight = await firestoreSyncService.getSyncPreflight(user.id);
+            if (preflight.hasPotentialMergeRisk) {
+              Alert.alert(
+                'Potential duplicate risk',
+                `This device has ${preflight.localUnsyncedDesigns} unsynced design(s) and ${preflight.localUnsyncedCollections} unsynced collection(s), while your cloud library already has ${preflight.remoteDesigns} design(s) and ${preflight.remoteCollections} collection(s).\n\nTo avoid duplicates, restoring first is usually safer.`,
+                [
+                  {
+                    text: 'Restore First',
+                    onPress: async () => {
+                      if (!requireNetwork('Please connect to the internet to restore your library.')) {
+                        return;
+                      }
+                      await runRestoreNow();
+                    },
+                  },
+                  {
+                    text: 'Merge Anyway',
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (!requireNetwork('Please connect to the internet to sync your library.')) {
+                        return;
+                      }
+                      await runSyncNow();
+                    },
+                  },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              );
+              return;
+            }
+
+            await runSyncNow();
           } catch (error) {
-            console.error('Failed to sync library:', error);
-            Alert.alert('Sync failed', 'Could not sync your library right now.');
-          } finally {
-            setSyncingLibrary(false);
+            console.error('Failed to run sync preflight:', error);
+            Alert.alert('Sync unavailable', 'Could not check sync safety right now.');
           }
         },
       },
@@ -128,16 +184,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           if (!requireNetwork('Please connect to the internet to restore your library.')) {
             return;
           }
-          setSyncingLibrary(true);
-          try {
-            const result = await firestoreSyncService.restoreUserData(user.id);
-            Alert.alert('Restore complete', `Restored ${result.designs} design(s) and ${result.collections} collection(s).`);
-          } catch (error) {
-            console.error('Failed to restore library:', error);
-            Alert.alert('Restore failed', 'Could not restore your library right now.');
-          } finally {
-            setSyncingLibrary(false);
-          }
+          await runRestoreNow();
         },
       },
       { text: 'Cancel', style: 'cancel' },

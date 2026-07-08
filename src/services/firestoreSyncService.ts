@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import {
   collection,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   orderBy,
@@ -161,6 +162,37 @@ export class FirestoreSyncService {
     return {
       collections: collectionRows.length,
       designs: designRows.length,
+    };
+  }
+
+  async getSyncPreflight(userId: string): Promise<{
+    localUnsyncedDesigns: number;
+    localUnsyncedCollections: number;
+    localTotalDesigns: number;
+    localTotalCollections: number;
+    remoteDesigns: number;
+    remoteCollections: number;
+    hasPotentialMergeRisk: boolean;
+  }> {
+    const local = await databaseService.getSyncPreflightCounts(userId);
+    const [remoteDesignsSnap, remoteCollectionsSnap] = await Promise.all([
+      getCountFromServer(collection(firestore, 'users', userId, 'designs')),
+      getCountFromServer(collection(firestore, 'users', userId, 'collections')),
+    ]);
+
+    const remoteDesigns = remoteDesignsSnap.data().count;
+    const remoteCollections = remoteCollectionsSnap.data().count;
+
+    return {
+      localUnsyncedDesigns: local.unsyncedDesigns,
+      localUnsyncedCollections: local.unsyncedCollections,
+      localTotalDesigns: local.totalLocalDesigns,
+      localTotalCollections: local.totalLocalCollections,
+      remoteDesigns,
+      remoteCollections,
+      hasPotentialMergeRisk:
+        (local.unsyncedDesigns > 0 || local.unsyncedCollections > 0) &&
+        (remoteDesigns > 0 || remoteCollections > 0),
     };
   }
 
