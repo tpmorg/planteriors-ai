@@ -18,7 +18,7 @@ A React Native Expo application that uses AI to generate plant-enhanced interior
 
 1. **Clone and Install Dependencies**
 ```bash
-cd planterior-ai
+cd planteriorai
 npm install
 ```
 

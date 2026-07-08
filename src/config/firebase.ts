@@ -7,6 +7,8 @@ import {
   initializeAuth,
   getReactNativePersistence,
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Import the google-services.json data
 const googleServices = require('../../google-services.json');
@@ -34,7 +36,10 @@ try {
   auth = getAuth(app);
 }
 
-export { auth };
+const firestore = getFirestore(app);
+const storage = getStorage(app);
+
+export { auth, firestore, storage };
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();

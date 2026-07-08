@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/react-native';
 import { AuthState, User } from '../types';
 import { useNetwork } from './NetworkContext';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
+import { firestoreSyncService } from '../services/firestoreSyncService';
 import { auth } from '../config/firebase';
 import { env } from '../utils/env';
 
@@ -81,6 +82,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const user = FirebaseAuthService.mapFirebaseUserToUser(firebaseUser);
         console.log('Firebase auth state changed — user:', user.email);
         syncSentryUser(user);
+        void firestoreSyncService.ensureUserProfile(user).catch((error) => {
+          console.error('Failed to ensure Firestore user profile:', error);
+        });
         setAuthState({
           isAuthenticated: true,
           user,

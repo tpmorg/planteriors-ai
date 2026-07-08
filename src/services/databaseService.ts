@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 
-const DB_VERSION = 7; // Current database version
+const DB_VERSION = 8; // Current database version
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -288,6 +288,21 @@ export class DatabaseService {
         CREATE INDEX IF NOT EXISTS idx_saved_designs_user_id ON saved_designs(user_id);
       `);
       await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_saved_designs_remote_id ON saved_designs(remote_id);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_saved_designs_sync_status ON saved_designs(sync_status);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_collections_remote_id ON collections(remote_id);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_collections_sync_status ON collections(sync_status);
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
+      `);
+      await this.db.execAsync(`
         CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking(user_id);
       `);
       await this.db.execAsync(`
@@ -330,6 +345,35 @@ export class DatabaseService {
     await this.ensureTableColumn('saved_designs', 'individual_plant_id', 'TEXT');
     await this.ensureTableColumn('saved_designs', 'generated_plants_json', 'TEXT');
     await this.ensureTableColumn('saved_designs', 'collection_id', 'INTEGER');
+
+    await this.ensureTableColumn('saved_designs', 'remote_id', 'TEXT');
+    await this.ensureTableColumn('saved_designs', 'updated_at', 'INTEGER');
+    await this.ensureTableColumn('saved_designs', 'deleted_at', 'INTEGER');
+    await this.ensureTableColumn('saved_designs', 'last_synced_at', 'INTEGER');
+    await this.ensureTableColumn('saved_designs', 'sync_status', "TEXT DEFAULT 'pending_upload'");
+    await this.ensureTableColumn('saved_designs', 'device_id', 'TEXT');
+    await this.ensureTableColumn('saved_designs', 'version', 'INTEGER DEFAULT 1');
+
+    await this.ensureTableColumn('collections', 'remote_id', 'TEXT');
+    await this.ensureTableColumn('collections', 'updated_at', 'INTEGER');
+    await this.ensureTableColumn('collections', 'deleted_at', 'INTEGER');
+    await this.ensureTableColumn('collections', 'last_synced_at', 'INTEGER');
+    await this.ensureTableColumn('collections', 'sync_status', "TEXT DEFAULT 'pending_upload'");
+    await this.ensureTableColumn('collections', 'device_id', 'TEXT');
+    await this.ensureTableColumn('collections', 'version', 'INTEGER DEFAULT 1');
+
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload_json TEXT,
+        attempts INTEGER DEFAULT 0,
+        next_attempt_at INTEGER,
+        created_at INTEGER NOT NULL
+      );
+    `);
   }
 
   private async ensureTableColumn(
@@ -408,6 +452,13 @@ export class DatabaseService {
       console.log('Running migration to v7: Adding generated plant identification results');
       await this.migrateToV7();
       await this.setDbVersion(7);
+    }
+
+    // Migration from v7 to v8: Add sync metadata columns and queue table
+    if (currentVersion < 8) {
+      console.log('Running migration to v8: Adding sync metadata support');
+      await this.migrateToV8();
+      await this.setDbVersion(8);
     }
 
     console.log('Migrations complete. Database at version:', DB_VERSION);
@@ -713,6 +764,55 @@ export class DatabaseService {
       `);
     } catch {
       // Column already exists
+    }
+  }
+
+  private async migrateToV8(): Promise<void> {
+    if (!this.db) return;
+
+    const statements = [
+      `ALTER TABLE saved_designs ADD COLUMN remote_id TEXT;`,
+      `ALTER TABLE saved_designs ADD COLUMN updated_at INTEGER;`,
+      `ALTER TABLE saved_designs ADD COLUMN deleted_at INTEGER;`,
+      `ALTER TABLE saved_designs ADD COLUMN last_synced_at INTEGER;`,
+      `ALTER TABLE saved_designs ADD COLUMN sync_status TEXT DEFAULT 'pending_upload';`,
+      `ALTER TABLE saved_designs ADD COLUMN device_id TEXT;`,
+      `ALTER TABLE saved_designs ADD COLUMN version INTEGER DEFAULT 1;`,
+      `ALTER TABLE collections ADD COLUMN remote_id TEXT;`,
+      `ALTER TABLE collections ADD COLUMN updated_at INTEGER;`,
+      `ALTER TABLE collections ADD COLUMN deleted_at INTEGER;`,
+      `ALTER TABLE collections ADD COLUMN last_synced_at INTEGER;`,
+      `ALTER TABLE collections ADD COLUMN sync_status TEXT DEFAULT 'pending_upload';`,
+      `ALTER TABLE collections ADD COLUMN device_id TEXT;`,
+      `ALTER TABLE collections ADD COLUMN version INTEGER DEFAULT 1;`,
+    ];
+
+    for (const statement of statements) {
+      try {
+        await this.db.execAsync(statement);
+      } catch {
+        // Column likely already exists
+      }
+    }
+
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload_json TEXT,
+        attempts INTEGER DEFAULT 0,
+        next_attempt_at INTEGER,
+        created_at INTEGER NOT NULL
+      );
+    `);
+
+    try {
+      await this.db.execAsync(`UPDATE saved_designs SET updated_at = COALESCE(updated_at, created_at), sync_status = COALESCE(sync_status, 'pending_upload'), version = COALESCE(version, 1) WHERE updated_at IS NULL OR sync_status IS NULL OR version IS NULL;`);
+      await this.db.execAsync(`UPDATE collections SET updated_at = COALESCE(updated_at, created_at), sync_status = COALESCE(sync_status, 'pending_upload'), version = COALESCE(version, 1) WHERE updated_at IS NULL OR sync_status IS NULL OR version IS NULL;`);
+    } catch {
+      // Ignore backfill failures
     }
   }
 
@@ -1239,6 +1339,7 @@ export class DatabaseService {
       const plantStyleName = design.plantStyleName || (isSinglePlantMode ? design.individualPlantSize || '' : '');
       const plantStyleDescription = design.plantStyleDescription || (isSinglePlantMode ? design.individualPlantPlacement || '' : '');
 
+      const now = Date.now();
       const result = await this.db.runAsync(
         `INSERT INTO saved_designs (
           original_image_uri, generated_image_uri, local_image_path,
@@ -1249,8 +1350,8 @@ export class DatabaseService {
           individual_plant_size, individual_plant_placement,
           individual_plant_id,
           generated_plants_json,
-          custom_prompt, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          custom_prompt, created_at, updated_at, sync_status, version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           design.originalImageUri,
           design.generatedImageUri,
@@ -1268,7 +1369,10 @@ export class DatabaseService {
           toDbValue(design.individualPlantId),
           design.generatedPlants ? JSON.stringify(design.generatedPlants) : null,
           design.customPrompt ?? '',
-          Date.now(),
+          now,
+          now,
+          'pending_upload',
+          1,
         ]
       );
 
@@ -1297,7 +1401,7 @@ export class DatabaseService {
           placement: design.individualPlantPlacement!,
         } : undefined,
         customPrompt: design.customPrompt,
-        createdAt: new Date(Date.now()),
+        createdAt: new Date(now),
         isFavorite: false,
       };
 
@@ -1317,6 +1421,7 @@ export class DatabaseService {
     try {
       const result = await this.db.getAllAsync(`
         SELECT * FROM saved_designs
+        WHERE deleted_at IS NULL
         ORDER BY created_at DESC
       `);
 
@@ -1337,6 +1442,7 @@ export class DatabaseService {
         SELECT original_image_uri
         FROM saved_designs
         WHERE original_image_uri IS NOT NULL
+          AND deleted_at IS NULL
       `;
 
       if (userId) {
@@ -1367,7 +1473,7 @@ export class DatabaseService {
 
     try {
       const result = await this.db.getFirstAsync(
-        'SELECT * FROM saved_designs WHERE id = ?',
+        'SELECT * FROM saved_designs WHERE id = ? AND deleted_at IS NULL',
         [id]
       );
 
@@ -1387,8 +1493,10 @@ export class DatabaseService {
 
     try {
       await this.db.runAsync(
-        'UPDATE saved_designs SET generated_plants_json = ? WHERE id = ?',
-        [JSON.stringify(generatedPlants), designId]
+        `UPDATE saved_designs
+         SET generated_plants_json = ?, updated_at = ?, sync_status = 'pending_upload', version = COALESCE(version, 1) + 1
+         WHERE id = ?`,
+        [JSON.stringify(generatedPlants), Date.now(), designId]
       );
       this.notifyLibraryChanged();
     } catch (error) {
@@ -1403,8 +1511,13 @@ export class DatabaseService {
 
     try {
       await this.db.runAsync(
-        'UPDATE saved_designs SET is_favorite = 1 - is_favorite WHERE id = ?',
-        [id]
+        `UPDATE saved_designs
+         SET is_favorite = 1 - is_favorite,
+             updated_at = ?,
+             sync_status = 'pending_upload',
+             version = COALESCE(version, 1) + 1
+         WHERE id = ?`,
+        [Date.now(), id]
       );
       console.log('Toggled favorite for design:', id);
       this.notifyLibraryChanged();
@@ -1429,8 +1542,16 @@ export class DatabaseService {
         }
       }
 
-      await this.db.runAsync('DELETE FROM saved_designs WHERE id = ?', [id]);
-      console.log('Design deleted:', id);
+      await this.db.runAsync(
+        `UPDATE saved_designs
+         SET deleted_at = ?,
+             updated_at = ?,
+             sync_status = 'pending_delete',
+             version = COALESCE(version, 1) + 1
+         WHERE id = ?`,
+        [Date.now(), Date.now(), id]
+      );
+      console.log('Design marked deleted:', id);
       this.notifyLibraryChanged();
     } catch (error) {
       console.error('Failed to delete design:', error);
@@ -1524,11 +1645,13 @@ export class DatabaseService {
       const rows = userId
         ? await this.db.getAllAsync(`
             SELECT * FROM collections
-            WHERE user_id = ? OR user_id IS NULL
+            WHERE (user_id = ? OR user_id IS NULL)
+              AND deleted_at IS NULL
             ORDER BY name COLLATE NOCASE ASC
           `, [userId])
         : await this.db.getAllAsync(`
             SELECT * FROM collections
+            WHERE deleted_at IS NULL
             ORDER BY name COLLATE NOCASE ASC
           `);
 
@@ -1555,8 +1678,8 @@ export class DatabaseService {
     const now = Date.now();
     try {
       const result = await this.db.runAsync(
-        `INSERT INTO collections (user_id, name, created_at) VALUES (?, ?, ?)`
-        , [userId ?? null, trimmed, now]
+        `INSERT INTO collections (user_id, name, created_at, updated_at, sync_status, version) VALUES (?, ?, ?, ?, ?, ?)`
+        , [userId ?? null, trimmed, now, now, 'pending_upload', 1]
       );
 
       const insertedId = await this.resolveInsertRowId(result);
@@ -1580,8 +1703,13 @@ export class DatabaseService {
     const value = collectionId ? Number(collectionId) : null;
     try {
       await this.db.runAsync(
-        'UPDATE saved_designs SET collection_id = ? WHERE id = ?'
-        , [value, Number(designId)]
+        `UPDATE saved_designs
+         SET collection_id = ?,
+             updated_at = ?,
+             sync_status = 'pending_upload',
+             version = COALESCE(version, 1) + 1
+         WHERE id = ?`
+        , [value, Date.now(), Number(designId)]
       );
       this.notifyLibraryChanged();
     } catch (error) {
@@ -1806,7 +1934,9 @@ export class DatabaseService {
 
     try {
       await this.db.runAsync(
-        'UPDATE saved_designs SET user_id = ? WHERE user_id IS NULL',
+        `UPDATE saved_designs
+         SET user_id = ?, sync_status = CASE WHEN sync_status IS NULL THEN 'pending_upload' ELSE sync_status END
+         WHERE user_id IS NULL`,
         [userId]
       );
       console.log('Assigned user_id to existing designs:', userId);
@@ -1814,6 +1944,206 @@ export class DatabaseService {
       console.error('Failed to assign user_id to existing designs:', error);
       throw error;
     }
+  }
+
+  // ============================================
+  // Sync Methods
+  // ============================================
+
+  async getSyncableDesignRows(userId: string): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return this.db.getAllAsync(
+      `SELECT * FROM saved_designs WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC`,
+      [userId]
+    );
+  }
+
+  async getSyncableCollectionRows(userId: string): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return this.db.getAllAsync(
+      `SELECT * FROM collections WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC`,
+      [userId]
+    );
+  }
+
+  async markDesignSynced(localId: string, remoteId: string): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = Date.now();
+    await this.db.runAsync(
+      `UPDATE saved_designs
+       SET remote_id = ?, last_synced_at = ?, sync_status = 'synced'
+       WHERE id = ?`,
+      [remoteId, now, Number(localId)]
+    );
+  }
+
+  async markCollectionSynced(localId: string, remoteId: string): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = Date.now();
+    await this.db.runAsync(
+      `UPDATE collections
+       SET remote_id = ?, last_synced_at = ?, sync_status = 'synced'
+       WHERE id = ?`,
+      [remoteId, now, Number(localId)]
+    );
+  }
+
+  async upsertRestoredCollection(input: {
+    userId: string;
+    remoteId: string;
+    name: string;
+    createdAt: number;
+    updatedAt: number;
+    deletedAt?: number | null;
+    deviceId?: string | null;
+    version?: number;
+  }): Promise<string> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const existing = await this.db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM collections WHERE remote_id = ? LIMIT 1',
+      [input.remoteId]
+    );
+
+    const now = Date.now();
+    if (existing?.id) {
+      await this.db.runAsync(
+        `UPDATE collections
+         SET user_id = ?, name = ?, created_at = ?, updated_at = ?, deleted_at = ?,
+             device_id = ?, version = ?, last_synced_at = ?, sync_status = 'synced'
+         WHERE id = ?`,
+        [
+          input.userId,
+          input.name,
+          input.createdAt,
+          input.updatedAt,
+          input.deletedAt ?? null,
+          input.deviceId ?? null,
+          input.version ?? 1,
+          now,
+          existing.id,
+        ]
+      );
+      return String(existing.id);
+    }
+
+    const result = await this.db.runAsync(
+      `INSERT INTO collections
+       (user_id, name, created_at, updated_at, deleted_at, remote_id, last_synced_at, sync_status, device_id, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'synced', ?, ?)`,
+      [
+        input.userId,
+        input.name,
+        input.createdAt,
+        input.updatedAt,
+        input.deletedAt ?? null,
+        input.remoteId,
+        now,
+        input.deviceId ?? null,
+        input.version ?? 1,
+      ]
+    );
+
+    return String(await this.resolveInsertRowId(result));
+  }
+
+  async upsertRestoredDesign(input: {
+    userId: string;
+    remoteId: string;
+    originalImageUri: string;
+    generatedImageUri: string;
+    localImagePath?: string | null;
+    mode: PlantSelectionMode;
+    collectionLocalId?: string | null;
+    plantTypeName?: string | null;
+    plantTypeDescription?: string | null;
+    plantStyleName?: string | null;
+    plantStyleDescription?: string | null;
+    individualPlantName?: string | null;
+    individualPlantScientificName?: string | null;
+    individualPlantSize?: PlantSize | null;
+    individualPlantPlacement?: PlacementType | null;
+    individualPlantId?: string | null;
+    generatedPlants?: IdentifiedDesignPlant[] | null;
+    customPrompt?: string | null;
+    createdAt: number;
+    updatedAt: number;
+    deletedAt?: number | null;
+    isFavorite: boolean;
+    deviceId?: string | null;
+    version?: number;
+  }): Promise<string> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const existing = await this.db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM saved_designs WHERE remote_id = ? LIMIT 1',
+      [input.remoteId]
+    );
+    const now = Date.now();
+    const values = [
+      input.originalImageUri,
+      input.generatedImageUri,
+      input.localImagePath ?? null,
+      input.userId,
+      input.mode,
+      input.collectionLocalId ? Number(input.collectionLocalId) : null,
+      input.plantTypeName ?? null,
+      input.plantTypeDescription ?? null,
+      input.plantStyleName ?? null,
+      input.plantStyleDescription ?? null,
+      input.individualPlantName ?? null,
+      input.individualPlantScientificName ?? null,
+      input.individualPlantSize ?? null,
+      input.individualPlantPlacement ?? null,
+      input.individualPlantId ?? null,
+      input.generatedPlants ? JSON.stringify(input.generatedPlants) : null,
+      input.customPrompt ?? null,
+      input.createdAt,
+      input.updatedAt,
+      input.deletedAt ?? null,
+      input.remoteId,
+      now,
+      input.deviceId ?? null,
+      input.version ?? 1,
+      input.isFavorite ? 1 : 0,
+    ];
+
+    if (existing?.id) {
+      await this.db.runAsync(
+        `UPDATE saved_designs
+         SET original_image_uri = ?, generated_image_uri = ?, local_image_path = ?, user_id = ?, mode = ?, collection_id = ?,
+             plant_type_name = ?, plant_type_description = ?, plant_style_name = ?, plant_style_description = ?,
+             individual_plant_name = ?, individual_plant_scientific_name = ?, individual_plant_size = ?, individual_plant_placement = ?,
+             individual_plant_id = ?, generated_plants_json = ?, custom_prompt = ?, created_at = ?, updated_at = ?, deleted_at = ?,
+             remote_id = ?, last_synced_at = ?, device_id = ?, version = ?, is_favorite = ?, sync_status = 'synced'
+         WHERE id = ?`,
+        [...values, existing.id]
+      );
+      return String(existing.id);
+    }
+
+    const result = await this.db.runAsync(
+      `INSERT INTO saved_designs
+       (original_image_uri, generated_image_uri, local_image_path, user_id, mode, collection_id,
+        plant_type_name, plant_type_description, plant_style_name, plant_style_description,
+        individual_plant_name, individual_plant_scientific_name, individual_plant_size, individual_plant_placement,
+        individual_plant_id, generated_plants_json, custom_prompt, created_at, updated_at, deleted_at,
+        remote_id, last_synced_at, device_id, version, is_favorite, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+      values
+    );
+
+    return String(await this.resolveInsertRowId(result));
   }
 
   // ============================================

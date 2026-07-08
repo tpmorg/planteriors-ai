@@ -1,9 +1,91 @@
+import { Timestamp } from 'firebase/firestore';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   picture?: string;
   provider: 'google' | 'apple';
+}
+
+export type SyncStatus = 'pending_upload' | 'synced' | 'pending_delete' | 'failed' | 'conflict';
+export type FirestoreUserProvider = 'google' | 'apple';
+export type FirestoreSyncSchemaVersion = 1;
+
+export interface FirestoreUserProfile {
+  uid: string;
+  email: string;
+  name: string;
+  provider: FirestoreUserProvider;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface FirestoreSyncMeta {
+  schemaVersion: FirestoreSyncSchemaVersion;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastSyncAt: Timestamp | null;
+  lastRestoreAt: Timestamp | null;
+  activeDeviceId: string | null;
+}
+
+export interface FirestoreCollectionDoc {
+  id: string;
+  name: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  deletedAt: Timestamp | null;
+  deviceId: string;
+  version: number;
+}
+
+export interface FirestoreDesignDoc {
+  id: string;
+  collectionId: string | null;
+  mode: Extract<PlantSelectionMode, 'multi-plant' | 'individual'>;
+  originalImagePath: string;
+  generatedImagePath: string;
+  originalImageUrl: string | null;
+  generatedImageUrl: string | null;
+  customPrompt: string | null;
+  plantTypeName: string | null;
+  plantTypeDescription: string | null;
+  plantStyleName: string | null;
+  plantStyleDescription: string | null;
+  individualPlantName: string | null;
+  individualPlantScientificName: string | null;
+  individualPlantSize: PlantSize | null;
+  individualPlantPlacement: string | null;
+  individualPlantId: string | null;
+  generatedPlants: IdentifiedDesignPlant[] | null;
+  isFavorite: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  deletedAt: Timestamp | null;
+  deviceId: string;
+  version: number;
+}
+
+export interface LocalSyncMetadata {
+  remoteId?: string | null;
+  updatedAt: number;
+  deletedAt?: number | null;
+  lastSyncedAt?: number | null;
+  syncStatus: SyncStatus;
+  deviceId: string;
+  version: number;
+}
+
+export interface SyncQueueItem {
+  id?: number;
+  entityType: 'design' | 'collection';
+  entityId: string;
+  operation: 'upsert' | 'delete' | 'restore';
+  payloadJson?: string | null;
+  attempts: number;
+  nextAttemptAt?: number | null;
+  createdAt: number;
 }
 
 export interface PlantStyle {

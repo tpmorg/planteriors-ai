@@ -19,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
+import { firestoreSyncService } from '../services/firestoreSyncService';
 
 interface AccountScreenProps {
   onUpgradePress?: () => void;
@@ -48,6 +49,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const isSheetPresentation = presentation === 'sheet';
 
   const [isRestoring, setRestoring] = React.useState(false);
+  const [isSyncingLibrary, setSyncingLibrary] = React.useState(false);
 
   const handleLogout = () => {
     signOut();
@@ -93,6 +95,53 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     } finally {
       setRestoring(false);
     }
+  };
+
+  const handleCloudSync = () => {
+    if (!user) {
+      Alert.alert('Sign in required', 'Please sign in to sync your library.');
+      return;
+    }
+
+    Alert.alert('Cloud Sync', 'Choose an option', [
+      {
+        text: 'Sync Now',
+        onPress: async () => {
+          if (!requireNetwork('Please connect to the internet to sync your library.')) {
+            return;
+          }
+          setSyncingLibrary(true);
+          try {
+            const result = await firestoreSyncService.syncUserData(user);
+            Alert.alert('Sync complete', `Synced ${result.designs} design(s) and ${result.collections} collection(s).`);
+          } catch (error) {
+            console.error('Failed to sync library:', error);
+            Alert.alert('Sync failed', 'Could not sync your library right now.');
+          } finally {
+            setSyncingLibrary(false);
+          }
+        },
+      },
+      {
+        text: 'Restore from Cloud',
+        onPress: async () => {
+          if (!requireNetwork('Please connect to the internet to restore your library.')) {
+            return;
+          }
+          setSyncingLibrary(true);
+          try {
+            const result = await firestoreSyncService.restoreUserData(user.id);
+            Alert.alert('Restore complete', `Restored ${result.designs} design(s) and ${result.collections} collection(s).`);
+          } catch (error) {
+            console.error('Failed to restore library:', error);
+            Alert.alert('Restore failed', 'Could not restore your library right now.');
+          } finally {
+            setSyncingLibrary(false);
+          }
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleResetUsage = () => {
@@ -282,6 +331,31 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             </View>
           </View>
         )}
+
+        <View style={styles.syncSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Cloud Backup</Text>
+          </View>
+          <View style={styles.syncCard}>
+            <Text style={styles.syncDescription}>
+              Sync your saved designs and collections to your account, or restore them on this device.
+            </Text>
+            <TouchableOpacity
+              style={[styles.syncButton, isSyncingLibrary && styles.syncButtonDisabled]}
+              onPress={handleCloudSync}
+              disabled={isSyncingLibrary}
+            >
+              {isSyncingLibrary ? (
+                <ActivityIndicator color={theme.colors.surface} />
+              ) : (
+                <>
+                  <AppIcon name="ArrowCircleUp" size={20} color={theme.colors.surface} />
+                  <Text style={styles.syncButtonText}>Sync / Restore Library</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.menuSection}>
           <TouchableOpacity
@@ -590,6 +664,50 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   upgradeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.surface,
+  },
+  syncSection: {
+    backgroundColor: theme.colors.surface,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  syncCard: {
+    backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  syncDescription: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  syncButtonDisabled: {
+    opacity: 0.7,
+  },
+  syncButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.surface,

@@ -1,0 +1,295 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users/{uid}
+    // Fields:
+    //   - uid: string (required, immutable, must equal auth uid)
+    //   - email: string (required, owner-only PII, max 320)
+    //   - name: string (required, max 120)
+    //   - provider: string (required, 'google' | 'apple')
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: users/{uid}/sync_meta/{docId}
+    // Doc IDs:
+    //   - profile
+    // Fields:
+    //   - schemaVersion: int (required, 1..1000)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //   - lastSyncAt: timestamp|null (optional)
+    //   - lastRestoreAt: timestamp|null (optional)
+    //   - activeDeviceId: string|null (optional, max 200)
+    //
+    // Collection: users/{uid}/collections/{collectionId}
+    // Fields:
+    //   - id: string (required, immutable, must equal collectionId)
+    //   - name: string (required, 1..120 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //   - deletedAt: timestamp|null (optional)
+    //   - deviceId: string (required, 1..200 chars)
+    //   - version: int (required, 1..1000000)
+    //
+    // Collection: users/{uid}/designs/{designId}
+    // Fields:
+    //   - id: string (required, immutable, must equal designId)
+    //   - collectionId: string|null (optional, max 120)
+    //   - mode: string (required, 'multi-plant' | 'individual')
+    //   - originalImagePath: string (required, must be in user's Storage path)
+    //   - generatedImagePath: string (required, must be in user's Storage path)
+    //   - originalImageUrl: string|null (optional URL, max 2000)
+    //   - generatedImageUrl: string|null (optional URL, max 2000)
+    //   - customPrompt: string|null (optional, max 4000)
+    //   - plantTypeName: string|null (optional, max 120)
+    //   - plantTypeDescription: string|null (optional, max 1000)
+    //   - plantStyleName: string|null (optional, max 120)
+    //   - plantStyleDescription: string|null (optional, max 1000)
+    //   - individualPlantName: string|null (optional, max 120)
+    //   - individualPlantScientificName: string|null (optional, max 160)
+    //   - individualPlantSize: string|null (optional, 'small'|'medium'|'large')
+    //   - individualPlantPlacement: string|null (optional, max 200)
+    //   - individualPlantId: string|null (optional, max 120)
+    //   - generatedPlants: list|null (optional, max 50 items)
+    //   - isFavorite: bool (required)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //   - deletedAt: timestamp|null (optional)
+    //   - deviceId: string (required, 1..200 chars)
+    //   - version: int (required, 1..1000000)
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isNonEmptyString(value, minLen, maxLen) {
+      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    }
+
+    function isOptionalString(value, maxLen) {
+      return value == null || (value is string && value.size() <= maxLen);
+    }
+
+    function isValidUrl(value) {
+      return value is string &&
+        value.size() <= 2000 &&
+        (value.matches('^https://.*') || value.matches('^http://.*'));
+    }
+
+    function isOptionalUrl(value) {
+      return value == null || isValidUrl(value);
+    }
+
+    function isOptionalTimestamp(value) {
+      return value == null || value is timestamp;
+    }
+
+    function isPositiveInt(value, minValue, maxValue) {
+      return value is int && value >= minValue && value <= maxValue;
+    }
+
+    function isValidMode(value) {
+      return value in ['multi-plant', 'individual'];
+    }
+
+    function isValidProvider(value) {
+      return value in ['google', 'apple'];
+    }
+
+    function isValidPlantSize(value) {
+      return value == null || value in ['small', 'medium', 'large'];
+    }
+
+    function isValidGeneratedPlants(value) {
+      return value == null || (value is list && value.size() <= 50);
+    }
+
+    function isScopedDesignPath(uid, designId, path) {
+      return path is string &&
+        path.size() <= 300 &&
+        path.matches('^users/' + uid + '/designs/' + designId + '/[A-Za-z0-9._-]+$');
+    }
+
+    function unchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUserProfile(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'uid',
+          'email',
+          'name',
+          'provider',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        d.keys().hasAll(['uid', 'email', 'name', 'provider', 'createdAt', 'updatedAt']) &&
+        d.uid == uid &&
+        d.uid == request.auth.uid &&
+        isNonEmptyString(d.uid, 1, 128) &&
+        isNonEmptyString(d.email, 3, 320) &&
+        isNonEmptyString(d.name, 1, 120) &&
+        isValidProvider(d.provider) &&
+        d.createdAt is timestamp &&
+        d.updatedAt is timestamp;
+    }
+
+    function isValidSyncMeta() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'schemaVersion',
+          'createdAt',
+          'updatedAt',
+          'lastSyncAt',
+          'lastRestoreAt',
+          'activeDeviceId'
+        ]) &&
+        d.keys().hasAll(['schemaVersion', 'createdAt', 'updatedAt']) &&
+        isPositiveInt(d.schemaVersion, 1, 1000) &&
+        d.createdAt is timestamp &&
+        d.updatedAt is timestamp &&
+        isOptionalTimestamp(d.lastSyncAt) &&
+        isOptionalTimestamp(d.lastRestoreAt) &&
+        (d.activeDeviceId == null || isNonEmptyString(d.activeDeviceId, 1, 200));
+    }
+
+    function isValidCollection(collectionId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'id',
+          'name',
+          'createdAt',
+          'updatedAt',
+          'deletedAt',
+          'deviceId',
+          'version'
+        ]) &&
+        d.keys().hasAll([
+          'id',
+          'name',
+          'createdAt',
+          'updatedAt',
+          'deviceId',
+          'version'
+        ]) &&
+        d.id == collectionId &&
+        isNonEmptyString(d.id, 1, 120) &&
+        isNonEmptyString(d.name, 1, 120) &&
+        d.createdAt is timestamp &&
+        d.updatedAt is timestamp &&
+        isOptionalTimestamp(d.deletedAt) &&
+        isNonEmptyString(d.deviceId, 1, 200) &&
+        isPositiveInt(d.version, 1, 1000000);
+    }
+
+    function isValidDesign(uid, designId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'id',
+          'collectionId',
+          'mode',
+          'originalImagePath',
+          'generatedImagePath',
+          'originalImageUrl',
+          'generatedImageUrl',
+          'customPrompt',
+          'plantTypeName',
+          'plantTypeDescription',
+          'plantStyleName',
+          'plantStyleDescription',
+          'individualPlantName',
+          'individualPlantScientificName',
+          'individualPlantSize',
+          'individualPlantPlacement',
+          'individualPlantId',
+          'generatedPlants',
+          'isFavorite',
+          'createdAt',
+          'updatedAt',
+          'deletedAt',
+          'deviceId',
+          'version'
+        ]) &&
+        d.keys().hasAll([
+          'id',
+          'mode',
+          'originalImagePath',
+          'generatedImagePath',
+          'isFavorite',
+          'createdAt',
+          'updatedAt',
+          'deviceId',
+          'version'
+        ]) &&
+        d.id == designId &&
+        isNonEmptyString(d.id, 1, 120) &&
+        (d.collectionId == null || isNonEmptyString(d.collectionId, 1, 120)) &&
+        isValidMode(d.mode) &&
+        isScopedDesignPath(uid, designId, d.originalImagePath) &&
+        isScopedDesignPath(uid, designId, d.generatedImagePath) &&
+        isOptionalUrl(d.originalImageUrl) &&
+        isOptionalUrl(d.generatedImageUrl) &&
+        isOptionalString(d.customPrompt, 4000) &&
+        isOptionalString(d.plantTypeName, 120) &&
+        isOptionalString(d.plantTypeDescription, 1000) &&
+        isOptionalString(d.plantStyleName, 120) &&
+        isOptionalString(d.plantStyleDescription, 1000) &&
+        isOptionalString(d.individualPlantName, 120) &&
+        isOptionalString(d.individualPlantScientificName, 160) &&
+        isValidPlantSize(d.individualPlantSize) &&
+        isOptionalString(d.individualPlantPlacement, 200) &&
+        isOptionalString(d.individualPlantId, 120) &&
+        isValidGeneratedPlants(d.generatedPlants) &&
+        d.isFavorite is bool &&
+        d.createdAt is timestamp &&
+        d.updatedAt is timestamp &&
+        isOptionalTimestamp(d.deletedAt) &&
+        isNonEmptyString(d.deviceId, 1, 200) &&
+        isPositiveInt(d.version, 1, 1000000);
+    }
+
+    match /users/{uid} {
+      allow create: if isOwner(uid) && isValidUserProfile(uid);
+      allow read: if isOwner(uid);
+      allow update: if isOwner(uid) && isValidUserProfile(uid) && unchanged(['uid', 'createdAt']);
+      allow delete: if false;
+
+      match /sync_meta/{docId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && docId == 'profile' && isValidSyncMeta();
+        allow update: if isOwner(uid) && docId == 'profile' && isValidSyncMeta() && unchanged(['createdAt']);
+        allow delete: if false;
+      }
+
+      match /collections/{collectionId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidCollection(collectionId);
+        allow update: if isOwner(uid) && isValidCollection(collectionId) && unchanged(['id', 'createdAt']);
+        allow delete: if isOwner(uid);
+      }
+
+      match /designs/{designId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidDesign(uid, designId);
+        allow update: if isOwner(uid) && isValidDesign(uid, designId) && unchanged(['id', 'createdAt']);
+        allow delete: if isOwner(uid);
+      }
+    }
+  }
+}
