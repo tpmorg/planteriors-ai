@@ -159,6 +159,7 @@
       },
       "googleClientId": "${GOOGLE_CLIENT_ID}",
       "geminiApiKey": "${GEMINI_API_KEY}",
+      "googlePlacesApiKey": "${GOOGLE_PLACES_API_KEY}",
       "sentryDsn": "${SENTRY_DSN}"
     },
     "owner": "morgish"

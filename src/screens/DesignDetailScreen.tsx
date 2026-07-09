@@ -44,6 +44,9 @@ import {
   searchPlants as searchSeedPlants,
 } from '../data/plantDatabase';
 import { saveDesignImageToDevice } from '../utils/imageSave';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
+import { ShoppingListSection } from '../components/ShoppingListSection';
+import { NearbyShopsModal } from '../components/NearbyShopsModal';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -216,12 +219,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       text: 'Tell me what to change. I will create a new iteration from this design.',
     },
   ]);
+  const [showShopsModal, setShowShopsModal] = useState(false);
+  const [shopsModalPlantName, setShopsModalPlantName] = useState('');
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
   const [plantProfile, setPlantProfile] = useState<PlantProfile | null>(null);
   const plantProfileRequestIdRef = useRef(0);
   const [isIdentifyingDesignPlants, setIsIdentifyingDesignPlants] = useState(false);
+  const [isCompareMode, setIsCompareMode] = useState(false);
   const isImageTransitioningRef = useRef(false);
   const isMountedRef = useRef(true);
   const { user } = useAuth();
@@ -410,6 +416,21 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     }
     showToast('Choose a replacement plant', 'info');
     onReplacePlant(design);
+  };
+
+  const toggleCompare = () => {
+    if (showInfoModal) {
+      hideModal();
+    }
+    setIsCompareMode((prev) => !prev);
+  };
+
+  const handleFindNearby = (plantName: string) => {
+    if (showInfoModal) {
+      hideModal();
+    }
+    setShopsModalPlantName(plantName);
+    setShowShopsModal(true);
   };
 
   const identifyGeneratedDesignPlants = async () => {
@@ -676,6 +697,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
     setCurrentIndex(index);
     setDesign(nextDesign);
+    setIsCompareMode(false);
     if (showInfoModal) {
       hideModal();
     }
@@ -853,67 +875,93 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
         {/* Full-screen zoomable image */}
         <View style={styles.imageContainer}>
-          <GestureDetector
-            gesture={Gesture.Simultaneous(
-              doubleTapGesture,
-              pinchGesture,
-              panGesture,
-              swipeUpGesture,
-              swipeLeftGesture,
-              swipeRightGesture
-            )}
-          >
-            <Animated.View style={styles.imageWrapper}>
-              <Animated.Image
-                source={{ uri: getImageUri() }}
-                style={[styles.image, imageStyle, imageFadeStyle]}
-                resizeMode="contain"
-              />
-              {design.collectionId && (
-                <View style={[styles.collectionBadge, { bottom: insets.bottom + 138 }]}>
-                  <Text style={styles.collectionBadgeText} numberOfLines={1}>
-                    {activeCollectionName || 'Collection'}
-                  </Text>
-                </View>
+          {isCompareMode ? (
+            <BeforeAfterSlider
+              originalUri={design.originalImageUri}
+              generatedUri={design.generatedImageUri}
+            />
+          ) : (
+            <GestureDetector
+              gesture={Gesture.Simultaneous(
+                doubleTapGesture,
+                pinchGesture,
+                panGesture,
+                swipeUpGesture,
+                swipeLeftGesture,
+                swipeRightGesture
               )}
-              {designList.length > 1 && (
-                <View style={[styles.imageCounter, { bottom: insets.bottom + 138 }]}>
-                  <Text style={styles.imageCounterText}>
-                    {currentIndex + 1} / {designList.length}
-                  </Text>
-                </View>
-              )}
+            >
+              <Animated.View style={styles.imageWrapper}>
+                <Animated.Image
+                  source={{ uri: getImageUri() }}
+                  style={[styles.image, imageStyle, imageFadeStyle]}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </GestureDetector>
+          )}
 
-              {/* Refinement trigger temporarily disabled */}
-              {false && (
-                <TouchableOpacity
-                  onPress={openRefineModal}
-                  style={styles.aiRefineTrigger}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.aiRefineOuterGlow}>
-                    <View style={styles.aiRefineInnerRing}>
-                      <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              )}
-            </Animated.View>
-          </GestureDetector>
+          {design.collectionId && (
+            <View style={[styles.collectionBadge, { bottom: insets.bottom + 138 }]}>
+              <Text style={styles.collectionBadgeText} numberOfLines={1}>
+                {activeCollectionName || 'Collection'}
+              </Text>
+            </View>
+          )}
+          {designList.length > 1 && (
+            <View style={[styles.imageCounter, { bottom: insets.bottom + 138 }]}>
+              <Text style={styles.imageCounterText}>
+                {currentIndex + 1} / {designList.length}
+              </Text>
+            </View>
+          )}
+
+          {/* Refinement trigger temporarily disabled */}
+          {false && (
+            <TouchableOpacity
+              onPress={openRefineModal}
+              style={styles.aiRefineTrigger}
+              activeOpacity={0.9}
+            >
+              <View style={styles.aiRefineOuterGlow}>
+                <View style={styles.aiRefineInnerRing}>
+                  <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={[styles.bottomDock, { bottom: insets.bottom + 14 }]}>
-          <TouchableOpacity
-            onPress={startPlantReplacement}
-            style={styles.bottomUtilityAction}
-            activeOpacity={0.86}
-            accessibilityRole="button"
-            accessibilityLabel="Replace plant"
-            accessibilityHint="Choose a different plant for this room image"
-          >
-            <AppIcon name="ArrowsClockwise" size={16} color="white" weight="bold" />
-            <Text style={styles.bottomUtilityActionText}>Replace Plant</Text>
-          </TouchableOpacity>
+          <View style={styles.utilityActionsRow}>
+            <TouchableOpacity
+              onPress={startPlantReplacement}
+              style={styles.bottomUtilityAction}
+              activeOpacity={0.86}
+              accessibilityRole="button"
+              accessibilityLabel="Replace plant"
+              accessibilityHint="Choose a different plant for this room image"
+            >
+              <AppIcon name="ArrowsClockwise" size={16} color="white" weight="bold" />
+              <Text style={styles.bottomUtilityActionText}>Replace Plant</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={toggleCompare}
+              style={[
+                styles.bottomUtilityAction,
+                isCompareMode && styles.bottomUtilityActionActive,
+              ]}
+              activeOpacity={0.86}
+              accessibilityRole="button"
+              accessibilityLabel={isCompareMode ? 'Exit compare mode' : 'Compare original and AI design'}
+            >
+              <AppIcon name="SlidersHorizontal" size={16} color="white" weight="bold" />
+              <Text style={styles.bottomUtilityActionText}>
+                {isCompareMode ? 'Done' : 'Compare'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.bottomActionBar}>
             <TouchableOpacity onPress={showModal} style={styles.bottomActionButton} activeOpacity={0.8}>
@@ -1155,6 +1203,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </View>
                     )}
 
+                    <View style={styles.shoppingListWrapper}>
+                      <ShoppingListSection
+                        design={design}
+                        onFindNearby={handleFindNearby}
+                      />
+                    </View>
+
                     {design.customPrompt && (
                       <View style={styles.infoItem}>
                         <AppIcon name="ChatCircleText" size={20} color={theme.colors.primary} />
@@ -1295,6 +1350,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             }
           }}
         />
+
+        <NearbyShopsModal
+          visible={showShopsModal}
+          plantName={shopsModalPlantName}
+          onDismiss={() => setShowShopsModal(false)}
+        />
       </View>
     </GestureHandlerRootView>
   );
@@ -1372,6 +1433,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: 'white',
     fontSize: 13,
     fontWeight: '700',
+  },
+  utilityActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bottomUtilityActionActive: {
+    backgroundColor: 'rgba(47,122,82,0.92)',
+    borderColor: 'rgba(134,239,172,0.5)',
   },
   bottomActionBar: {
     flexDirection: 'row',
@@ -1550,6 +1620,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   infoGrid: {
     gap: 12,
+  },
+  shoppingListWrapper: {
+    marginTop: 4,
+    marginBottom: 4,
   },
   infoItem: {
     flexDirection: 'row',

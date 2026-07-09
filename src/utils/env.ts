@@ -13,6 +13,7 @@ interface EnvConfig {
   REVENUECAT_ENTITLEMENT_ID: string;
   REVENUECAT_IOS_API_KEY_PRODUCTION: string;
   REVENUECAT_GOOGLE_API_KEY_PRODUCTION: string;
+  GOOGLE_PLACES_API_KEY: string;
 }
 
 class EnvironmentManager {
@@ -43,6 +44,7 @@ class EnvironmentManager {
       REVENUECAT_ENTITLEMENT_ID: expoConfig.revenueCatEntitlementId || expoConfig.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
       REVENUECAT_IOS_API_KEY_PRODUCTION: expoConfig.revenueCatIosApiKeyProduction || expoConfig.REVENUECAT_IOS_API_KEY_PRODUCTION || '',
       REVENUECAT_GOOGLE_API_KEY_PRODUCTION: expoConfig.revenueCatGoogleApiKeyProduction || expoConfig.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
+      GOOGLE_PLACES_API_KEY: expoConfig.googlePlacesApiKey || expoConfig.GOOGLE_PLACES_API_KEY || '',
     };
   }
 
@@ -95,6 +97,10 @@ class EnvironmentManager {
 
   getRevenueCatEntitlementId(): string {
     return this.get('REVENUECAT_ENTITLEMENT_ID');
+  }
+
+  getGooglePlacesApiKey(): string {
+    return this.get('GOOGLE_PLACES_API_KEY');
   }
 
   // Validation method to check if all required env vars are set
