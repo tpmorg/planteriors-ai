@@ -46,10 +46,28 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   // Full variant for free plan
   const progressPercentage = (freeRemaining / FREE_GENERATION_LIMIT) * 100;
   const hasReachedLimit = freeRemaining === 0;
+  const shouldHideBanner = isUpgradeCtaDismissed;
   const showUpgradeCta = Boolean(onUpgradePress) && (hasReachedLimit || !isUpgradeCtaDismissed);
+
+  if (shouldHideBanner) {
+    return null;
+  }
 
   return (
     <View style={[styles.container, hasReachedLimit && styles.limitContainer]}>
+      <TouchableOpacity
+        style={styles.dismissButton}
+        onPress={() => {
+          isUpgradeCtaDismissedForSession = true;
+          setIsUpgradeCtaDismissed(true);
+        }}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss free plan banner"
+      >
+        <AppIcon name="X" size={18} color={theme.colors.text} weight="bold" />
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={[styles.planName, hasReachedLimit && styles.limitPlanName]}>
           {hasReachedLimit ? 'Free Trial Complete' : 'Free Plan'}
@@ -60,6 +78,10 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
           </View>
         )}
       </View>
+
+      <Text style={styles.planSummary}>
+        Free includes {FREE_GENERATION_LIMIT} room designs. Premium unlocks unlimited generations, faster processing, and cloud backup.
+      </Text>
 
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
@@ -78,20 +100,12 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       {hasReachedLimit && (
         <Text style={styles.limitMessage}>
-          Subscribe to keep generating plant designs. Premium unlocks unlimited creations, priority processing, and HD exports.
+          You have used all free generations. Subscribe only if you want ongoing unlimited design creation.
         </Text>
       )}
 
       {showUpgradeCta && onUpgradePress && (
         <View style={[styles.upgradeCtaWrap, hasReachedLimit && styles.limitCtaWrap]}>
-          {!hasReachedLimit && (
-            <TouchableOpacity style={styles.dismissButton} onPress={() => {
-              isUpgradeCtaDismissedForSession = true;
-              setIsUpgradeCtaDismissed(true);
-            }}>
-              <AppIcon name="X" size={14} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={[styles.upgradeButton, hasReachedLimit && styles.limitUpgradeButton]}
             onPress={onUpgradePress}
@@ -123,12 +137,15 @@ const createStyles = (theme: any) =>
   StyleSheet.create({
     container: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 16,
+      borderRadius: 18,
+      paddingTop: 22,
+      paddingBottom: 20,
+      paddingHorizontal: 18,
       marginHorizontal: 16,
       marginVertical: 8,
       borderWidth: 1,
       borderColor: theme.colors.border,
+      position: 'relative',
     },
     limitContainer: {
       borderColor: theme.colors.primary,
@@ -152,16 +169,16 @@ const createStyles = (theme: any) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 10,
+      paddingRight: 44,
     },
     planName: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 20,
+      fontWeight: '700',
       color: theme.colors.text,
     },
     limitPlanName: {
-      fontSize: 19,
-      fontWeight: '700',
+      fontSize: 22,
     },
     premiumBadge: {
       flexDirection: 'row',
@@ -193,33 +210,39 @@ const createStyles = (theme: any) =>
       fontWeight: '600',
       color: theme.isDark ? '#fca5a5' : '#991b1b',
     },
+    planSummary: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 21,
+      marginBottom: 16,
+    },
     progressContainer: {
-      gap: 8,
+      gap: 10,
     },
     progressBar: {
-      height: 8,
+      height: 10,
       backgroundColor: theme.isDark ? theme.colors.border : theme.colors.borderLight,
-      borderRadius: 4,
+      borderRadius: 999,
       overflow: 'hidden',
     },
     progressFill: {
       height: '100%',
       backgroundColor: theme.colors.primary,
-      borderRadius: 4,
+      borderRadius: 999,
     },
     progressEmpty: {
       backgroundColor: theme.isDark ? '#7f1d1d' : '#f87171',
     },
     progressText: {
-      fontSize: 14,
+      fontSize: 15,
       color: theme.colors.textSecondary,
-      fontWeight: '500',
+      fontWeight: '600',
     },
     limitMessage: {
       fontSize: 14,
       color: theme.colors.text,
-      lineHeight: 20,
-      marginTop: 12,
+      lineHeight: 21,
+      marginTop: 14,
     },
     compactText: {
       fontSize: 13,
@@ -249,16 +272,18 @@ const createStyles = (theme: any) =>
       marginTop: 14,
     },
     dismissButton: {
-      alignSelf: 'flex-end',
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      position: 'absolute',
+      top: 14,
+      right: 14,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.isDark ? theme.colors.card : '#f3f4ef',
       borderWidth: 1,
       borderColor: theme.colors.border,
-      marginBottom: 6,
+      zIndex: 1,
     },
     upgradeButtonText: {
       fontSize: 15,
