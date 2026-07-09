@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Image, Text, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -20,6 +20,63 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
 }) => {
   const { width, height } = useWindowDimensions();
   const progress = useSharedValue(0.5);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    Image.getSize(
+      generatedUri,
+      (naturalWidth, naturalHeight) => {
+        if (!isActive || naturalWidth <= 0 || naturalHeight <= 0) {
+          return;
+        }
+
+        setImageAspectRatio(naturalWidth / naturalHeight);
+      },
+      () => {
+        if (isActive) {
+          setImageAspectRatio(null);
+        }
+      }
+    );
+
+    return () => {
+      isActive = false;
+    };
+  }, [generatedUri]);
+
+  const imageFrame = useMemo(() => {
+    if (!imageAspectRatio || width <= 0 || height <= 0) {
+      return {
+        top: 18,
+        left: 16,
+        right: 16,
+      };
+    }
+
+    const containerAspectRatio = width / height;
+
+    if (imageAspectRatio > containerAspectRatio) {
+      const renderedHeight = width / imageAspectRatio;
+      const verticalInset = Math.max(0, (height - renderedHeight) / 2);
+
+      return {
+        top: verticalInset + 16,
+        left: 16,
+        right: 16,
+      };
+    }
+
+    const renderedWidth = height * imageAspectRatio;
+    const horizontalInset = Math.max(0, (width - renderedWidth) / 2);
+
+    return {
+      top: 16,
+      left: horizontalInset + 16,
+      right: horizontalInset + 16,
+    };
+  }, [height, imageAspectRatio, width]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -54,15 +111,27 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           />
         </Animated.View>
 
-        {/* Labels — positioned at the bottom corners of the image area */}
-        <View style={[styles.label, styles.labelOriginal]}>
-          <View style={styles.labelPill}>
-            <Text style={styles.labelText}>Original</Text>
+        {/* Overlapping image-state pills */}
+        <View pointerEvents="none" style={styles.labelLayer}>
+          <View
+            style={[
+              styles.label,
+              { top: imageFrame.top, left: imageFrame.left },
+            ]}
+          >
+            <View style={styles.labelPill}>
+              <Text style={styles.labelText}>Original</Text>
+            </View>
           </View>
-        </View>
-        <View style={[styles.label, styles.labelGenerated]}>
-          <View style={styles.labelPill}>
-            <Text style={styles.labelText}>AI</Text>
+          <View
+            style={[
+              styles.label,
+              { top: imageFrame.top, right: imageFrame.right },
+            ]}
+          >
+            <View style={styles.labelPill}>
+              <Text style={styles.labelText}>Latest</Text>
+            </View>
           </View>
         </View>
 
@@ -95,6 +164,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     overflow: 'hidden',
   },
+  labelLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
+  },
   handle: {
     position: 'absolute',
     top: 0,
@@ -103,6 +177,8 @@ const styles = StyleSheet.create({
     width: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
+    elevation: 10,
   },
   handleTrack: {
     position: 'absolute',
@@ -159,28 +235,21 @@ const styles = StyleSheet.create({
   },
   label: {
     position: 'absolute',
-    bottom: 100,
-    zIndex: 2,
-  },
-  labelOriginal: {
-    left: 16,
-  },
-  labelGenerated: {
-    right: 16,
   },
   labelPill: {
-    backgroundColor: 'rgba(0,0,0,0.42)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: 'rgba(8,10,12,0.56)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.16)',
+    elevation: 2,
   },
   labelText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 11,
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.35,
     textTransform: 'uppercase',
   },
 });
