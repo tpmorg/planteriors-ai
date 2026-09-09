@@ -30,6 +30,7 @@ export class GeminiService {
 
   async generatePlantImage(
     request: GenerationRequest,
+    onPhaseChange?: (phase: 'preparing' | 'generating') => void,
   ): Promise<{ imageUri: string; isGenerated: boolean }> {
     try {
       // Safety check for network availability
@@ -38,6 +39,7 @@ export class GeminiService {
         throw new Error("No internet connection. Please check your network and try again.");
       }
 
+      onPhaseChange?.('preparing');
       const promptText = this.buildPrompt(request);
 
       console.log("Using Gemini SDK directly...");
@@ -58,6 +60,7 @@ export class GeminiService {
 
       // Compressed images are always JPEG
       const mimeType = "image/jpeg";
+      onPhaseChange?.('generating');
 
       console.log(
         "Successfully converted to base64, size:",

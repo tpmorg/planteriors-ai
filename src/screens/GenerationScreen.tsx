@@ -51,8 +51,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
   const [isCheckingUsage, setIsCheckingUsage] = useState(true); // New state for usage check
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
   const [currentStatus, setCurrentStatus] = useState("");
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(
     null,
@@ -77,20 +75,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     request.mode === 'replace-plant'
       ? 'Replacing plant with:'
       : 'Creating your design with:';
-
-  const initialSteps = [
-    { text: "Preparing your room image...", duration: 1000 },
-    { text: "Optimizing image for processing...", duration: 800 },
-    { text: "Connecting...", duration: 700 },
-  ];
-
-  const apiSteps = [
-    { text: "Sending image for analysis...", duration: 0 },
-    { text: "Analyzing room layout and lighting...", duration: 0 },
-    { text: "Designing plant placement...", duration: 0 },
-    { text: "Generating augmented image...", duration: 0 },
-    { text: "Processing final image...", duration: 0 },
-  ];
 
   useEffect(() => {
     checkUsageAndStart();
@@ -175,55 +159,18 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   }, [generatedImageUri, fadeAnim, scaleAnim]);
 
   const startGeneration = async () => {
-    let apiProgressInterval: ReturnType<typeof setInterval> | null = null;
-
     try {
-      // Phase 1: Initial preparation steps
-      setCurrentStatus("Preparing...");
-      for (let i = 0; i < initialSteps.length; i++) {
-        setCurrentStep(i);
-        setCurrentStatus(initialSteps[i].text);
-        setProgress((i + 1) / (initialSteps.length + apiSteps.length));
-        await new Promise((resolve) =>
-          setTimeout(resolve, initialSteps[i].duration),
-        );
-      }
-
-      // Phase 2: Real API call with live progress updates
+      setCurrentStatus("Preparing photo...");
       setApiCallStarted(true);
-      setCurrentStatus("Calling AI...");
 
       const geminiService = createGeminiService();
-
-      // Start the API call and update progress during the call
-      const apiPromise = geminiService.generatePlantImage(request);
-
-      // Simulate API progress steps while the real call is happening
-      let apiStepIndex = 0;
-      apiProgressInterval = setInterval(() => {
-        if (apiStepIndex < apiSteps.length) {
-          const totalSteps = initialSteps.length + apiSteps.length;
-          const currentProgress =
-            (initialSteps.length + apiStepIndex + 1) / totalSteps;
-
-          setProgress(currentProgress);
-          setCurrentStep(initialSteps.length + apiStepIndex);
-          setCurrentStatus(apiSteps[apiStepIndex].text);
-          apiStepIndex++;
-        }
-      }, 2000); // Update every 2 seconds during API call
-
-      // Wait for the actual API call to complete
-      const { imageUri: generatedUri, isGenerated } = await apiPromise;
+      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(
+        request,
+        (phase) => setCurrentStatus(
+          phase === 'preparing' ? 'Preparing photo...' : 'Generating design...'
+        )
+      );
       reportNetworkSuccess('generation');
-
-      // Clear the interval
-      if (apiProgressInterval) {
-        clearInterval(apiProgressInterval);
-      }
-
-      // Complete the progress
-      setProgress(1);
       setCurrentStatus("Generation complete!");
 
       setGeneratedImageUri(generatedUri);
@@ -237,9 +184,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         );
       }
     } catch (err) {
-      if (apiProgressInterval) {
-        clearInterval(apiProgressInterval);
-      }
       console.error("Generation error:", err);
       reportNetworkIssue('generation', err);
       setError(err instanceof Error ? err.message : "Failed to generate image");
@@ -249,8 +193,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   const handleRetry = () => {
     setError(null);
-    setProgress(0);
-    setCurrentStep(0);
     setCurrentStatus("");
     setGeneratedImageUri(null);
     setIsImageGenerated(false);
@@ -431,12 +373,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         </View>
 
         <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View
-              style={[styles.progressFill, { width: `${progress * 100}%` }]}
-            />
-          </View>
-          <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
         </View>
 
         <View style={styles.stepContainer}>

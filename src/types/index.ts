@@ -43,7 +43,7 @@ export interface FirestoreCollectionDoc {
 export interface FirestoreDesignDoc {
   id: string;
   collectionId: string | null;
-  mode: Extract<PlantSelectionMode, 'multi-plant' | 'individual'>;
+  mode: PlantSelectionMode;
   originalImagePath: string;
   generatedImagePath: string;
   originalImageUrl: string | null;

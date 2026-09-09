@@ -3,6 +3,23 @@ import * as ImageManipulator from 'expo-image-manipulator';
 const MAX_DIMENSION = 1024;
 const COMPRESSION_QUALITY = 0.75;
 
+export function getConstrainedImageSize(
+  width: number,
+  height: number,
+  maxDimension: number = MAX_DIMENSION
+): { width: number; height: number } | null {
+  const longestEdge = Math.max(width, height);
+  if (!Number.isFinite(longestEdge) || longestEdge <= 0 || longestEdge <= maxDimension) {
+    return null;
+  }
+
+  const scale = maxDimension / longestEdge;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
 /**
  * Compresses an image for AI processing.
  * Resizes to max 1024px on longest side and applies JPEG compression.
@@ -10,15 +27,14 @@ const COMPRESSION_QUALITY = 0.75;
  */
 export async function compressImageForAI(uri: string): Promise<string> {
   try {
+    const metadata = await ImageManipulator.manipulateAsync(uri, [], {
+      compress: 1,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    const resize = getConstrainedImageSize(metadata.width, metadata.height);
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      [
-        {
-          resize: {
-            width: MAX_DIMENSION,
-          },
-        },
-      ],
+      resize ? [{ resize }] : [],
       {
         compress: COMPRESSION_QUALITY,
         format: ImageManipulator.SaveFormat.JPEG,

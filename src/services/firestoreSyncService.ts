@@ -129,7 +129,11 @@ export class FirestoreSyncService {
       const payload: FirestoreDesignDoc = {
         id: remoteId,
         collectionId: row.collection_id ? collectionIdMap.get(String(row.collection_id)) || null : null,
-        mode: row.mode === 'multi-plant' ? 'multi-plant' : 'individual',
+        mode: row.mode === 'replace-plant'
+          ? 'replace-plant'
+          : row.mode === 'multi-plant'
+            ? 'multi-plant'
+            : 'individual',
         originalImagePath,
         generatedImagePath,
         originalImageUrl,

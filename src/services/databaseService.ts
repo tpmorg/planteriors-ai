@@ -1414,12 +1414,18 @@ export class DatabaseService {
     }
   }
 
-  async getAllDesigns(): Promise<SavedDesign[]> {
+  async getAllDesigns(userId?: string): Promise<SavedDesign[]> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const result = await this.db.getAllAsync(`
+      const result = userId
+        ? await this.db.getAllAsync(`
+        SELECT * FROM saved_designs
+        WHERE deleted_at IS NULL AND user_id = ?
+        ORDER BY created_at DESC
+      `, [userId])
+        : await this.db.getAllAsync(`
         SELECT * FROM saved_designs
         WHERE deleted_at IS NULL
         ORDER BY created_at DESC

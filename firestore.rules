@@ -40,7 +40,7 @@ service cloud.firestore {
     // Fields:
     //   - id: string (required, immutable, must equal designId)
     //   - collectionId: string|null (optional, max 120)
-    //   - mode: string (required, 'multi-plant' | 'individual')
+    //   - mode: string (required, 'multi-plant' | 'individual' | 'replace-plant')
     //   - originalImagePath: string (required, must be in user's Storage path)
     //   - generatedImagePath: string (required, must be in user's Storage path)
     //   - originalImageUrl: string|null (optional URL, max 2000)
@@ -101,7 +101,7 @@ service cloud.firestore {
     }
 
     function isValidMode(value) {
-      return value in ['multi-plant', 'individual'];
+      return value in ['multi-plant', 'individual', 'replace-plant'];
     }
 
     function isValidProvider(value) {
@@ -290,6 +290,19 @@ service cloud.firestore {
         allow update: if isOwner(uid) && isValidDesign(uid, designId) && unchanged(['id', 'createdAt']);
         allow delete: if isOwner(uid);
       }
+
+      // AI control-plane records are server-owned. Admin SDK access is
+      // authorized in the API and bypasses these client rules.
+      match /ai_jobs/{document=**} { allow read, write: if false; }
+      match /ai_uploads/{document=**} { allow read, write: if false; }
+      match /ai_usage/{document=**} { allow read, write: if false; }
+      match /ai_usage_events/{document=**} { allow read, write: if false; }
+      match /ai_idempotency/{document=**} { allow read, write: if false; }
+      match /ai_entitlements/{document=**} { allow read, write: if false; }
+      match /ai_rate_limits/{document=**} { allow read, write: if false; }
     }
+
+    match /ai_dispatch/{document=**} { allow read, write: if false; }
+    match /ai_webhook_events/{document=**} { allow read, write: if false; }
   }
 }

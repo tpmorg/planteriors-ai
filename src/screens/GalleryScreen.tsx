@@ -206,7 +206,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
   const loadDesigns = useCallback(async () => {
     try {
-      const savedDesigns = await databaseService.getAllDesigns();
+      const savedDesigns = await databaseService.getAllDesigns(user?.id);
       setDesigns(savedDesigns);
     } catch (error) {
       console.error('Failed to load designs:', error);
@@ -214,7 +214,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const loadCollections = useCallback(async () => {
     try {

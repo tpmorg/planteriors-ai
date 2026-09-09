@@ -114,7 +114,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
   const loadData = useCallback(async () => {
     try {
       const [savedDesigns, savedCollections] = await Promise.all([
-        databaseService.getAllDesigns(),
+        databaseService.getAllDesigns(user?.id),
         databaseService.getCollections(user?.id),
       ]);
 
