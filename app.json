@@ -158,7 +158,8 @@
         "projectId": "a325c769-f080-4a11-abf8-23bf1a17ceb8"
       },
       "googleClientId": "${GOOGLE_CLIENT_ID}",
-      "geminiApiKey": "${GEMINI_API_KEY}",
+      "aiApiUrl": "${AI_API_URL}",
+      "aiApiTimeout": "${AI_API_TIMEOUT}",
       "googlePlacesApiKey": "${GOOGLE_PLACES_API_KEY}",
       "sentryDsn": "${SENTRY_DSN}"
     },

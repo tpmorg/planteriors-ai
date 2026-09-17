@@ -1,6 +1,6 @@
 import { databaseService } from './databaseService';
-import { subscriptionService } from './subscriptionService';
 import { UsageStats } from '../types';
+import { aiApiService } from './aiApiService';
 
 export const FREE_GENERATION_LIMIT = 5;
 
@@ -14,17 +14,9 @@ class UsageTrackingService {
     freeRemaining?: number;
   }> {
     try {
-      // Check if user has an active subscription
-      const subscription = await subscriptionService.getSubscriptionStatus(userId);
-
-      if (subscription.isActive) {
-        // Subscribed users have unlimited generations
-        return { canGenerate: true };
-      }
-
-      // Check free trial usage
-      const freeUsage = await databaseService.getFreeTrialUsage(userId);
-      const freeRemaining = FREE_GENERATION_LIMIT - freeUsage.generationsUsed;
+      const usage = await aiApiService.getUsage();
+      if (usage.entitlement.active) return { canGenerate: true };
+      const freeRemaining = usage.generation.remaining ?? 0;
 
       if (freeRemaining > 0) {
         return {
@@ -41,8 +33,7 @@ class UsageTrackingService {
       };
     } catch (error) {
       console.error('Error checking if user can generate:', error);
-      // On error, allow generation but log the issue
-      return { canGenerate: true };
+      return { canGenerate: false, reason: 'no_subscription' };
     }
   }
 
@@ -69,15 +60,8 @@ class UsageTrackingService {
    */
   async getFreeGenerationsRemaining(userId: string): Promise<number> {
     try {
-      // If user has subscription, they have unlimited (return a high number)
-      const subscription = await subscriptionService.getSubscriptionStatus(userId);
-      if (subscription.isActive) {
-        return 999; // Effectively unlimited
-      }
-
-      const freeUsage = await databaseService.getFreeTrialUsage(userId);
-      const remaining = Math.max(0, FREE_GENERATION_LIMIT - freeUsage.generationsUsed);
-      return remaining;
+      const usage = await aiApiService.getUsage();
+      return usage.entitlement.active ? 999 : Math.max(0, usage.generation.remaining ?? 0);
     } catch (error) {
       console.error('Error getting free generations remaining:', error);
       return 0;

@@ -16,8 +16,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { createPlantIdentificationService } from '../services/plantIdentificationService';
 import { databaseService } from '../services/databaseService';
-import { subscriptionService } from '../services/subscriptionService';
-import { usageTrackingService } from '../services/usageTrackingService';
 import { PlantIdentificationResult } from '../types';
 
 interface PlantIdentifyScreenProps {
@@ -86,39 +84,10 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
 
   const ensureCanIdentify = async (): Promise<boolean> => {
     if (!user?.id) {
-      return true;
+      Alert.alert('Sign in required', 'Please sign in to identify a plant.');
+      return false;
     }
-
-    setIsCheckingUsage(true);
-    try {
-      const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
-      if (!canGenerate) {
-        await refreshStatus();
-        onUpgradePress();
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Failed to check Plant ID usage:', error);
-      return true;
-    } finally {
-      setIsCheckingUsage(false);
-    }
-  };
-
-  const trackPlantIdentificationUsage = async () => {
-    if (!user?.id) {
-      return;
-    }
-
-    try {
-      const subscription = await subscriptionService.getSubscriptionStatus(user.id);
-      const generationType = subscription.isActive ? 'paid' : 'free';
-      await usageTrackingService.trackGeneration(user.id, generationType);
-      await refreshStatus();
-    } catch (error) {
-      console.warn('Failed to track Plant ID usage:', error);
-    }
+    return true;
   };
 
   const identifyFromUri = async (uri: string) => {
@@ -134,7 +103,6 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
     try {
       const service = createPlantIdentificationService();
       const identified = await service.identifyPlantFromImage(uri);
-      await trackPlantIdentificationUsage();
       setResult(identified);
       setIsCheckingDuplicate(true);
       try {
@@ -146,6 +114,10 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to identify plant:', error);
+      if (error?.code === 'allowance_exhausted' || error?.code === 'forbidden') {
+        onUpgradePress();
+        return;
+      }
       Alert.alert('Identification failed', error?.message || 'Unable to identify this plant right now.');
     } finally {
       setIsCheckingDuplicate(false);

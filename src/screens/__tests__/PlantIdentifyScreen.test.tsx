@@ -139,7 +139,7 @@ describe('PlantIdentifyScreen', () => {
     });
   });
 
-  it('sends users to subscription before opening Plant ID camera when free quota is exhausted', async () => {
+  it('opens the camera and lets the server enforce Plant ID allowance after upload', async () => {
     (usageTrackingService.canGenerateImage as jest.Mock).mockResolvedValue({
       canGenerate: false,
       reason: 'limit_exceeded',
@@ -151,8 +151,8 @@ describe('PlantIdentifyScreen', () => {
     fireEvent.press(getByText('Take / Upload Photo'));
 
     await waitFor(() => {
-      expect(props.onUpgradePress).toHaveBeenCalledTimes(1);
+      expect(props.onOpenCamera).toHaveBeenCalledTimes(1);
     });
-    expect(props.onOpenCamera).not.toHaveBeenCalled();
+    expect(props.onUpgradePress).not.toHaveBeenCalled();
   });
 });

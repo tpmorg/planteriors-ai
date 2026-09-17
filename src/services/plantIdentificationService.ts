@@ -1,8 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
-import * as FileSystem from 'expo-file-system/legacy';
-import NetInfo from '@react-native-community/netinfo';
-import { env } from '../utils/env';
 import { databaseService } from './databaseService';
+import { aiApiService } from './aiApiService';
 import {
   CareLevel,
   IdentifiedDesignPlant,
@@ -13,8 +10,6 @@ import {
   PlantSize,
   WaterRequirement,
 } from '../types';
-
-const MODEL_NAME = 'gemini-2.5-flash';
 
 type IdentificationPayload = {
   commonName: string;
@@ -46,68 +41,12 @@ type DesignPlantPayload = {
 };
 
 export class PlantIdentificationService {
-  private client: GoogleGenAI;
-
-  constructor(apiKey: string) {
-    this.client = new GoogleGenAI({ apiKey });
-  }
-
   async identifyPlantFromImage(imageUri: string): Promise<PlantIdentificationResult> {
-    const network = await NetInfo.fetch();
-    if (!network.isConnected) {
-      throw new Error('No internet connection. Please check your network and try again.');
-    }
-
-    const { data: base64, mimeType } = await this.getImagePayload(imageUri);
-
-    const response = await this.client.models.generateContent({
-      model: MODEL_NAME,
-      contents: [
-        { text: this.buildPrompt() },
-        {
-          inlineData: {
-            mimeType,
-            data: base64,
-          },
-        },
-      ],
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
-
-    const jsonText = this.extractTextResponse(response);
-    const parsed = JSON.parse(this.extractJson(jsonText)) as IdentificationPayload;
-    return this.normalize(parsed);
+    return this.normalize(await aiApiService.identifyPlant(imageUri));
   }
 
   async identifyPlantsInGeneratedDesign(imageUri: string): Promise<IdentifiedDesignPlant[]> {
-    const network = await NetInfo.fetch();
-    if (!network.isConnected) {
-      throw new Error('No internet connection. Please check your network and try again.');
-    }
-
-    const { data: base64, mimeType } = await this.getImagePayload(imageUri);
-
-    const response = await this.client.models.generateContent({
-      model: MODEL_NAME,
-      contents: [
-        { text: this.buildDesignPlantPrompt() },
-        {
-          inlineData: {
-            mimeType,
-            data: base64,
-          },
-        },
-      ],
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
-
-    const jsonText = this.extractTextResponse(response);
-    const parsed = JSON.parse(this.extractJson(jsonText)) as DesignPlantPayload;
-    return this.normalizeDesignPlants(parsed);
+    return this.normalizeDesignPlants({ plants: await aiApiService.identifyDesignPlants(imageUri) });
   }
 
   async saveIdentificationToPlantDb(
@@ -340,34 +279,6 @@ Rules:
     return `id-${slug || 'unknown'}-${Date.now()}`;
   }
 
-  private getMimeType(uri: string): string {
-    const lower = uri.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
-  }
-
-  private async getImagePayload(uri: string): Promise<{ data: string; mimeType: string }> {
-    if (uri.startsWith('data:')) {
-      const match = uri.match(/^data:([^;]+);base64,(.*)$/);
-      if (!match) {
-        throw new Error('Unsupported image data format');
-      }
-      return { mimeType: match[1], data: match[2] };
-    }
-
-    if (!uri.startsWith('file://')) {
-      throw new Error('Expected a local file URI or generated image data URI for plant identification');
-    }
-
-    return {
-      mimeType: this.getMimeType(uri),
-      data: await FileSystem.readAsStringAsync(uri, { encoding: 'base64' }),
-    };
-  }
 }
 
-export const createPlantIdentificationService = (apiKey?: string) => {
-  const key = apiKey || env.getGeminiApiKey();
-  return new PlantIdentificationService(key);
-};
+export const createPlantIdentificationService = () => new PlantIdentificationService();

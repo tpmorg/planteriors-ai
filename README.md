@@ -11,7 +11,7 @@ Expo / React Native app for trying plants in real rooms, generating plant-forwar
 - SQLite for local-first app data
 - Firebase Auth
 - RevenueCat
-- Gemini via `@google/genai`
+- Server-side AI API for Gemini generation and plant identification
 - Sentry
 - `expo-speech-recognition`
 
@@ -19,7 +19,7 @@ Expo / React Native app for trying plants in real rooms, generating plant-forwar
 
 - Auth is real: Firebase Auth
 - Most app data is still local-first in SQLite
-- Firestore CLI config exists, but design sync is not implemented yet
+- Manual Firestore/Storage design sync and restore are available from Account
 
 Relevant files:
 
@@ -49,7 +49,8 @@ Important env vars:
 
 ```env
 GOOGLE_CLIENT_ID=
-GEMINI_API_KEY=
+AI_API_URL=https://planterior.app
+AI_API_TIMEOUT=310000
 SENTRY_DSN=
 REVENUECAT_ENTITLEMENT_ID=
 REVENUECAT_IOS_API_KEY_PRODUCTION=

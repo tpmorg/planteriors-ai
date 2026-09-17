@@ -1,6 +1,11 @@
 import { databaseService } from '../databaseService';
 import { subscriptionService } from '../subscriptionService';
 import { FREE_GENERATION_LIMIT, usageTrackingService } from '../usageTrackingService';
+import { aiApiService } from '../aiApiService';
+
+jest.mock('../aiApiService', () => ({
+  aiApiService: { getUsage: jest.fn() },
+}));
 
 jest.mock('../databaseService', () => ({
   databaseService: {
@@ -20,6 +25,7 @@ jest.mock('../subscriptionService', () => ({
 
 const mockedDatabaseService = databaseService as jest.Mocked<typeof databaseService>;
 const mockedSubscriptionService = subscriptionService as jest.Mocked<typeof subscriptionService>;
+const mockedAiApiService = aiApiService as jest.Mocked<typeof aiApiService>;
 
 describe('usageTrackingService', () => {
   beforeEach(() => {
@@ -36,29 +42,41 @@ describe('usageTrackingService', () => {
       firstGenerationAt: null,
       lastGenerationAt: null,
     });
+    mockedAiApiService.getUsage.mockResolvedValue({
+      entitlement: { active: false },
+      generation: { consumed: 0, reserved: 0, remaining: FREE_GENERATION_LIMIT },
+      identification: { consumed: 0, reserved: 0, remaining: 0 },
+      activeJobs: 0,
+      capabilities: { generation: true, identification: false },
+      policyVersion: 'test',
+    });
   });
 
   describe('canGenerateImage', () => {
     it('allows active subscribers without checking free trial usage', async () => {
-      mockedSubscriptionService.getSubscriptionStatus.mockResolvedValue({
-        isActive: true,
-        type: 'monthly',
-        expiryDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
-        isMock: false,
+      mockedAiApiService.getUsage.mockResolvedValue({
+        entitlement: { active: true },
+        generation: { consumed: 0, reserved: 0, remaining: null },
+        identification: { consumed: 0, reserved: 0, remaining: null },
+        activeJobs: 0,
+        capabilities: { generation: true, identification: true },
+        policyVersion: 'test',
       });
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
       expect(result).toEqual({ canGenerate: true });
-      expect(mockedDatabaseService.getFreeTrialUsage).not.toHaveBeenCalled();
+      expect(mockedAiApiService.getUsage).toHaveBeenCalled();
     });
 
     it('allows free users while free generations remain', async () => {
-      mockedDatabaseService.getFreeTrialUsage.mockResolvedValue({
-        userId: 'user-123',
-        generationsUsed: 2,
-        firstGenerationAt: 1710000000000,
-        lastGenerationAt: 1710000100000,
+      mockedAiApiService.getUsage.mockResolvedValue({
+        entitlement: { active: false },
+        generation: { consumed: 2, reserved: 0, remaining: FREE_GENERATION_LIMIT - 2 },
+        identification: { consumed: 0, reserved: 0, remaining: 0 },
+        activeJobs: 0,
+        capabilities: { generation: true, identification: false },
+        policyVersion: 'test',
       });
 
       const result = await usageTrackingService.canGenerateImage('user-123');
@@ -70,11 +88,13 @@ describe('usageTrackingService', () => {
     });
 
     it('blocks free users after the free generation limit is exhausted', async () => {
-      mockedDatabaseService.getFreeTrialUsage.mockResolvedValue({
-        userId: 'user-123',
-        generationsUsed: FREE_GENERATION_LIMIT,
-        firstGenerationAt: 1710000000000,
-        lastGenerationAt: 1710000100000,
+      mockedAiApiService.getUsage.mockResolvedValue({
+        entitlement: { active: false },
+        generation: { consumed: FREE_GENERATION_LIMIT, reserved: 0, remaining: 0 },
+        identification: { consumed: 0, reserved: 0, remaining: 0 },
+        activeJobs: 0,
+        capabilities: { generation: false, identification: false },
+        policyVersion: 'test',
       });
 
       const result = await usageTrackingService.canGenerateImage('user-123');
@@ -86,13 +106,13 @@ describe('usageTrackingService', () => {
       });
     });
 
-    it('allows generation if the check fails so the app fails open', async () => {
+    it('blocks generation if the authoritative check fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(jest.fn());
-      mockedSubscriptionService.getSubscriptionStatus.mockRejectedValue(new Error('RevenueCat down'));
+      mockedAiApiService.getUsage.mockRejectedValue(new Error('API down'));
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
-      expect(result).toEqual({ canGenerate: true });
+      expect(result).toEqual({ canGenerate: false, reason: 'no_subscription' });
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -115,15 +135,17 @@ describe('usageTrackingService', () => {
   });
 
   it('returns unlimited remaining generations for active subscribers', async () => {
-    mockedSubscriptionService.getSubscriptionStatus.mockResolvedValue({
-      isActive: true,
-      type: 'annual',
-      expiryDate: Date.now() + 365 * 24 * 60 * 60 * 1000,
-      isMock: false,
+    mockedAiApiService.getUsage.mockResolvedValue({
+      entitlement: { active: true },
+      generation: { consumed: 0, reserved: 0, remaining: null },
+      identification: { consumed: 0, reserved: 0, remaining: null },
+      activeJobs: 0,
+      capabilities: { generation: true, identification: true },
+      policyVersion: 'test',
     });
 
     await expect(usageTrackingService.getFreeGenerationsRemaining('user-123')).resolves.toBe(999);
-    expect(mockedDatabaseService.getFreeTrialUsage).not.toHaveBeenCalled();
+    expect(mockedAiApiService.getUsage).toHaveBeenCalled();
   });
 
   it('aggregates user usage stats from total and free usage', async () => {

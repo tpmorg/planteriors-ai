@@ -3,13 +3,14 @@ import Constants from 'expo-constants';
 interface EnvConfig {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  GEMINI_API_KEY: string;
   APP_NAME: string;
   APP_SCHEME: string;
   APP_DOMAIN: string;
   APPLE_CLIENT_ID: string;
   DEBUG_MODE: boolean;
   API_TIMEOUT: number;
+  AI_API_URL: string;
+  AI_API_TIMEOUT: number;
   REVENUECAT_ENTITLEMENT_ID: string;
   REVENUECAT_IOS_API_KEY_PRODUCTION: string;
   REVENUECAT_GOOGLE_API_KEY_PRODUCTION: string;
@@ -34,13 +35,14 @@ class EnvironmentManager {
     this.config = {
       GOOGLE_CLIENT_ID: expoConfig.googleClientId || expoConfig.GOOGLE_CLIENT_ID || '',
       GOOGLE_CLIENT_SECRET: expoConfig.googleClientSecret || expoConfig.GOOGLE_CLIENT_SECRET || '',
-      GEMINI_API_KEY: expoConfig.geminiApiKey || expoConfig.GEMINI_API_KEY || '',
       APP_NAME: expoConfig.appName || expoConfig.APP_NAME || 'Planterior AI',
       APP_SCHEME: expoConfig.appScheme || expoConfig.APP_SCHEME || 'planterior-ai',
       APP_DOMAIN: expoConfig.appDomain || expoConfig.APP_DOMAIN || 'planterior-ai.app',
       APPLE_CLIENT_ID: expoConfig.appleClientId || expoConfig.APPLE_CLIENT_ID || '',
       DEBUG_MODE: expoConfig.debugMode || expoConfig.DEBUG_MODE || false,
       API_TIMEOUT: expoConfig.apiTimeout || expoConfig.API_TIMEOUT || 30000,
+      AI_API_URL: expoConfig.aiApiUrl || expoConfig.AI_API_URL || 'https://www.planterior.app',
+      AI_API_TIMEOUT: expoConfig.aiApiTimeout || expoConfig.AI_API_TIMEOUT || 310000,
       REVENUECAT_ENTITLEMENT_ID: expoConfig.revenueCatEntitlementId || expoConfig.REVENUECAT_ENTITLEMENT_ID || 'Planterior Pro',
       REVENUECAT_IOS_API_KEY_PRODUCTION: expoConfig.revenueCatIosApiKeyProduction || expoConfig.REVENUECAT_IOS_API_KEY_PRODUCTION || '',
       REVENUECAT_GOOGLE_API_KEY_PRODUCTION: expoConfig.revenueCatGoogleApiKeyProduction || expoConfig.REVENUECAT_GOOGLE_API_KEY_PRODUCTION || '',
@@ -63,7 +65,6 @@ class EnvironmentManager {
   private isRequired(key: keyof EnvConfig): boolean {
     const required = [
       'GOOGLE_CLIENT_ID',
-      'GEMINI_API_KEY',
     ];
     return required.includes(key);
   }
@@ -71,12 +72,6 @@ class EnvironmentManager {
   // Helper methods for commonly used values
   getGoogleClientId(): string {
     return this.get('GOOGLE_CLIENT_ID');
-  }
-
-  getGeminiApiKey(): string {
-    const key = this.get('GEMINI_API_KEY');
-    console.log('Environment Gemini API key:', key ? `${key.substring(0, 10)}...` : 'MISSING');
-    return key;
   }
 
   getAppScheme(): string {
@@ -95,6 +90,14 @@ class EnvironmentManager {
     return this.get('API_TIMEOUT');
   }
 
+  getAiApiUrl(): string {
+    return this.get('AI_API_URL');
+  }
+
+  getAiApiTimeout(): number {
+    return this.get('AI_API_TIMEOUT');
+  }
+
   getRevenueCatEntitlementId(): string {
     return this.get('REVENUECAT_ENTITLEMENT_ID');
   }
@@ -105,7 +108,7 @@ class EnvironmentManager {
 
   // Validation method to check if all required env vars are set
   validateConfig(): { isValid: boolean; missingVars: string[] } {
-    const requiredVars = ['GOOGLE_CLIENT_ID', 'GEMINI_API_KEY'];
+    const requiredVars = ['GOOGLE_CLIENT_ID', 'AI_API_URL'];
     const missingVars: string[] = [];
 
     for (const varName of requiredVars) {

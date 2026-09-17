@@ -19,6 +19,7 @@ import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme, ThemeMode } from '../contexts/ThemeContext';
 import { onboardingService } from '../services/onboardingService';
 import { subscriptionService } from '../services/subscriptionService';
+import { aiApiService, AiApiError } from '../services/aiApiService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -50,6 +51,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [diagnosticTapCount, setDiagnosticTapCount] = useState(0);
   const [showDiagnostics, setShowDiagnostics] = useState(__DEV__);
+  const [isTestingApiUsage, setIsTestingApiUsage] = useState(false);
   const { handleScroll, tabBarHeight } = useTabBar();
   const { theme, themeMode, setThemeMode } = useTheme();
   const requireNetwork = useNetworkGuard();
@@ -158,6 +160,43 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
       'RevenueCat Sanity Check',
       json.length > 3500 ? `${json.slice(0, 3500)}\n\n...truncated; full payload is in device logs.` : json
     );
+  };
+
+  const handleDebugApiUsage = async () => {
+    if (!requireNetwork('Please connect to the internet to test the API.')) {
+      return;
+    }
+
+    setIsTestingApiUsage(true);
+    try {
+      const usage = await aiApiService.getUsage();
+      const json = JSON.stringify(usage, null, 2);
+      console.log('Authenticated API usage response:', json);
+      Alert.alert(
+        'API Authentication Passed',
+        json.length > 3500 ? `${json.slice(0, 3500)}\n\n...truncated; full payload is in device logs.` : json
+      );
+    } catch (error) {
+      console.error('Authenticated API usage test failed:', error);
+
+      if (error instanceof AiApiError) {
+        const details = [
+          `HTTP ${error.status}`,
+          error.code,
+          error.message,
+          error.requestId ? `Request ID: ${error.requestId}` : null,
+        ].filter(Boolean).join('\n');
+        Alert.alert('API Authentication Failed', details);
+        return;
+      }
+
+      Alert.alert(
+        'API Authentication Failed',
+        error instanceof Error ? error.message : 'The API request could not be completed.'
+      );
+    } finally {
+      setIsTestingApiUsage(false);
+    }
   };
 
   const openExternalLink = async (url: string) => {
@@ -310,6 +349,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
                 <Text style={styles.menuText}>RevenueCat Sanity Check</Text>
                 <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
+
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={[styles.menuItem, isTestingApiUsage && styles.menuItemDisabled]}
+                  onPress={handleDebugApiUsage}
+                  disabled={isTestingApiUsage}
+                >
+                  <AppIcon name="CloudCheck" size={24} color={theme.colors.text} />
+                  <Text style={styles.menuText}>
+                    {isTestingApiUsage ? 'Testing API Authentication…' : 'Test API Authentication'}
+                  </Text>
+                  <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -452,6 +505,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text,
     marginLeft: 16,
+  },
+  menuItemDisabled: {
+    opacity: 0.55,
   },
   menuValue: {
     flexDirection: 'row',

@@ -14,11 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
+import { aiApiService, AiApiError } from "../services/aiApiService";
 import { databaseService } from "../services/databaseService";
 import { useAuth } from "../contexts/AuthContext";
 import { useSubscription } from "../contexts/SubscriptionContext";
-import { usageTrackingService } from "../services/usageTrackingService";
-import { subscriptionService } from "../services/subscriptionService";
 import { PaywallModal } from "../components/PaywallModal";
 import { useNetwork, useNetworkGuard } from "../contexts/NetworkContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -55,6 +54,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(
     null,
   );
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
@@ -96,25 +96,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         return;
       }
 
-      // Check if user can generate
-      const { canGenerate, reason } = await usageTrackingService.canGenerateImage(user.id);
-
-      if (!canGenerate) {
-        setIsCheckingUsage(false);
-        setShowPaywall(true);
-        return;
-      }
-
-      // User can generate, start the process
+      // The server performs the authoritative allowance check.
       setIsCheckingUsage(false);
       setIsGenerating(true);
       startGeneration();
     } catch (error) {
       console.error('Error checking usage:', error);
-      // On error, allow generation to proceed
+      setError(error instanceof Error ? error.message : 'Unable to start generation');
       setIsCheckingUsage(false);
-      setIsGenerating(true);
-      startGeneration();
     }
   };
 
@@ -164,16 +153,20 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setApiCallStarted(true);
 
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(
+      const { imageUri: generatedUri, isGenerated, jobId } = await geminiService.generatePlantImage(
         request,
-        (phase) => setCurrentStatus(
-          phase === 'preparing' ? 'Preparing photo...' : 'Generating design...'
-        )
+        (phase) => setCurrentStatus({
+          preparing: 'Preparing photo...',
+          uploading: 'Uploading photo...',
+          generating: 'Generating design...',
+          downloading: 'Downloading result...',
+        }[phase])
       );
       reportNetworkSuccess('generation');
       setCurrentStatus("Generation complete!");
 
       setGeneratedImageUri(generatedUri);
+      setGenerationJobId(jobId);
       setIsImageGenerated(isGenerated);
       setIsGenerating(false);
 
@@ -186,7 +179,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     } catch (err) {
       console.error("Generation error:", err);
       reportNetworkIssue('generation', err);
-      setError(err instanceof Error ? err.message : "Failed to generate image");
+      if (err instanceof AiApiError && (err.code === 'allowance_exhausted' || err.code === 'forbidden')) {
+        setShowPaywall(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to generate image");
+      }
       setIsGenerating(false);
     }
   };
@@ -195,6 +192,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     setError(null);
     setCurrentStatus("");
     setGeneratedImageUri(null);
+    setGenerationJobId(null);
     setIsImageGenerated(false);
     setApiCallStarted(false);
     setIsGenerating(true);
@@ -202,9 +200,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   };
 
   const handleUseResult = async () => {
-    if (generatedImageUri && isImageGenerated && user) {
+    if (generatedImageUri && isImageGenerated && generationJobId && user) {
       try {
         console.log("Saving design to database...");
+
+        const remoteDesign = await aiApiService.saveGeneration(generationJobId);
 
         const savedDesign = await databaseService.saveDesign({
           originalImageUri: request.imageUri,
@@ -225,10 +225,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           customPrompt: request.prompt,
         });
 
-        // NEW: Track usage after successful save
-        const subscription = await subscriptionService.getSubscriptionStatus(user.id);
-        const generationType = subscription.isActive ? 'paid' : 'free';
-        await usageTrackingService.trackGeneration(user.id, generationType);
+        await databaseService.markDesignSynced(savedDesign.id, remoteDesign.designId);
 
         // Refresh subscription context to update UI
         await refreshStatus();
