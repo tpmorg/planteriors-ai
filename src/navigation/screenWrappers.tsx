@@ -15,6 +15,7 @@ import { GenerationScreen } from '../screens/GenerationScreen';
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { DesignDetailScreen } from '../screens/DesignDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { ARPlacementPOCScreen } from '../screens/ARPlacementPOCScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PlantIdentifyScreen } from '../screens/PlantIdentifyScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
@@ -256,7 +257,23 @@ function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
     navigation.getParent()?.navigate('Onboarding', { fromSettings: true });
   };
 
-  return <SettingsScreen onOpenOnboarding={handleOpenOnboarding} />;
+  const handleOpenARPlacementPOC = () => {
+    // Development-only route (also `__DEV__`-gated in App.tsx).
+    navigation.getParent()?.navigate('ARPlacementPOC');
+  };
+
+  return (
+    <SettingsScreen
+      onOpenOnboarding={handleOpenOnboarding}
+      onOpenARPlacementPOC={handleOpenARPlacementPOC}
+    />
+  );
+}
+
+export function ARPlacementPOCScreenWrapper({
+  navigation,
+}: RootStackScreenProps<'ARPlacementPOC'>) {
+  return <ARPlacementPOCScreen onClose={() => navigation.goBack()} />;
 }
 
 function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {

@@ -25,6 +25,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsScreenProps {
   onOpenOnboarding?: () => void;
+  /** Development-only entry point for the AR surface placement POC. */
+  onOpenARPlacementPOC?: () => void;
 }
 
 const getAppVersionDisplay = (): string => {
@@ -46,7 +48,10 @@ const getAppVersionDisplay = (): string => {
   return buildNumber ? `${appVersion}(${buildNumber})` : appVersion;
 };
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({
+  onOpenOnboarding,
+  onOpenARPlacementPOC,
+}) => {
   const [notifications, setNotifications] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [diagnosticTapCount, setDiagnosticTapCount] = useState(0);
@@ -363,6 +368,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
                   <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               )}
+
+              {__DEV__ && onOpenARPlacementPOC ? (
+                <TouchableOpacity style={styles.menuItem} onPress={onOpenARPlacementPOC}>
+                  <AppIcon name="Cube" size={24} color={theme.colors.text} />
+                  <View style={styles.settingText}>
+                    <Text style={styles.settingLabel}>AR Placement POC</Text>
+                    <Text style={styles.settingDescription}>
+                      Horizontal surface detection and one stationary plant proxy. Requires a
+                      rebuild that includes ViroReact.
+                    </Text>
+                  </View>
+                  <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
             </>
           )}
         </View>

@@ -19,6 +19,7 @@ import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
 import {
+  ARPlacementPOCScreenWrapper,
   CreateEntryScreenWrapper,
   DesignDetailScreenWrapper,
   DesignFlowNavigator,
@@ -231,6 +232,16 @@ function AppContent() {
                 headerShown: false,
               }}
             />
+            {__DEV__ ? (
+              <Stack.Screen
+                name="ARPlacementPOC"
+                component={ARPlacementPOCScreenWrapper}
+                options={{
+                  presentation: "modal",
+                  headerShown: false,
+                }}
+              />
+            ) : null}
           </Stack.Navigator>
         </NavigationContainer>
       </TabBarProvider>
