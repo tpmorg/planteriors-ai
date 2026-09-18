@@ -25,8 +25,9 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsScreenProps {
   onOpenOnboarding?: () => void;
-  /** Development-only entry point for the AR surface placement POC. */
+  /** Development-only entry point for the AR surface placement lab. */
   onOpenARPlacementPOC?: () => void;
+  onOpenARPlacementExample?: () => void;
 }
 
 const getAppVersionDisplay = (): string => {
@@ -51,6 +52,7 @@ const getAppVersionDisplay = (): string => {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onOpenOnboarding,
   onOpenARPlacementPOC,
+  onOpenARPlacementExample,
 }) => {
   const [notifications, setNotifications] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
@@ -373,10 +375,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <TouchableOpacity style={styles.menuItem} onPress={onOpenARPlacementPOC}>
                   <AppIcon name="Cube" size={24} color={theme.colors.text} />
                   <View style={styles.settingText}>
-                    <Text style={styles.settingLabel}>AR Placement POC</Text>
+                    <Text style={styles.settingLabel}>AR Placement Lab</Text>
                     <Text style={styles.settingDescription}>
-                      Horizontal surface detection and one stationary plant proxy. Requires a
-                      rebuild that includes ViroReact.
+                      Reusable surface-placement module. Requires a rebuild that includes ViroReact.
+                    </Text>
+                  </View>
+                  <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
+              {__DEV__ && onOpenARPlacementExample ? (
+                <TouchableOpacity style={styles.menuItem} onPress={onOpenARPlacementExample}>
+                  <AppIcon name="Cube" size={24} color={theme.colors.text} />
+                  <View style={styles.settingText}>
+                    <Text style={styles.settingLabel}>AR Placement Example</Text>
+                    <Text style={styles.settingDescription}>
+                      Minimal second consumer using an asymmetric box. No app business services.
                     </Text>
                   </View>
                   <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />

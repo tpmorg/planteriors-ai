@@ -16,6 +16,7 @@ import { GalleryScreen } from '../screens/GalleryScreen';
 import { DesignDetailScreen } from '../screens/DesignDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ARPlacementPOCScreen } from '../screens/ARPlacementPOCScreen';
+import { MinimalARPlacementScreen } from '../examples/ar-placement/MinimalARPlacementScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PlantIdentifyScreen } from '../screens/PlantIdentifyScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
@@ -258,14 +259,18 @@ function SettingsScreenWrapper({ navigation }: TabScreenProps<'Settings'>) {
   };
 
   const handleOpenARPlacementPOC = () => {
-    // Development-only route (also `__DEV__`-gated in App.tsx).
     navigation.getParent()?.navigate('ARPlacementPOC');
+  };
+
+  const handleOpenARPlacementExample = () => {
+    navigation.getParent()?.navigate('ARPlacementExample');
   };
 
   return (
     <SettingsScreen
       onOpenOnboarding={handleOpenOnboarding}
       onOpenARPlacementPOC={handleOpenARPlacementPOC}
+      onOpenARPlacementExample={handleOpenARPlacementExample}
     />
   );
 }
@@ -274,6 +279,12 @@ export function ARPlacementPOCScreenWrapper({
   navigation,
 }: RootStackScreenProps<'ARPlacementPOC'>) {
   return <ARPlacementPOCScreen onClose={() => navigation.goBack()} />;
+}
+
+export function ARPlacementExampleScreenWrapper({
+  navigation,
+}: RootStackScreenProps<'ARPlacementExample'>) {
+  return <MinimalARPlacementScreen onClose={() => navigation.goBack()} />;
 }
 
 function LibraryScreenWrapper({ navigation }: TabScreenProps<'Library'>) {

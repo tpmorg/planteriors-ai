@@ -20,8 +20,10 @@ export type RootStackParamList = {
   PlantIdentify: { capturedImageUri?: string; capturedImageAt?: number } | undefined;
   PlantCamera: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;
-  /** Development-only AR surface placement proof of concept. Guarded by `__DEV__`. */
+  /** Development-only AR surface placement lab. Guarded by `__DEV__`. */
   ARPlacementPOC: undefined;
+  /** Development-only second consumer of the AR placement module. */
+  ARPlacementExample: undefined;
 };
 
 export type DesignFlowStackParamList = {
