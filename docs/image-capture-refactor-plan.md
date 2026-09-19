@@ -1,7 +1,7 @@
 # Image capture and design creation refactor
 
 Date: 2026-09-18
-Status: Implementation plan. No prototype prerequisite; application changes are not implemented by this document.
+Status: Implementation reference. Restyle now uses the single-screen styling form described below; device validation remains required.
 Scope: Planterior mobile app in this repository. The existing server API remains the integration boundary.
 
 ## Product decision
@@ -17,16 +17,16 @@ There is no Suggested plants feature. The app does not currently have sufficient
 ## Goals and boundaries
 
 - Make a first generated design possible with minimal setup.
-- Present no more than three task alternatives at a time.
+- Present no more than three top-level task alternatives at a time. Restyle's styling form is an intentional exception for grouped settings.
 - Preserve Restyle, Add, Replace, plant selection, existing styling controls, manual placement, photo reuse, identification, and refinement.
-- Use separate focused views instead of a long configuration form.
+- Use focused views for photo, intent, and placement; keep Restyle settings together in one scrollable styling form.
 - Preserve the current theme, shared controls, icons, authentication, subscription behavior, and API integration.
 - Keep live AR outside the critical photo-generation path. This plan's placement editor operates on a photograph and must not be described as live AR.
 - Do not change pricing, billing policy, server implementation, or cloud sync policy as part of this refactor.
 
-The three-choice limit applies to task alternatives and visible selectable values. Back, Close, search, and pagination are supporting controls. A page of catalog results contains at most three plants. Native camera, permission dialogs, keyboard, and system photo picker follow platform conventions and are outside this app-owned limit.
+The three-choice limit applies to task alternatives and catalog pages, not Restyle radio groups. Show all available Restyle values without pagination or horizontal overflow. Back, Close, search, and pagination are supporting controls. Native camera, permission dialogs, keyboard, and system photo picker follow platform conventions and are outside this app-owned limit.
 
-At default text size, each decision view should fit without required vertical scrolling on the supported phone baseline. Permit scrolling for accessibility text sizes, small displays, and keyboard use; never clip controls or reduce text to enforce the limit.
+Scrolling is acceptable when it is clearly signposted. Scrollable flow screens show a tappable More below label with a downward chevron whenever content remains below the viewport, plus the native scroll indicator. Tapping advances part of a page. Hide the cue at the bottom and restore it when the user scrolls up; recalculate after content or viewport changes. Reserve the cue's space so hiding it does not shift the form or footer. Keep Generate fixed below the scroll area. Allow larger text, small displays, and keyboard use without clipping controls or shrinking text.
 
 ## Current problems to remove
 
@@ -55,7 +55,7 @@ flowchart TD
     F --> G[Restyle room]
     F --> H[Add a plant]
     F --> I[Replace a plant]
-    G --> J[Ready: default arrangement]
+    G --> J[Style your room: all settings in one form]
     H --> K[Choose a plant]
     K --> L[Ready: selected plant and automatic placement]
     I --> M[Mark existing plant]
@@ -104,15 +104,15 @@ Show the chosen room and three labeled choices:
 
 Selecting an intent advances immediately; no additional Continue action. Remove the persistent mode toggle from configuration pages. Back returns to this choice without losing the photo.
 
-### 3. Restyle ready screen
+### 3. Restyle styling screen
 
-Show the room and a compact summary of the actual selected configuration, such as plant type, density, and care level.
+Open Style your room immediately after selecting Restyle. Show a compact room photo followed by labeled radio groups in this order: Plant type, Style, Plant density, Care level, Pot style, Pot color, Planter boxes. Include optional Special instructions inline at the end. Pot colors have both swatches and names; radio controls expose their selected state to assistive technology.
 
-Actions: Generate design and Customize.
+Keep Generate design and the current allowance in the fixed footer. Remove the Restyle Customize button, group menus, leaf screens, and Done/Apply detours. Selections update the draft immediately without navigating away.
 
-Use an explicit, named preset assembled from valid existing plant type/style and option IDs. Avoid array-index defaults. Defaults are deterministic product choices, not inferred room suitability. All preset values must be represented accurately in the summary and customization views.
+Use the explicit named preset for initial values, visibly selected in the form. Defaults are deterministic product choices, not inferred room suitability. Changing plant type preserves a compatible style when available and otherwise selects a valid style from that type, so generation is never blocked by a cleared style.
 
-No further selection is required. This yields three app decision views before generation: photo source, intent, ready. Native capture/picker interactions are additional.
+Users can change any setting directly or generate with the visible selections. This yields three app decision views before generation: photo source, intent, styling. Native capture/picker interactions are additional. The More below cue makes the remaining settings discoverable without forcing the user to scroll before generating.
 
 ### 4. Plant chooser for Add and Replace
 
@@ -154,31 +154,24 @@ Describe the selected size honestly; a photograph does not establish exact physi
 
 ## Optional customization
 
-Customize opens at most three groups. Each leaf edits one setting, then returns to ready. This is optional navigation, not a mandatory wizard.
+Restyle has no separate customization hierarchy. All settings are on its styling screen. Add and Replace retain focused customization for plant, size, placement, and instructions.
 
 ```mermaid
 flowchart TD
-    A[Customize] --> B[Plants and arrangement]
-    A --> C[Pots]
-    A --> D[Preferences]
-    B --> E[Plant type or species]
-    B --> F[Style]
-    B --> G[Density or size]
-    C --> H[Pot style]
-    C --> I[Pot color]
-    C --> J[Planter boxes]
-    D --> K[Care level]
-    D --> L[Pet-safe preference]
-    D --> M[Special instructions]
+    A[Restyle] --> B[Single styling form]
+    B --> C[Generate design]
+    D[Add or Replace] --> E[Focused customization]
+    E --> F[Plant and placement]
+    E --> G[Special instructions]
 ```
 
-The diagram is the maximum grouping, not a promise that every option is supported in every mode. Expose existing supported combinations only. Restyle uses plant type/style/density; single-plant modes use species/size/placement. Preserve any existing placement-type values through a focused placement-settings view.
+Expose existing supported combinations only. Restyle uses plant type/style/density; single-plant modes use species/size/placement. Preserve any existing placement-type values through a focused placement-settings view.
 
-Keep all existing selectable values. Sets larger than three use pages of up to three values or search. Do not discard choices to simplify the interface. Show the current value and preserve it when returning from another setting.
+Keep all existing selectable values. Restyle groups wrap onto additional rows instead of paginating. Catalog search retains three-result pages. Show the current value and preserve it when returning from another setting.
 
 Before replacing the old screen, record a control-to-destination inventory from the current checkout. Confirm that every existing control has a new location or an explicitly documented reason it is inapplicable. Pet-safe constraints must not be extended to new generation modes without verifying how they are enforced by the available catalog and request contract.
 
-Special instructions are optional. Show a single input and a clear apply action. Keyboard and back navigation preserve entered text.
+Special instructions are optional. Restyle's inline input updates the draft as the user types, with no separate Apply step. Keyboard and back navigation preserve entered text.
 
 ## Generation and result
 
@@ -271,7 +264,7 @@ Avoid re-asking a question whose answer is already supplied by the entry point.
 2. Add typed draft state, request adapter, and shared screen shell.
 3. Implement photo source and intent screens.
 4. Move permission requests to the relevant action; remove mandatory crop/review.
-5. Implement Restyle ready with explicit defaults and optional customization.
+5. Implement the single-screen Restyle styling form with visible selected values, fixed Generate action, and overflow cue.
 6. Connect the existing generation API and result path.
 
 Completion: an authenticated user can create and save a Restyle through the new flow without configuring optional settings.
@@ -315,7 +308,9 @@ On Android and iOS, verify capture, import, denied permissions, optional crop, r
 
 ## Acceptance criteria and measurement
 
-- Each app-owned decision displays at most three alternatives; catalogs display at most three selectable results per page.
+- Top-level decisions display at most three alternatives; catalogs display at most three selectable results per page. Restyle shows all styling values in labeled radio groups.
+- Restyle requires no Customize, category, or setting navigation; all settings are directly editable on one screen.
+- Scrollable flow screens display More below only while content remains beneath the viewport. The cue responds to scrolling, layout changes, and content changes, and is tappable.
 - Restyle requires no optional configuration and uses at most three app decision views before generation, excluding native photo acquisition.
 - Add does not require manual placement; Replace requires an explicit target.
 - No generation action is labeled Preview.

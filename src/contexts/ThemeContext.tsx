@@ -7,6 +7,16 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export interface ThemeColors {
   primary: string;
   primaryDark: string;
+  /** Foreground for anything sitting on `primary`. Never hardcode white. */
+  onPrimary: string;
+  /** Destructive accents (sign out, delete). */
+  destructive: string;
+  onDestructive: string;
+  /** Tinted destructive background + border for outlined destructive buttons. */
+  destructiveSurface: string;
+  destructiveBorder: string;
+  /** Modal / bottom-sheet backdrop. */
+  scrim: string;
   background: string;
   surface: string;
   card: string;
@@ -32,6 +42,12 @@ const lightTheme: Theme = {
   colors: {
     primary: '#4e6b57',
     primaryDark: '#355746',
+    onPrimary: '#fffdf9',
+    destructive: '#dc2626',
+    onDestructive: '#ffffff',
+    destructiveSurface: '#fef2f2',
+    destructiveBorder: '#f8b4b4',
+    scrim: 'rgba(17, 24, 20, 0.45)',
     background: '#f6f3ee',
     surface: '#fffdf9',
     card: '#ffffff',
@@ -54,6 +70,12 @@ const darkTheme: Theme = {
   colors: {
     primary: '#79c89e',
     primaryDark: '#4da978',
+    onPrimary: '#0d1210',
+    destructive: '#f87171',
+    onDestructive: '#2a0a0a',
+    destructiveSurface: 'rgba(220, 38, 38, 0.14)',
+    destructiveBorder: 'rgba(248, 113, 113, 0.4)',
+    scrim: 'rgba(0, 0, 0, 0.6)',
     background: '#0d1210',
     surface: '#131c19',
     card: '#1a2521',

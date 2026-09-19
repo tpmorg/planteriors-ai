@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 import { useNavigation } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
@@ -33,6 +34,8 @@ export const SubscriptionScreen: React.FC = () => {
   const [isRestoring, setRestoring] = useState(false);
   const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
   const [productLoadError, setProductLoadError] = useState<string | null>(null);
+
+  const selectedProduct = products.find((product) => product.id === selectedProductId);
 
   const formatPurchaseFailureDebug = (
     debug?: Record<string, unknown>
@@ -372,13 +375,15 @@ export const SubscriptionScreen: React.FC = () => {
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.closeButton}
+        <AppButton
+          variant="icon"
+          icon="X"
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <AppIcon name="X" size={28} color={theme.colors.text} />
-        </TouchableOpacity>
+          accessibilityLabel="Close"
+          style={styles.closeButton}
+          hitSlop={10}
+          testID="subscription-close"
+        />
       </View>
 
       <ScrollView
@@ -420,13 +425,14 @@ export const SubscriptionScreen: React.FC = () => {
               <AppIcon name="WarningCircle" size={28} color={theme.colors.textSecondary} />
               <Text style={styles.statusTitle}>Plans Unavailable</Text>
               <Text style={styles.statusText}>{productLoadError}</Text>
-              <TouchableOpacity
-                style={styles.retryButton}
+              <AppButton
+                variant="primary"
+                size="sm"
+                title="Retry"
                 onPress={loadProducts}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
+                style={styles.retryButton}
+                testID="subscription-retry"
+              />
             </View>
           ) : (
             products.map((product) => (
@@ -443,42 +449,15 @@ export const SubscriptionScreen: React.FC = () => {
         </View>
 
         {!productLoadError && (
-          <TouchableOpacity
-            style={[
-              styles.purchaseButton,
-              (isPurchasing || !selectedProductId) && styles.purchaseButtonDisabled
-            ]}
-            onPress={handlePurchase}
-            disabled={isPurchasing || !selectedProductId}
-            activeOpacity={0.8}
-          >
-            {isPurchasing ? (
-              <ActivityIndicator color={theme.colors.surface} />
-            ) : (
-              <>
-                <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
-                <Text style={styles.purchaseButtonText}>
-                  {products.find((product) => product.id === selectedProductId)?.kind === 'room_pack'
-                    ? 'Buy Room Pack'
-                    : 'Subscribe Monthly'}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <AppButton
+            variant="secondary"
+            title="Restore Purchases"
+            loading={isRestoring}
+            onPress={handleRestorePurchases}
+            style={styles.restoreButton}
+            testID="subscription-restore"
+          />
         )}
-
-        <TouchableOpacity
-          style={styles.restoreButton}
-          onPress={handleRestorePurchases}
-          disabled={isRestoring}
-          activeOpacity={0.6}
-        >
-          {isRestoring ? (
-            <ActivityIndicator size="small" color={theme.colors.textSecondary} />
-          ) : (
-            <Text style={styles.restoreButtonText}>Restore Purchases</Text>
-          )}
-        </TouchableOpacity>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
@@ -502,6 +481,22 @@ export const SubscriptionScreen: React.FC = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {!productLoadError ? (
+        <View style={styles.stickyFooter}>
+          <AppButton
+            variant="primary"
+            size="lg"
+            elevated
+            icon="CreditCard"
+            loading={isPurchasing}
+            disabled={!selectedProductId}
+            title={selectedProduct?.kind === 'room_pack' ? 'Buy Room Pack' : 'Subscribe Monthly'}
+            onPress={handlePurchase}
+            testID="subscription-purchase"
+          />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -698,10 +693,7 @@ const createStyles = (theme: any) =>
       paddingVertical: 10,
     },
     closeButton: {
-      padding: 8,
-      borderRadius: 14,
       backgroundColor: theme.isDark ? 'rgba(31,36,33,0.8)' : 'rgba(255,255,255,0.9)',
-      borderWidth: 1,
       borderColor: theme.colors.border,
     },
     content: {
@@ -800,51 +792,17 @@ const createStyles = (theme: any) =>
     },
     retryButton: {
       marginTop: 4,
-      paddingVertical: 10,
-      paddingHorizontal: 18,
-      borderRadius: 12,
-      backgroundColor: theme.colors.primary,
     },
-    retryButtonText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.colors.surface,
-    },
-    purchaseButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      backgroundColor: theme.colors.primary,
-      paddingVertical: 16,
-      borderRadius: 16,
-      marginBottom: 16,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: theme.isDark ? 0.28 : 0.16,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    purchaseButtonDisabled: {
-      opacity: 0.6,
-    },
-    purchaseButtonText: {
-      fontSize: 17,
-      fontWeight: 'bold',
-      color: theme.colors.surface,
+    stickyFooter: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
     },
     restoreButton: {
-      paddingVertical: 12,
-      alignItems: 'center',
-      borderRadius: 12,
-      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    restoreButtonText: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      fontWeight: '500',
+      marginBottom: 4,
     },
     footer: {
       marginTop: 24,

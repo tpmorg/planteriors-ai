@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   TouchableWithoutFeedback,
   Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { AppButton } from './AppButton';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
@@ -77,22 +77,24 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                   />
                 </View>
 
-                <TouchableOpacity
-                  style={styles.upgradeButton}
+                <AppButton
+                  variant="primary"
+                  size="lg"
+                  elevated
+                  icon="CreditCard"
+                  title="View Design Options"
                   onPress={onUpgrade}
-                  activeOpacity={0.8}
-                >
-                  <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
-                  <Text style={styles.upgradeButtonText}>View Design Options</Text>
-                </TouchableOpacity>
+                  style={styles.upgradeButton}
+                  testID="paywall-upgrade"
+                />
 
-                <TouchableOpacity
-                  style={styles.dismissButton}
+                <AppButton
+                  variant="ghost"
+                  title="Maybe Later"
                   onPress={onDismiss}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.dismissButtonText}>Maybe Later</Text>
-                </TouchableOpacity>
+                  textStyle={styles.dismissButtonText}
+                  testID="paywall-dismiss"
+                />
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -196,23 +198,7 @@ const createStyles = (theme: any) =>
       marginBottom: 32,
     },
     upgradeButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      backgroundColor: theme.colors.primary,
-      paddingVertical: 16,
-      borderRadius: 12,
       marginBottom: 12,
-    },
-    upgradeButtonText: {
-      fontSize: 17,
-      fontWeight: 'bold',
-      color: theme.colors.surface,
-    },
-    dismissButton: {
-      paddingVertical: 12,
-      alignItems: 'center',
     },
     dismissButtonText: {
       fontSize: 16,

@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   Linking,
   Platform,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 
 export const AuthScreen: React.FC = () => {
@@ -66,53 +66,38 @@ export const AuthScreen: React.FC = () => {
 
         <View style={styles.buttonContainer}>
           {Platform.OS === 'android' && (
-            <TouchableOpacity
-              style={[styles.button, styles.googleButton, isLoading && { opacity: 0.6 }]}
+            <AppButton
+              variant="secondary"
+              icon="GoogleLogo"
+              iconColor="#4285F4"
+              title="Continue with Google"
+              loading={isLoading}
               onPress={() => {
                 if (requireNetwork()) {
                   signInWithGoogle();
                 }
               }}
-              disabled={isLoading}
-            >
-              <AppIcon name="GoogleLogo" size={20} color="#4285F4" />
-              <Text style={styles.buttonText}>Continue with Google</Text>
-            </TouchableOpacity>
+              testID="auth-google"
+            />
           )}
 
           {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={[styles.button, styles.appleButton, isLoading && { opacity: 0.6 }]}
+            <AppButton
+              variant="secondary"
+              icon="AppleLogo"
+              iconColor={theme.isDark ? '#000000' : '#ffffff'}
+              title="Continue with Apple"
+              loading={isLoading}
               onPress={() => {
                 if (requireNetwork()) {
                   signInWithApple();
                 }
               }}
-              disabled={isLoading}
-            >
-              <AppIcon
-                name="AppleLogo"
-                size={20}
-                color={theme.isDark ? '#000000' : '#ffffff'}
-              />
-              <Text style={[styles.buttonText, styles.appleButtonText]}>
-                Continue with Apple
-              </Text>
-            </TouchableOpacity>
+              style={styles.appleButton}
+              textStyle={styles.appleButtonText}
+              testID="auth-apple"
+            />
           )}
-
-          {/* {showBypass && (
-            <TouchableOpacity
-              style={[styles.button, styles.bypassButton]}
-              onPress={signInBypass}
-              disabled={isLoading}
-            >
-              <AppIcon name="BugBeetle" size={20} color="#ffffff" />
-              <Text style={[styles.buttonText, styles.bypassButtonText]}>
-                Dev Bypass Login
-              </Text>
-            </TouchableOpacity>
-          )} */}
         </View>
 
         <Text style={styles.disclaimer}>
@@ -221,43 +206,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 12,
     marginBottom: 28,
   },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 15,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-  },
-  googleButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
   appleButton: {
     backgroundColor: theme.isDark ? '#ffffff' : '#000000',
+    borderColor: 'transparent',
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: theme.isDark ? 0.2 : 0.14,
     shadowRadius: 10,
     elevation: 3,
   },
-  bypassButton: {
-    backgroundColor: '#f59e0b',
-    borderWidth: 1,
-    borderColor: '#d97706',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
   appleButtonText: {
     color: theme.isDark ? '#000000' : '#ffffff',
-  },
-  bypassButtonText: {
-    color: '#ffffff',
   },
   disclaimer: {
     fontSize: 13,

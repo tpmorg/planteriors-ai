@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 import { DesignFlowShell } from '../components/DesignFlowShell';
+import { RestyleOptions } from '../components/RestyleOptions';
 import { useTheme } from '../contexts/ThemeContext';
 import { MAINTENANCE_LEVELS, PLACEMENT_DENSITIES, PLANT_TYPES, POT_COLORS, POT_STYLES } from '../designFlow/designFlow';
 import type { DesignFlowDraft, PlantSize } from '../types';
@@ -79,7 +81,7 @@ export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onCho
       return setOptions(sizes.map((id) => ({ id, name: id[0].toUpperCase() + id.slice(1) })), draft.individualPlant?.size, (id) => updateDraft({ individualPlant: { ...draft.individualPlant!, size: id as PlantSize } }));
     }
     if (leaf === 'planter-box') return setOptions([{ id: 'no', name: 'No planter boxes' }, { id: 'yes', name: 'Include planter boxes' }], draft.plantOptions?.usePlanterBox ? 'yes' : 'no', (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, usePlanterBox: id === 'yes' } }));
-    if (leaf === 'instructions') return <View style={styles.instructions}><TextInput style={styles.textArea} multiline value={prompt} onChangeText={setPrompt} placeholder="Describe anything else you want" placeholderTextColor={theme.colors.textSecondary} /><TouchableOpacity style={styles.apply} onPress={() => { updateDraft({ prompt: prompt.trim() || undefined }); setLeaf(null); }}><Text style={styles.applyText}>Apply instructions</Text></TouchableOpacity></View>;
+    if (leaf === 'instructions') return <View style={styles.instructions}><TextInput style={styles.textArea} multiline value={prompt} onChangeText={setPrompt} placeholder="Describe anything else you want" placeholderTextColor={theme.colors.textSecondary} /><AppButton title="Apply instructions" onPress={() => { updateDraft({ prompt: prompt.trim() || undefined }); setLeaf(null); }} testID="customize-apply" /></View>;
     return null;
   };
 
@@ -89,9 +91,14 @@ export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onCho
     onBack();
   };
   const title = leaf ? leaves[group!].find((value) => value.id === leaf)?.title || 'Customize' : group ? groups.find((value) => value.id === group)?.title || 'Customize' : 'Customize';
+  // Older persisted drafts can still resume on this route.
+  if (isRestyle) return <DesignFlowShell title="Style your room" onBack={onBack} onClose={onClose} scroll
+    footer={<AppButton title="Done" size="lg" elevated onPress={onDone} testID="customize-done" />}>
+    <RestyleOptions draft={draft} updateDraft={updateDraft} />
+  </DesignFlowShell>;
   return (
     <DesignFlowShell title={title} subtitle={leaf ? 'Choose one setting' : 'Optional changes'} onBack={back} onClose={onClose}
-      footer={!group && !leaf ? <TouchableOpacity style={styles.done} onPress={onDone}><Text style={styles.doneText}>Done</Text></TouchableOpacity> : undefined}>
+      footer={!group && !leaf ? <AppButton title="Done" size="lg" elevated onPress={onDone} testID="customize-done" /> : undefined}>
       {!group && !leaf ? <View style={styles.list}>{groups.map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => setGroup(item.id)}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View> : null}
       {group && !leaf ? <View style={styles.list}>{leaves[group].map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => {
         if (item.id === 'species') { onChoosePlant(); return; }
@@ -109,6 +116,5 @@ const createStyles = (theme: any) => StyleSheet.create({
   rowCopy: { flex: 1 }, rowTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' }, rowDetail: { color: theme.colors.textSecondary, marginTop: 5, textTransform: 'capitalize' },
   optionList: { flex: 1, justifyContent: 'center', gap: 12 }, option: { minHeight: 72, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, optionSelected: { borderColor: theme.colors.primary, backgroundColor: theme.colors.borderLight }, optionTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '700' }, optionTitleSelected: { color: theme.colors.primary },
   pages: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 }, pageButton: { color: theme.colors.primary, fontWeight: '700' }, pageLabel: { color: theme.colors.textSecondary }, disabled: { opacity: 0.35 },
-  instructions: { flex: 1, justifyContent: 'center', gap: 14 }, textArea: { minHeight: 150, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 16, textAlignVertical: 'top', fontSize: 16 }, apply: { minHeight: 52, borderRadius: 17, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }, applyText: { color: 'white', fontWeight: '800' },
-  done: { minHeight: 52, borderRadius: 17, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }, doneText: { color: 'white', fontWeight: '800', fontSize: 16 },
+  instructions: { flex: 1, justifyContent: 'center', gap: 14 }, textArea: { minHeight: 150, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 16, textAlignVertical: 'top', fontSize: 16 },
 });

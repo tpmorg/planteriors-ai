@@ -536,7 +536,7 @@ function DesignReadyScreenWrapper({ navigation }: DesignFlowScreenProps<'Ready'>
     await setPhoto(cropped);
     updateDraft({ step: 'ready' });
   };
-  return <DesignReadyScreen draft={draft} allowanceText={`${freeGenerationsRemaining} design credits available`} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onGenerate={() => void generate()} onCustomize={() => navigation.navigate('Customize')} onChooseSpot={() => navigation.navigate('PlantLocation', { purpose: 'add' })} onChangeTarget={() => navigation.navigate('PlantLocation', { purpose: 'replace' })} onReplacePhoto={() => navigation.navigate('Camera', { mode: 'room', preserveDraft: true })} onCropPhoto={() => void cropPhoto()} />;
+  return <DesignReadyScreen draft={draft} updateDraft={updateDraft} allowanceText={`${freeGenerationsRemaining} design credits available`} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onGenerate={() => void generate()} onCustomize={() => navigation.navigate('Customize')} onChooseSpot={() => navigation.navigate('PlantLocation', { purpose: 'add' })} onChangeTarget={() => navigation.navigate('PlantLocation', { purpose: 'replace' })} onReplacePhoto={() => navigation.navigate('Camera', { mode: 'room', preserveDraft: true })} onCropPhoto={() => void cropPhoto()} />;
 }
 
 function DesignCustomizeScreenWrapper({ navigation }: DesignFlowScreenProps<'Customize'>) {

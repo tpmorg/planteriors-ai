@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Image,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -186,11 +186,17 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.headerButton}>
-          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <AppButton
+          variant="icon"
+          icon="ArrowLeft"
+          iconColor={theme.colors.primary}
+          onPress={onBack}
+          accessibilityLabel="Back"
+          style={styles.headerButton}
+          testID="identify-back"
+        />
         <Text style={styles.headerTitle}>Identify Plant</Text>
-        <View style={styles.headerButton} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -245,49 +251,38 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
       <View style={styles.footer}>
         {!result ? (
           <View style={styles.row}>
-            <TouchableOpacity
-              style={[styles.primaryButton, isCheckingUsage && styles.disabledButton]}
+            <AppButton
+              variant="primary"
+              icon="Camera"
+              title="Take / Upload Photo"
+              loading={isCheckingUsage}
               onPress={openCameraFlow}
-              disabled={isCheckingUsage}
-            >
-              {isCheckingUsage ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <AppIcon name="Camera" size={18} color="white" />
-              )}
-              <Text style={styles.primaryButtonText}>Take / Upload Photo</Text>
-            </TouchableOpacity>
+              style={styles.flexButton}
+              testID="identify-camera"
+            />
           </View>
         ) : (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={resetFlow}>
-              <AppIcon name="ArrowClockwise" size={18} color={theme.colors.primary} />
-              <Text style={styles.secondaryButtonText}>Try Another</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                (isSaving || isCheckingDuplicate || isAlreadyInLibrary) && styles.disabledButton,
-              ]}
+            <AppButton
+              variant="secondary"
+              icon="ArrowClockwise"
+              iconColor={theme.colors.primary}
+              title="Try Another"
+              onPress={resetFlow}
+              style={styles.flexButton}
+            />
+            <AppButton
+              variant="primary"
+              icon={isAlreadyInLibrary ? 'Prohibit' : 'Check'}
+              title={isAlreadyInLibrary ? 'Already In Library' : 'Add To Library'}
+              loading={isSaving}
+              disabled={isCheckingDuplicate || isAlreadyInLibrary}
               onPress={saveToPlantDb}
-              disabled={isSaving || isCheckingDuplicate || isAlreadyInLibrary}
+              style={styles.flexButton}
               accessibilityLabel={
                 isAlreadyInLibrary ? 'Plant already in library' : 'Add identified plant to library'
               }
-            >
-              {isSaving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <AppIcon
-                  name={isAlreadyInLibrary ? 'Prohibit' : 'Check'}
-                  size={18}
-                  color="white"
-                />
-              )}
-              <Text style={styles.primaryButtonText}>
-                {isAlreadyInLibrary ? 'Already In Library' : 'Add To Library'}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </View>
@@ -309,9 +304,12 @@ const createStyles = (theme: any) =>
       paddingVertical: 12,
     },
     headerButton: {
-      width: 36,
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+    },
+    headerSpacer: {
+      width: 44,
+      height: 44,
     },
     headerTitle: {
       fontSize: 20,
@@ -441,39 +439,7 @@ const createStyles = (theme: any) =>
       flexDirection: 'row',
       gap: 10,
     },
-    primaryButton: {
+    flexButton: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: theme.colors.primary,
-      borderRadius: 12,
-      paddingVertical: 14,
-    },
-    primaryButtonText: {
-      color: 'white',
-      fontWeight: '700',
-      fontSize: 15,
-    },
-    secondaryButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      borderRadius: 12,
-      paddingVertical: 14,
-      borderWidth: 1,
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.surface,
-    },
-    secondaryButtonText: {
-      color: theme.colors.primary,
-      fontWeight: '700',
-      fontSize: 15,
-    },
-    disabledButton: {
-      opacity: 0.7,
     },
   });

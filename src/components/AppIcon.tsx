@@ -1,7 +1,7 @@
 import React from 'react';
 import * as PhosphorIcons from 'phosphor-react-native';
 
-type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+export type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
 
 interface AppIconProps {
   name: string;

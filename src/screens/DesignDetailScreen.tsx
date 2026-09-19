@@ -16,6 +16,8 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActionSheet } from '../components/ActionSheet';
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -228,6 +230,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
   const plantProfileRequestIdRef = useRef(0);
   const [isIdentifyingDesignPlants, setIsIdentifyingDesignPlants] = useState(false);
   const [isCompareMode, setIsCompareMode] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const isImageTransitioningRef = useRef(false);
   const isMountedRef = useRef(true);
   const { user } = useAuth();
@@ -859,9 +862,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     <GestureHandlerRootView style={styles.container}>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <View style={[styles.detailHeader, { top: insets.top + 6 }]}>
-          <TouchableOpacity onPress={onBack} style={styles.headerBackButton}>
-            <AppIcon name="ArrowLeft" size={24} color="white" />
-          </TouchableOpacity>
+          <AppButton
+            variant="icon"
+            overlay
+            icon="ArrowLeft"
+            onPress={onBack}
+            accessibilityLabel="Back"
+            style={styles.headerBackButton}
+            testID="design-detail-back"
+          />
           <View style={styles.detailHeaderText}>
             <Text style={styles.detailHeaderTitle} numberOfLines={1}>
               {headerDate}
@@ -934,90 +943,121 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
         <View style={[styles.bottomDock, { bottom: insets.bottom + 14 }]}>
           <View style={styles.utilityActionsRow}>
-            <TouchableOpacity
+            <AppButton
+              variant="chip"
+              size="sm"
+              overlay
+              icon="ArrowsClockwise"
+              title="Replace Plant"
               onPress={startPlantReplacement}
-              style={styles.bottomUtilityAction}
-              activeOpacity={0.86}
-              accessibilityRole="button"
-              accessibilityLabel="Replace plant"
+              style={styles.utilityAction}
+              textStyle={styles.utilityActionLabel}
               accessibilityHint="Choose a different plant for this room image"
-            >
-              <AppIcon name="ArrowsClockwise" size={16} color="white" weight="bold" />
-              <Text style={styles.bottomUtilityActionText}>Replace Plant</Text>
-            </TouchableOpacity>
+              testID="design-detail-replace-plant"
+            />
 
-            <TouchableOpacity
+            <AppButton
+              variant="chip"
+              size="sm"
+              overlay
+              selected={isCompareMode}
+              icon="SlidersHorizontal"
+              title={isCompareMode ? 'Done' : 'Compare'}
               onPress={toggleCompare}
-              style={[
-                styles.bottomUtilityAction,
-                isCompareMode && styles.bottomUtilityActionActive,
-              ]}
-              activeOpacity={0.86}
-              accessibilityRole="button"
+              style={styles.utilityAction}
+              textStyle={styles.utilityActionLabel}
               accessibilityLabel={isCompareMode ? 'Exit compare mode' : 'Compare original and AI design'}
-            >
-              <AppIcon name="SlidersHorizontal" size={16} color="white" weight="bold" />
-              <Text style={styles.bottomUtilityActionText}>
-                {isCompareMode ? 'Done' : 'Compare'}
-              </Text>
-            </TouchableOpacity>
+              testID="design-detail-compare"
+            />
           </View>
 
           <View style={styles.bottomActionBar}>
-            <TouchableOpacity onPress={showModal} style={styles.bottomActionButton} activeOpacity={0.8}>
-              <AppIcon name="Info" size={22} color="white" />
-              <Text style={styles.bottomActionLabel}>Details</Text>
-            </TouchableOpacity>
+            <AppButton
+              variant="ghost"
+              overlay
+              icon="Heart"
+              iconColor={design.isFavorite ? '#ef4444' : undefined}
+              iconWeight={design.isFavorite ? 'fill' : 'regular'}
+              title="Favorite"
+              onPress={toggleFavorite}
+              style={styles.dockAction}
+              textStyle={styles.dockActionLabel}
+              testID="design-detail-favorite"
+            />
 
-            <TouchableOpacity onPress={openCollections} style={styles.bottomActionButton} activeOpacity={0.8}>
-              <AppIcon name="FolderPlus" size={22} color="white" />
-              <Text style={styles.bottomActionLabel}>Collect</Text>
-            </TouchableOpacity>
+            <AppButton
+              variant="ghost"
+              overlay
+              icon="FolderPlus"
+              title="Collect"
+              onPress={openCollections}
+              style={styles.dockAction}
+              textStyle={styles.dockActionLabel}
+              testID="design-detail-collect"
+            />
 
-            <TouchableOpacity onPress={toggleFavorite} style={styles.bottomActionButton} activeOpacity={0.8}>
-              <AppIcon
-                name="Heart"
-                size={22}
-                color={design.isFavorite ? '#ef4444' : 'white'}
-                weight={design.isFavorite ? 'fill' : 'regular'}
-              />
-              <Text style={styles.bottomActionLabel}>Favorite</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
+            <AppButton
+              variant="ghost"
+              overlay
+              icon="ShareNetwork"
+              title="Share"
+              loading={isSharing}
               onPress={shareDesign}
-              style={styles.bottomActionButton}
-              activeOpacity={0.8}
-              disabled={isSharing}
-            >
-              <AppIcon
-                name={isSharing ? 'Hourglass' : 'ShareNetwork'}
-                size={22}
-                color="white"
-              />
-              <Text style={styles.bottomActionLabel}>Share</Text>
-            </TouchableOpacity>
+              style={styles.dockAction}
+              textStyle={styles.dockActionLabel}
+              testID="design-detail-share"
+            />
 
-            <TouchableOpacity
-              onPress={saveDesignToDevice}
-              style={styles.bottomActionButton}
-              activeOpacity={0.8}
-              disabled={isSavingToDevice}
-            >
-              <AppIcon
-                name={isSavingToDevice ? 'Hourglass' : 'DownloadSimple'}
-                size={22}
-                color="white"
-              />
-              <Text style={styles.bottomActionLabel}>Save</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={deleteDesign} style={styles.bottomActionButton} activeOpacity={0.8}>
-              <AppIcon name="Trash" size={22} color="white" />
-              <Text style={styles.bottomActionLabel}>Delete</Text>
-            </TouchableOpacity>
+            <AppButton
+              variant="ghost"
+              overlay
+              icon="CaretUp"
+              title="More"
+              onPress={() => setShowActionsMenu(true)}
+              style={styles.dockAction}
+              textStyle={styles.dockActionLabel}
+              accessibilityLabel="More actions"
+              testID="design-detail-more"
+            />
           </View>
         </View>
+
+        <ActionSheet
+          visible={showActionsMenu}
+          title="Design actions"
+          onDismiss={() => setShowActionsMenu(false)}
+          actions={[
+            {
+              key: 'details',
+              label: 'Details',
+              icon: 'Info',
+              onPress: () => {
+                setShowActionsMenu(false);
+                showModal();
+              },
+            },
+            {
+              key: 'save',
+              label: 'Save to device',
+              icon: isSavingToDevice ? 'Hourglass' : 'DownloadSimple',
+              loading: isSavingToDevice,
+              onPress: () => {
+                setShowActionsMenu(false);
+                saveDesignToDevice();
+              },
+            },
+            {
+              key: 'delete',
+              label: 'Delete design',
+              icon: 'Trash',
+              destructive: true,
+              onPress: () => {
+                setShowActionsMenu(false);
+                deleteDesign();
+              },
+            },
+          ]}
+        />
 
         {/* Custom Animated Modal */}
         {showInfoModal && (
@@ -1411,26 +1451,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     zIndex: 3,
     gap: 10,
   },
-  bottomUtilityAction: {
-    alignSelf: 'flex-start',
+  utilityAction: {
     minHeight: 34,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 17,
-    backgroundColor: theme.isDark ? 'rgba(26,26,26,0.92)' : 'rgba(18,18,18,0.76)',
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.22)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  bottomUtilityActionText: {
-    color: 'white',
+  utilityActionLabel: {
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1438,10 +1465,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  bottomUtilityActionActive: {
-    backgroundColor: 'rgba(47,122,82,0.92)',
-    borderColor: 'rgba(134,239,172,0.5)',
   },
   bottomActionBar: {
     flexDirection: 'row',
@@ -1460,18 +1483,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 12,
   },
-  bottomActionButton: {
+  dockAction: {
     flex: 1,
     minWidth: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    minHeight: 48,
+    flexDirection: 'column',
+    gap: 4,
     paddingHorizontal: 2,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
-  bottomActionLabel: {
-    color: 'white',
-    fontSize: 10,
+  dockActionLabel: {
+    fontSize: 12,
     fontWeight: '600',
   },
   imageContainer: {

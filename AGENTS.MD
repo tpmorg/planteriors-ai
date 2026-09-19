@@ -211,6 +211,25 @@ interface SubscriptionStatus {
 ### Location: `src/components/`
 
 ```typescript
+// Buttons - ALWAYS use this instead of TouchableOpacity for new UI
+AppButton.tsx
+  - Variants: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'icon' | 'chip'
+  - Sizes: 'sm' (44pt) | 'md' (48pt) | 'lg' (54pt)
+  - Props: title, onPress, variant, size, icon, iconPosition, iconColor, iconWeight,
+           selected, overlay, loading, disabled, elevated, fullWidth, hitSlop,
+           style, textStyle, accessibilityLabel, accessibilityHint, testID
+  - Guarantees: >=44pt touch target, themed label colour (never raw white - use
+    theme.colors.onPrimary), scale(0.98) pressed feedback, accessibilityRole
+    "button" + accessibilityState {disabled, busy}
+  - `overlay` = always-dark treatment for buttons sitting on photos
+  - `hitSlop` defaults to 8 on icon/chip variants
+
+// Overflow / secondary actions
+ActionSheet.tsx
+  - Props: visible, title, actions[{key,label,icon,destructive,loading,onPress}],
+           onDismiss, cancelLabel
+  - 56pt rows, destructive rows use theme.colors.destructive
+
 // Usage indicators
 UsageIndicator.tsx
   - Props: freeRemaining, isSubscribed, variant, onUpgradePress
@@ -224,6 +243,18 @@ PaywallModal.tsx
   - Feature list with checkmarks
   - Triggered when user exhausts free generations
 ```
+
+### Button colour tokens
+`theme.colors` includes `onPrimary` (cream in light, `#0d1210` in dark),
+`destructive` / `onDestructive` / `destructiveSurface` / `destructiveBorder`,
+and `scrim` for modal backdrops. Do not hardcode `white`/`#ffffff` for button
+labels.
+
+### DesignDetailScreen dock (3 + overflow)
+The full-screen dock shows three primary actions (Favorite, Collect, Share)
+plus a "More" action that opens an `ActionSheet` with Details, Save to device
+and Delete. Details is also reachable by swiping up on the image.
+
 
 ## Screen Implementation Patterns
 
@@ -389,6 +420,12 @@ theme.isDark // boolean
 **Add global state**: `src/contexts/` (create new context or modify existing)
 
 **Create UI component**: `src/components/` (follow existing patterns)
+
+**Add a button**: `src/components/AppButton.tsx` (do not add new `TouchableOpacity` CTAs)
+
+**Add an overflow menu**: `src/components/ActionSheet.tsx`
+
+**Change theme colours**: `src/contexts/ThemeContext.tsx` (light + dark must both be updated)
 
 **Add new screen**: `src/screens/` + update `App.tsx` navigation
 

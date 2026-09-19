@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   ImageSourcePropType,
@@ -9,12 +8,11 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface OnboardingSlide {
@@ -135,34 +133,28 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         </View>
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, currentIndex === 0 && styles.secondaryButtonDisabled]}
+          <AppButton
+            variant="secondary"
+            size="lg"
+            title="Back"
             onPress={handleBack}
             disabled={currentIndex === 0 || isCompleting}
-          >
-            <Text style={styles.secondaryButtonText}>Back</Text>
-          </TouchableOpacity>
+            style={styles.backButton}
+            testID="onboarding-back"
+          />
 
-          <TouchableOpacity
-            style={[styles.primaryButton, isCompleting && styles.primaryButtonDisabled]}
+          <AppButton
+            variant="primary"
+            size="lg"
+            elevated
+            title={isLast ? (fromSettings ? 'Done' : 'Get Started') : 'Continue'}
+            icon={isLast ? 'CheckCircle' : 'ArrowRight'}
+            iconPosition="right"
+            loading={isCompleting}
             onPress={handleContinue}
-            disabled={isCompleting}
-          >
-            {isCompleting ? (
-              <ActivityIndicator color={theme.colors.surface} />
-            ) : (
-              <>
-                <Text style={styles.primaryButtonText}>
-                  {isLast ? (fromSettings ? 'Done' : 'Get Started') : 'Continue'}
-                </Text>
-                <AppIcon
-                  name={isLast ? 'CheckCircle' : 'ArrowRight'}
-                  size={18}
-                  color={theme.colors.surface}
-                />
-              </>
-            )}
-          </TouchableOpacity>
+            style={styles.continueButton}
+            testID="onboarding-continue"
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -249,46 +241,11 @@ const createStyles = (
       flexDirection: 'row',
       gap: 10,
     },
-    secondaryButton: {
+    backButton: {
       flex: 1,
-      height: 52,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.surface,
     },
-    secondaryButtonDisabled: {
-      opacity: 0.45,
-    },
-    secondaryButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-    primaryButton: {
+    continueButton: {
       flex: 1.4,
-      height: 52,
-      borderRadius: 14,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: 8,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: theme.isDark ? 0.28 : 0.16,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    primaryButtonDisabled: {
-      opacity: 0.7,
-    },
-    primaryButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.surface,
     },
   });
 };

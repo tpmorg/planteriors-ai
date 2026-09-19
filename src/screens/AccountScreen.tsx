@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
   Linking,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
 import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -271,14 +271,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <Text style={styles.subtitle}>Your plan, profile, and preferences</Text>
             </View>
             {isSheetPresentation && onClose ? (
-              <TouchableOpacity
+              <AppButton
+                variant="icon"
+                size="md"
+                icon="X"
                 onPress={onClose}
-                style={styles.closeButton}
-                accessibilityRole="button"
                 accessibilityLabel="Close account"
-              >
-                <AppIcon name="X" size={20} color={theme.colors.text} />
-              </TouchableOpacity>
+                style={styles.closeButton}
+                testID="account-close"
+              />
             ) : null}
           </View>
         </View>
@@ -344,12 +345,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 </View>
               )}
               {subscription?.isActive ? (
-                <TouchableOpacity
-                  style={styles.manageButton}
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  title="Manage Subscription"
                   onPress={handleManageSubscription}
-                >
-                  <Text style={styles.manageButtonText}>Manage Subscription</Text>
-                </TouchableOpacity>
+                  style={styles.manageButton}
+                  testID="account-manage"
+                />
               ) : (
                 <Text style={styles.expiryText}>
                   Free-plan warnings are hidden in debug mode.
@@ -362,12 +365,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <Text style={styles.freePlanDetails}>
                 {freeGenerationsRemaining} design credits available
               </Text>
-              <TouchableOpacity
-                style={styles.upgradeButton}
+              <AppButton
+                variant="primary"
+                size="sm"
+                title={'See Plans & Credits'}
                 onPress={handleUpgrade}
-              >
-                <Text style={styles.upgradeButtonText}>See Plans &amp; Credits</Text>
-              </TouchableOpacity>
+                style={styles.upgradeButton}
+                testID="account-upgrade"
+              />
             </View>
           )}
         </View>
@@ -392,12 +397,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <Text style={styles.usageStatValue}>{usageStats.paidUsed}</Text>
               </View>
               {__DEV__ && (
-                <TouchableOpacity
-                  style={styles.resetButton}
+                <AppButton
+                  variant="chip"
+                  size="sm"
+                  title="Reset Usage (Dev)"
                   onPress={handleResetUsage}
-                >
-                  <Text style={styles.resetButtonText}>Reset Usage (Dev)</Text>
-                </TouchableOpacity>
+                  style={styles.resetButton}
+                  textStyle={styles.resetButtonText}
+                  testID="account-reset-usage"
+                />
               )}
             </View>
           </View>
@@ -413,26 +421,16 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 ? 'When you choose, sync locally saved designs and collections to your account or restore them on this device.'
                 : 'Designs are saved locally on this device. Cloud backup and restore are available with the monthly plan.'}
             </Text>
-            <TouchableOpacity
-              style={[styles.syncButton, isSyncingLibrary && styles.syncButtonDisabled]}
+            <AppButton
+              variant="primary"
+              size="sm"
+              icon={hasCloudSyncAccess ? 'ArrowCircleUp' : 'Lock'}
+              title={hasCloudSyncAccess ? 'Sync / Restore Library' : 'View Monthly Plan'}
+              loading={isSyncingLibrary}
               onPress={handleCloudSync}
-              disabled={isSyncingLibrary}
-            >
-              {isSyncingLibrary ? (
-                <ActivityIndicator color={theme.colors.surface} />
-              ) : (
-                <>
-                  <AppIcon
-                    name={hasCloudSyncAccess ? "ArrowCircleUp" : "Lock"}
-                    size={20}
-                    color={theme.colors.surface}
-                  />
-                  <Text style={styles.syncButtonText}>
-                    {hasCloudSyncAccess ? 'Sync / Restore Library' : 'View Monthly Plan'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+              style={styles.syncButton}
+              testID="account-cloud-sync"
+            />
           </View>
         </View>
 
@@ -457,10 +455,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         </View>
 
         <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <AppIcon name="SignOut" size={24} color="#dc2626" />
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
+          <AppButton
+            variant="destructive"
+            size="md"
+            icon="SignOut"
+            title="Sign Out"
+            onPress={handleLogout}
+            style={styles.logoutButton}
+            testID="account-sign-out"
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -522,13 +525,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
     borderColor: theme.colors.border,
   },
   userSection: {
@@ -623,20 +620,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 2,
   },
   logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 15,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#f8b4b4',
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#dc2626',
-    marginLeft: 8,
+    borderColor: theme.colors.destructiveBorder,
   },
   // Subscription Section Styles
   subscriptionSection: {
@@ -705,17 +689,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: '#92400e',
   },
   manageButton: {
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  manageButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text,
   },
   freePlanText: {
     fontSize: 16,
@@ -729,21 +703,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   upgradeButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: theme.isDark ? 0.25 : 0.12,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  upgradeButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.surface,
+    marginTop: 4,
   },
   syncSection: {
     backgroundColor: theme.colors.surface,
@@ -773,21 +733,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     lineHeight: 20,
   },
   syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  syncButtonDisabled: {
-    opacity: 0.7,
-  },
-  syncButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.surface,
+    marginTop: 2,
   },
   // Usage Section Styles
   usageSection: {
@@ -828,10 +774,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   resetButton: {
     backgroundColor: '#fef3c7',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
+    borderColor: '#fcd34d',
     marginTop: 8,
+    alignSelf: 'center',
   },
   resetButtonText: {
     fontSize: 13,
