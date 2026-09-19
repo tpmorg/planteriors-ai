@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
-import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
 import { describeAiError } from "../services/aiErrorPresentation";
@@ -348,7 +347,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             },
           ]}
         >
-          <BeforeAfterSlider originalUri={request.imageUri} generatedUri={generatedImageUri} />
+          <Image
+            source={{ uri: generatedImageUri }}
+            style={styles.resultImage}
+            accessibilityLabel="Generated plant design"
+          />
 
           {/* Overlay header with back button */}
           <View style={styles.resultHeader}>
@@ -362,6 +365,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
           {/* Compact info overlay at bottom */}
           <View style={styles.resultOverlay}>
+            <Text style={styles.resultTitle}>Design ready</Text>
             <Text style={styles.resultSubtitle}>{requestPlantSummary}</Text>
             {error ? <Text style={styles.previousResultError}>The new version failed. Your previous result is still here.</Text> : null}
           </View>
