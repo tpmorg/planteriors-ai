@@ -139,11 +139,24 @@ databaseService.ts
   ├── trackUsage() - Record generation event
   └── getFreeTrialUsage() - Get usage counts
 
-// AI Generation
+// AI Generation (backend owns the provider call; the app never holds an AI key)
+aiApiService.ts
+  ├── generatePlantImage() - Upload + POST /api/v1/generations + poll to completion
+  ├── identifyPlant() / identifyDesignPlants() - POST /api/v1/identifications
+  ├── Auth: Firebase ID token in Authorization (401 refreshes the token once)
+  ├── Auto-retries retryable 429s with exponential backoff (4 attempts: 1s/2s/4s),
+  │   reusing the Idempotency-Key so a retry cannot double-spend allowance.
+  │   5xx is marked retryable for the UI but is not auto-retried.
+  └── AiApiError { code, status, retryable, requestId }
+
 geminiService.ts
-  ├── generateImage() - Main generation method
-  ├── uploadImage() - Upload to Gemini API
-  └── Uses Gemini 2.5 Flash Image Preview model
+  └── Thin compatibility wrapper over aiApiService
+
+aiErrorPresentation.ts
+  └── describeAiError(err) -> { kind, title, message, retryLabel, retryable, reference }
+      Use this in every screen instead of branching on err.code or err.status.
+      `429` is ambiguous (allowance vs throttle) so it classifies by `code` first;
+      only `kind === 'allowance'` should open the paywall.
 
 // Usage Enforcement
 usageTrackingService.ts
@@ -509,6 +522,23 @@ console.log(result);
 ```
 
 ## Common Issues & Solutions
+
+### "I get a 429 when generating - is it my subscription?"
+Not necessarily. The API returns `429` for **both** exhausted allowance and plain
+rate limiting, so the status alone cannot tell you which. Debug it like this:
+
+1. The full `AiApiError` is logged by `GenerationScreen.startGeneration()`
+   (`console.error("Generation error:", err)`). Read its `code`, `status`,
+   `retryable` and `requestId` from the Metro console.
+2. `code` decides: an allowance code means the paywall path; a rate-limit code
+   (or an empty code) means throttling.
+3. `requestId` identifies the request in backend logs - quote that, not the 429.
+4. A bare `429` with no allowance code is treated as a throttle and is retried
+   automatically up to 4 times with backoff, so a persistent 429 means the
+   throttle outlasted ~7s, or the server sent `retryable: false`.
+
+Do not add a new `err.code === '...'` branch in a screen - extend
+`aiErrorPresentation.ts` so every surface stays consistent.
 
 ### "User exhausted free generations but can still generate"
 - Check if `trackGeneration()` is called after save

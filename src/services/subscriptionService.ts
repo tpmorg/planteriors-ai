@@ -716,6 +716,7 @@ class SubscriptionService {
 
   private mapCustomerInfoToStatus(customerInfo: CustomerInfo): SubscriptionStatus {
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+    const hasPurchased = customerInfo.allPurchasedProductIdentifiers.length > 0;
 
     if (!entitlement) {
       this.addRevenueCatBreadcrumb('RevenueCat expected entitlement inactive', {
@@ -723,13 +724,15 @@ class SubscriptionService {
         activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
         allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
       }, 'warning');
-      return this.defaultStatus();
+      return { ...this.defaultStatus(), isVerified: true, hasPurchased };
     }
 
     const isAnnual = entitlement.productIdentifier?.includes('annual');
 
     return {
       isActive: true,
+      isVerified: true,
+      hasPurchased: true,
       type: isAnnual ? 'annual' : 'monthly',
       expiryDate: entitlement.expirationDate
         ? new Date(entitlement.expirationDate).getTime()
@@ -746,6 +749,8 @@ class SubscriptionService {
   private defaultStatus(): SubscriptionStatus {
     return {
       isActive: false,
+      isVerified: false,
+      hasPurchased: false,
       type: null,
       expiryDate: null,
       isMock: false,

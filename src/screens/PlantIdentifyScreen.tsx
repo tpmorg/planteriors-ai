@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
+import { describeAiError } from '../services/aiErrorPresentation';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -112,13 +113,19 @@ export const PlantIdentifyScreen: React.FC<PlantIdentifyScreenProps> = ({
         console.warn('Failed to check plant duplicate status:', duplicateError);
         setIsAlreadyInLibrary(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to identify plant:', error);
-      if (error?.code === 'allowance_exhausted' || error?.code === 'forbidden') {
+      const failure = describeAiError(error);
+
+      if (failure.kind === 'allowance') {
         onUpgradePress();
         return;
       }
-      Alert.alert('Identification failed', error?.message || 'Unable to identify this plant right now.');
+
+      Alert.alert(
+        failure.title,
+        failure.reference ? `${failure.message}\n\nReference: ${failure.reference}` : failure.message,
+      );
     } finally {
       setIsCheckingDuplicate(false);
       setIsIdentifying(false);

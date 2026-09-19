@@ -676,7 +676,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
           <UsageIndicator
             freeRemaining={freeGenerationsRemaining}
-            isSubscribed={subscription?.isActive || false}
+            isFreeTier={
+              subscription !== null &&
+              subscription.isVerified === true &&
+              !subscription.isActive &&
+              subscription.hasPurchased !== true
+            }
+            userId={user?.id}
             variant="full"
             onUpgradePress={onUpgradePress}
           />

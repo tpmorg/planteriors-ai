@@ -15,7 +15,7 @@ import { AppIcon } from '../components/AppIcon';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
-import { AiApiError } from "../services/aiApiService";
+import { describeAiError } from "../services/aiErrorPresentation";
 import { databaseService } from "../services/databaseService";
 import { useAuth } from "../contexts/AuthContext";
 import { useSubscription } from "../contexts/SubscriptionContext";
@@ -69,6 +69,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   );
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(!!initialResultUri);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
+  const [errorReference, setErrorReference] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -204,15 +206,21 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     } catch (err) {
       console.error("Generation error:", err);
       reportNetworkIssue('generation', err);
-      if (err instanceof AiApiError && (err.code === 'allowance_exhausted' || err.code === 'forbidden')) {
+      const failure = describeAiError(err);
+
+      if (failure.kind === 'allowance') {
+        // Out of credits: the paywall is the answer, not an error screen.
         setShowPaywall(true);
-      } else if (err instanceof AiApiError && err.code === 'timeout') {
+      } else if (failure.kind === 'timeout') {
         setIsRequestUnknown(true);
         onRequestUnknown?.();
         setError('The request was interrupted, so its final status is unknown. Edit the setup before deciding whether to submit a new generation.');
       } else {
-        setError(err instanceof Error ? err.message : "Failed to generate image");
+        setError(failure.message);
       }
+
+      setErrorTitle(failure.title);
+      setErrorReference(failure.reference ?? null);
       setIsGenerating(false);
     } finally {
       generationInFlightRef.current = false;
@@ -221,6 +229,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   const handleRetry = () => {
     setError(null);
+    setErrorTitle(null);
+    setErrorReference(null);
     setCurrentStatus("");
     setGeneratedImageUri(null);
     setIsImageGenerated(false);
@@ -295,8 +305,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
         <View style={styles.errorContainer}>
           <AppIcon name="WarningCircle" size={64} color="#dc2626" />
-          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Text style={styles.errorTitle}>{errorTitle ?? 'Generation failed'}</Text>
           <Text style={styles.errorText}>{error}</Text>
+          {errorReference ? (
+            <Text style={styles.errorReference}>Reference: {errorReference}</Text>
+          ) : null}
 
           {generatedImageUri && !isImageGenerated && (
             <View style={styles.placeholderInfo}>
@@ -360,7 +373,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
               <Text style={styles.generateAgainText}>Adjust</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.generateAgainButton, isRequestUnknown && styles.buttonDisabled]} disabled={isRequestUnknown} onPress={() => { setError(null); setSavedDesignId(null); setIsGenerating(true); void startGeneration(); }}>
+            <TouchableOpacity style={[styles.generateAgainButton, isRequestUnknown && styles.buttonDisabled]} disabled={isRequestUnknown} onPress={() => { setError(null); setErrorTitle(null); setErrorReference(null); setSavedDesignId(null); setIsGenerating(true); void startGeneration(); }}>
               <AppIcon name="ArrowClockwise" size={19} color="white" />
               <Text style={styles.generateAgainText}>Another version</Text>
             </TouchableOpacity>
@@ -650,7 +663,14 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary,
     textAlign: "center",
-    marginBottom: 32,
+    marginBottom: 12,
+  },
+  errorReference: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    opacity: 0.7,
+    marginBottom: 24,
   },
   retryButton: {
     backgroundColor: theme.colors.primary,

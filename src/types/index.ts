@@ -415,6 +415,8 @@ export interface SubscriptionProduct {
 
 export interface SubscriptionStatus {
   isActive: boolean;
+  isVerified?: boolean;
+  hasPurchased?: boolean;
   type: 'monthly' | 'annual' | null;
   expiryDate: number | null;
   isMock: boolean;

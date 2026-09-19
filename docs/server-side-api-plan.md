@@ -83,6 +83,17 @@ Proposed upload defaults: JPEG, maximum 5 MiB and a bounded decoded pixel count,
 
 Return `400` for malformed input, `401/403` for auth/access, `404` for inaccessible/missing objects, `409` for conflicting idempotency payloads or state transitions, `413/415` for upload size/type, `429` for exhausted allowance/rate limits with an actionable code, and `503` when authorization dependencies cannot be verified. Do not fail open.
 
+**Client routing of `429` (required).** Because `429` carries both an entitlement failure and a plain throttle, the app *cannot* route on status alone. It classifies by `code` first and only falls back to status:
+
+| `code` | Client behaviour |
+| --- | --- |
+| `allowance_exhausted`, `insufficient_credits`, `payment_required`, `entitlement_required`, `no_entitlement` | Paywall |
+| `rate_limited`, `rate_limit_exceeded`, `too_many_requests`, `throttled`, `quota_exceeded`, `resource_exhausted` | Retry with backoff, then a "Too many requests" error |
+| anything else (including a bare `429`) | Treated as a throttle |
+
+So an allowance failure **must** carry one of the allowance codes even when it uses `429`. Also send `error.retryable` (`false` = do not retry; `true`/absent = the client may retry with backoff) and a `requestId`, which is surfaced to the user as a support reference. `status: 403` is treated as an allowance failure for backward compatibility.
+
+
 ## Jobs, retries, and accounting
 
 Proposed server-only records beneath `users/{uid}`:

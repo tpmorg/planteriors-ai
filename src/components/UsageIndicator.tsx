@@ -1,33 +1,69 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface UsageIndicatorProps {
   freeRemaining: number;
-  isSubscribed: boolean;
+  isFreeTier: boolean;
+  userId?: string;
   variant?: 'compact' | 'full';
   onUpgradePress?: () => void;
 }
 
-let isUpgradeCtaDismissedForSession = false;
+const TOKEN_BANNER_SEEN_KEY = '@planterior_token_banner_seen';
 
 export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   freeRemaining,
-  isSubscribed,
+  isFreeTier,
+  userId,
   variant = 'full',
   onUpgradePress,
 }) => {
   const { theme } = useTheme();
   const { suppressFreePlanWarnings } = useDebugPreferences();
-  const [isUpgradeCtaDismissed, setIsUpgradeCtaDismissed] = useState(
-    isUpgradeCtaDismissedForSession
-  );
+  const [hasLoadedBannerState, setHasLoadedBannerState] = useState(false);
+  const [hasSeenBanner, setHasSeenBanner] = useState(true);
   const styles = createStyles(theme);
-  const showPaidLayout = isSubscribed || suppressFreePlanWarnings;
+  const bannerSeenKey = userId ? `${TOKEN_BANNER_SEEN_KEY}:${userId}` : null;
 
-  if (showPaidLayout) {
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBannerState = async () => {
+      if (!isFreeTier || !bannerSeenKey || suppressFreePlanWarnings) {
+        if (!cancelled) {
+          setHasSeenBanner(true);
+          setHasLoadedBannerState(true);
+        }
+        return;
+      }
+
+      try {
+        const seen = await AsyncStorage.getItem(bannerSeenKey);
+        if (cancelled) return;
+        setHasSeenBanner(seen === 'true');
+        setHasLoadedBannerState(true);
+        if (seen !== 'true') await AsyncStorage.setItem(bannerSeenKey, 'true');
+      } catch (error) {
+        console.warn('Unable to load token banner state:', error);
+        if (!cancelled) {
+          setHasSeenBanner(true);
+          setHasLoadedBannerState(true);
+        }
+      }
+    };
+
+    setHasLoadedBannerState(false);
+    void loadBannerState();
+    return () => {
+      cancelled = true;
+    };
+  }, [bannerSeenKey, isFreeTier, suppressFreePlanWarnings]);
+
+  if (!isFreeTier || suppressFreePlanWarnings || !hasLoadedBannerState || hasSeenBanner) {
     return null;
   }
 
@@ -44,21 +80,13 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
   // Full variant for free plan
   const hasReachedLimit = freeRemaining === 0;
-  const shouldHideBanner = isUpgradeCtaDismissed;
-  const showUpgradeCta = Boolean(onUpgradePress) && (hasReachedLimit || !isUpgradeCtaDismissed);
-
-  if (shouldHideBanner) {
-    return null;
-  }
+  const showUpgradeCta = Boolean(onUpgradePress);
 
   return (
     <View style={[styles.container, hasReachedLimit && styles.limitContainer]}>
       <TouchableOpacity
         style={styles.dismissButton}
-        onPress={() => {
-          isUpgradeCtaDismissedForSession = true;
-          setIsUpgradeCtaDismissed(true);
-        }}
+        onPress={() => setHasSeenBanner(true)}
         hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="Dismiss free plan banner"
