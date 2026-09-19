@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,9 +9,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../components/AppIcon';
 import { CameraScreen } from '../screens/CameraScreen';
-import { PlantSelectionScreen } from '../screens/PlantSelectionScreen';
 import { PlantLocationScreen } from '../screens/PlantLocationScreen';
 import { GenerationScreen } from '../screens/GenerationScreen';
+import { DesignIntentScreen } from '../screens/DesignIntentScreen';
+import { DesignReadyScreen } from '../screens/DesignReadyScreen';
+import { DesignCustomizeScreen } from '../screens/DesignCustomizeScreen';
+import { PlantChooserScreen } from '../screens/PlantChooserScreen';
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { DesignDetailScreen } from '../screens/DesignDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -25,6 +28,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { DesignFlowProvider, useDesignFlow } from '../contexts/DesignFlowContext';
+import { buildGenerationRequest, pruneRecoverableResults, shouldResumeAfterPurchase } from '../designFlow/designFlow';
+import { cropImageToAspect } from '../utils/imageUtils';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
 import { onboardingService } from '../services/onboardingService';
@@ -331,11 +337,33 @@ export function CreateEntryScreenWrapper({
 }
 
 export function DesignFlowNavigator() {
+  const { user } = useAuth();
   return (
-    <DesignFlowStack.Navigator screenOptions={{ headerShown: false }}>
+    <DesignFlowProvider ownerId={user?.id || 'anonymous'}>
+      <DesignFlowNavigatorContent />
+    </DesignFlowProvider>
+  );
+}
+
+function DesignFlowNavigatorContent() {
+  const { draft, isRestoring } = useDesignFlow();
+  if (isRestoring) return null;
+  const initialRouteName: keyof DesignFlowStackParamList =
+    draft.step === 'intent' ? 'Intent'
+      : draft.step === 'plant' ? 'PlantChooser'
+        : draft.step === 'target' ? 'PlantLocation'
+          : draft.step === 'customization' ? 'Customize'
+            : draft.step === 'ready' || draft.step === 'recoverable-error' ? 'Ready'
+              : draft.step === 'result' && draft.results.length > 0 ? 'Generation'
+              : 'Camera';
+  return (
+    <DesignFlowStack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
       <DesignFlowStack.Screen name="Camera" component={CameraScreenWrapper} />
-      <DesignFlowStack.Screen name="PlantSelection" component={PlantSelectionScreenWrapper} />
-      <DesignFlowStack.Screen name="PlantLocation" component={PlantLocationScreenWrapper} />
+      <DesignFlowStack.Screen name="Intent" component={DesignIntentScreenWrapper} />
+      <DesignFlowStack.Screen name="PlantChooser" component={PlantChooserScreenWrapper} />
+      <DesignFlowStack.Screen name="PlantLocation" component={PlantLocationScreenWrapper} initialParams={{ purpose: draft.intent === 'replace' ? 'replace' : 'add' }} />
+      <DesignFlowStack.Screen name="Ready" component={DesignReadyScreenWrapper} />
+      <DesignFlowStack.Screen name="Customize" component={DesignCustomizeScreenWrapper} />
       <DesignFlowStack.Screen name="Generation" component={GenerationScreenWrapper} />
     </DesignFlowStack.Navigator>
   );
@@ -343,8 +371,29 @@ export function DesignFlowNavigator() {
 
 function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camera'>) {
   const { user } = useAuth();
-  const { mode, initialMode, initialIndividualSelection } = route.params || {};
+  const { mode, initialIntent, initialIndividualSelection, initialPhotoUri, preserveDraft } = route.params || {};
+  const { setPhoto, updateDraft, resetDraft } = useDesignFlow();
   const [recentSourceImages, setRecentSourceImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!preserveDraft) {
+      resetDraft(initialIndividualSelection ? 'plant-detail' : initialPhotoUri ? 'reuse-room' : 'new-design');
+    }
+    if (!initialPhotoUri) return;
+    let active = true;
+    setPhoto(initialPhotoUri).then(() => {
+      if (!active) return;
+      updateDraft({ intent: initialIntent || 'replace', individualPlant: initialIndividualSelection });
+      if (initialIntent === 'add' && initialIndividualSelection) {
+        navigation.replace('Ready');
+      } else if (initialIntent === 'replace') {
+        navigation.replace('PlantLocation', { purpose: 'replace' });
+      } else {
+        navigation.replace('Intent');
+      }
+    }).catch((error) => console.error('Failed to prepare prefilled design photo:', error));
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -352,7 +401,10 @@ function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camer
       try {
         const images = await databaseService.getRecentSourceImageUris(user?.id, 24);
         if (mounted) {
-          setRecentSourceImages(images);
+          const checks = await Promise.all(images.map((uri) => new Promise<string | null>((resolve) => {
+            Image.getSize(uri, () => resolve(uri), () => resolve(null));
+          })));
+          if (mounted) setRecentSourceImages(checks.filter((uri): uri is string => !!uri));
         }
       } catch (error) {
         console.error('Failed to load recent source images:', error);
@@ -365,12 +417,19 @@ function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camer
     };
   }, [user?.id]);
 
-  const handleImageTaken = (imageUri: string) => {
-    navigation.navigate('PlantSelection', {
-      imageUri,
-      initialMode: initialMode || 'multi-plant',
-      initialIndividualSelection,
-    });
+  const handleImageTaken = async (imageUri: string) => {
+    await setPhoto(imageUri);
+    if (preserveDraft) {
+      updateDraft({ step: 'ready' });
+      navigation.navigate('Ready');
+      return;
+    }
+    if (initialIndividualSelection) {
+      updateDraft({ intent: 'add', individualPlant: initialIndividualSelection, step: 'ready' });
+      navigation.navigate('Ready');
+      return;
+    }
+    navigation.navigate('Intent');
   };
 
   const handleClose = () => {
@@ -387,138 +446,146 @@ function CameraScreenWrapper({ navigation, route }: DesignFlowScreenProps<'Camer
   );
 }
 
-function PlantSelectionScreenWrapper({
-  route,
-  navigation,
-}: DesignFlowScreenProps<'PlantSelection'>) {
-  const { imageUri, initialMode, initialIndividualSelection } = route.params;
-  const { user } = useAuth();
-  const { refreshStatus } = useSubscription();
+function closeDesignFlow(navigation: any) {
+  navigation.getParent()?.goBack();
+}
 
-  const navigateToGenerationIfAllowed = useCallback(
-    async (request: GenerationRequest) => {
-      try {
-        if (!user?.id) {
-          navigation.navigate('Generation', { request });
-          return;
-        }
-
-        const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
-        if (!canGenerate) {
-          await refreshStatus();
-          navigation.getParent()?.navigate('Subscription');
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to verify generation access from plant selection:', error);
-      }
-
-      navigation.navigate('Generation', { request });
-    },
-    [navigation, refreshStatus, user?.id]
-  );
-
-  const handlePlantSelected = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
-    const request: GenerationRequest = {
-      imageUri,
-      ...selectionData,
-    };
-    void navigateToGenerationIfAllowed(request);
+function DesignIntentScreenWrapper({ navigation }: DesignFlowScreenProps<'Intent'>) {
+  const { draft, setIntent } = useDesignFlow();
+  if (!draft.photo) return null;
+  const choose = (intent: 'restyle' | 'add' | 'replace') => {
+    setIntent(intent);
+    if (intent === 'restyle') navigation.navigate('Ready');
+    else if (intent === 'replace') navigation.navigate('PlantLocation', { purpose: 'replace' });
+    else navigation.navigate('PlantChooser');
   };
+  return <DesignIntentScreen imageUri={draft.photo.originalUri} onSelect={choose} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} />;
+}
 
-  const handleChoosePlacement = (selectionData: Omit<GenerationRequest, 'imageUri'>) => {
-    navigation.navigate('PlantLocation', {
-      imageUri,
-      request: selectionData,
-      initialPlacementMode: 'choose',
-    });
-  };
-
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  return (
-    <PlantSelectionScreen
-      imageUri={imageUri}
-      initialMode={initialMode}
-      initialIndividualSelection={initialIndividualSelection}
-      onPlantSelected={handlePlantSelected}
-      onChoosePlacement={handleChoosePlacement}
-      onBack={handleBack}
-    />
-  );
+function PlantChooserScreenWrapper({ navigation }: DesignFlowScreenProps<'PlantChooser'>) {
+  const { setPlant } = useDesignFlow();
+  return <PlantChooserScreen onSelect={(selection) => { setPlant(selection); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onIdentify={() => navigation.getParent()?.navigate('PlantIdentify')} />;
 }
 
 function PlantLocationScreenWrapper({
   route,
   navigation,
 }: DesignFlowScreenProps<'PlantLocation'>) {
-  const { imageUri, request, initialPlacementMode } = route.params;
+  const { purpose } = route.params;
+  const { draft, setLocation, updateDraft } = useDesignFlow();
+  if (!draft.photo) return null;
+  return <PlantLocationScreen imageUri={draft.photo.originalUri} request={{ mode: purpose === 'replace' ? 'replace-plant' : 'individual', individualPlant: draft.individualPlant }} onLocationSelected={(location) => {
+    if (!location && purpose === 'replace') return;
+    setLocation(location || undefined);
+    if (purpose === 'replace' && !draft.individualPlant) {
+      updateDraft({ step: 'plant' });
+      navigation.navigate('PlantChooser');
+    } else {
+      updateDraft({ step: 'ready' });
+      navigation.navigate('Ready');
+    }
+  }} onBack={() => navigation.goBack()} initialPlacementMode={purpose === 'replace' ? 'choose' : draft.location ? 'choose' : 'auto'} />;
+}
+
+function DesignReadyScreenWrapper({ navigation }: DesignFlowScreenProps<'Ready'>) {
+  const { draft, updateDraft, setPhoto } = useDesignFlow();
   const { user } = useAuth();
-  const { refreshStatus } = useSubscription();
-
-  const navigateToGenerationIfAllowed = useCallback(
-    async (fullRequest: GenerationRequest) => {
-      try {
-        if (!user?.id) {
-          navigation.navigate('Generation', { request: fullRequest });
-          return;
-        }
-
+  const { refreshStatus, freeGenerationsRemaining, purchaseCompletion } = useSubscription();
+  const submissionRef = useRef(false);
+  const generate = async (skipAccessCheck: boolean = false) => {
+    if (submissionRef.current) return;
+    submissionRef.current = true;
+    try {
+      const request = buildGenerationRequest(draft);
+      if (user?.id && !skipAccessCheck) {
         const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
         if (!canGenerate) {
           await refreshStatus();
+          updateDraft({
+            resumeAfterPurchase: true,
+            purchaseEventBaselineId: purchaseCompletion?.id || 0,
+          });
           navigation.getParent()?.navigate('Subscription');
+          submissionRef.current = false;
           return;
         }
-      } catch (error) {
-        console.error('Failed to verify generation access from location selection:', error);
       }
-
-      navigation.navigate('Generation', { request: fullRequest });
-    },
-    [navigation, refreshStatus, user?.id]
-  );
-
-  const handleLocationSelected = (location: PlantLocation | null) => {
-    const fullRequest: GenerationRequest = location
-      ? { imageUri, ...request, location }
-      : { imageUri, ...request };
-    void navigateToGenerationIfAllowed(fullRequest);
+      updateDraft({
+        requestId: `request-${Date.now()}`,
+        requestStatus: 'submitting',
+        step: 'generating',
+        resumeAfterPurchase: false,
+        purchaseEventBaselineId: undefined,
+      });
+      navigation.navigate('Generation', { request });
+    } catch (error) {
+      console.error('Invalid design draft:', error);
+      submissionRef.current = false;
+    }
   };
+  useEffect(() => {
+    if (!shouldResumeAfterPurchase(draft, purchaseCompletion)) return;
 
-  const handleBack = () => {
-    navigation.goBack();
+    submissionRef.current = false;
+    void generate(true);
+  }, [purchaseCompletion?.id, draft.resumeAfterPurchase, draft.purchaseEventBaselineId]);
+  const cropPhoto = async () => {
+    if (!draft.photo) return;
+    const cropped = await cropImageToAspect(draft.photo.originalUri, 4, 3);
+    if (cropped === draft.photo.originalUri) return;
+    await setPhoto(cropped);
+    updateDraft({ step: 'ready' });
   };
+  return <DesignReadyScreen draft={draft} allowanceText={`${freeGenerationsRemaining} design credits available`} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onGenerate={() => void generate()} onCustomize={() => navigation.navigate('Customize')} onChooseSpot={() => navigation.navigate('PlantLocation', { purpose: 'add' })} onChangeTarget={() => navigation.navigate('PlantLocation', { purpose: 'replace' })} onReplacePhoto={() => navigation.navigate('Camera', { mode: 'room', preserveDraft: true })} onCropPhoto={() => void cropPhoto()} />;
+}
 
-  return (
-    <PlantLocationScreen
-      imageUri={imageUri}
-      request={request}
-      onLocationSelected={handleLocationSelected}
-      onBack={handleBack}
-      initialPlacementMode={initialPlacementMode}
-    />
-  );
+function DesignCustomizeScreenWrapper({ navigation }: DesignFlowScreenProps<'Customize'>) {
+  const { draft, updateDraft } = useDesignFlow();
+  useEffect(() => { updateDraft({ step: 'customization' }); }, []);
+  return <DesignCustomizeScreen draft={draft} updateDraft={updateDraft} onChoosePlant={() => { updateDraft({ step: 'plant' }); navigation.navigate('PlantChooser'); }} onChooseSpot={() => { updateDraft({ step: 'target' }); navigation.navigate('PlantLocation', { purpose: draft.intent === 'replace' ? 'replace' : 'add' }); }} onDone={() => { updateDraft({ step: 'ready' }); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} />;
 }
 
 function GenerationScreenWrapper({
   route,
   navigation,
 }: DesignFlowScreenProps<'Generation'>) {
-  const { request } = route.params;
+  const { draft, updateDraft } = useDesignFlow();
+  const { purchaseCompletion } = useSubscription();
+  let request = route.params?.request;
+  if (!request) {
+    try {
+      request = buildGenerationRequest(draft);
+    } catch {
+      return null;
+    }
+  }
+  const restoredResult = route.params?.request ? undefined : draft.results[draft.results.length - 1];
 
-  const handleGenerationComplete = (_result: GeneratedImage) => {
-    navigation.getParent()?.navigate('MainApp');
+  const handleGenerationComplete = (result: GeneratedImage) => {
+    // Save remains on the result. The user decides when to leave the flow.
+    updateDraft({
+      step: 'result',
+      requestStatus: 'succeeded',
+      results: draft.results.map((item) => item.imageUri === result.generatedImageUri ? { ...item, savedDesignId: result.id } : item),
+    });
   };
 
   const handleBack = () => {
+    updateDraft({
+      step: 'ready',
+      requestStatus: draft.requestStatus === 'succeeded' ? 'succeeded' : 'failed',
+    });
     navigation.goBack();
   };
 
   const handleUpgradePress = () => {
     const parentNavigation = navigation.getParent();
+    updateDraft({
+      step: 'ready',
+      requestStatus: 'failed',
+      resumeAfterPurchase: true,
+      purchaseEventBaselineId: purchaseCompletion?.id || 0,
+    });
     navigation.goBack();
     parentNavigation?.navigate('Subscription');
   };
@@ -526,8 +593,22 @@ function GenerationScreenWrapper({
   return (
     <GenerationScreen
       request={request}
+      initialResultUri={restoredResult?.imageUri}
+      initialSavedDesignId={restoredResult?.savedDesignId}
       onGenerationComplete={handleGenerationComplete}
       onBack={handleBack}
+      onAdjust={(imageUri) => { updateDraft({ step: 'ready', refinementSourceUri: imageUri }); navigation.navigate('Ready'); }}
+      onClose={() => navigation.getParent()?.navigate('MainApp')}
+      onResultVisible={(imageUri, jobId) => updateDraft({
+        step: 'result',
+        jobId,
+        requestStatus: 'succeeded',
+        results: pruneRecoverableResults([
+          ...draft.results.filter((item) => item.imageUri !== imageUri),
+          { requestId: draft.requestId || `request-${Date.now()}`, jobId, imageUri, createdAt: Date.now() },
+        ]),
+      })}
+      onRequestUnknown={() => updateDraft({ step: 'recoverable-error', requestStatus: 'unknown' })}
       onUpgradePress={handleUpgradePress}
     />
   );
@@ -791,8 +872,8 @@ export function DesignDetailScreenWrapper({
     }
 
     navigation.navigate('DesignFlow', {
-      screen: 'PlantSelection',
-      params: { imageUri, initialMode: 'replace-plant' },
+      screen: 'Camera',
+      params: { mode: 'room', initialPhotoUri: imageUri, initialIntent: 'replace' },
     });
   };
 
@@ -829,7 +910,7 @@ export function PlantDetailScreenWrapper({
       screen: 'Camera',
       params: {
         mode: 'room',
-        initialMode: 'individual',
+        initialIntent: 'add',
         initialIndividualSelection: createInitialSelectionFromPlant(plant),
       },
     });

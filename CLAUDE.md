@@ -77,7 +77,10 @@ planterior-ai/
 │   │   ├── AccountScreen.tsx # User profile and settings
 │   │   ├── SettingsScreen.tsx # App preferences and configuration
 │   │   ├── CameraScreen.tsx # Camera for room photos
-│   │   ├── PlantSelectionScreen.tsx # Plant type & style selection
+│   │   ├── DesignIntentScreen.tsx # Restyle/Add/Replace choice
+│   │   ├── PlantChooserScreen.tsx # Browse/My plants chooser
+│   │   ├── DesignReadyScreen.tsx # Generation-ready summary
+│   │   ├── DesignCustomizeScreen.tsx # Focused optional settings
 │   │   ├── GenerationScreen.tsx # AI generation & progress
 │   │   └── DesignDetailScreen.tsx # Full-screen image with gestures
 │   ├── services/           # API services
@@ -127,16 +130,16 @@ planterior-ai/
 ### 4. Camera & Photo Capture
 - **Dual Input**: Live camera or gallery photo selection
 - **Permission Handling**: Automatic camera and photo library access
-- **Preview System**: Image confirmation before proceeding
+- **Photo-first flow**: Capture/import advances directly to intent
 - **High Quality**: Optimized image capture settings
 - **Location**: `src/screens/CameraScreen.tsx`
 
 ### 5. AI Plant Integration
-- **Plant Selection**: 4 plant types with multiple style options
-- **Visual Interface**: Card-based selection with descriptions
-- **Custom Prompts**: Optional user-defined requirements
-- **Style Preview**: Visual examples for each style option
-- **Location**: `src/screens/PlantSelectionScreen.tsx`
+- **Intent-first setup**: Restyle, Add, or Replace
+- **Plant Selection**: Browse and My plants with three-result pages
+- **Focused customization**: Plant, pot, care, placement, and prompt editors
+- **Persistent draft**: Account-scoped flow and bounded result recovery
+- **Location**: `src/screens/DesignIntentScreen.tsx`, `src/screens/PlantChooserScreen.tsx`, `src/screens/DesignReadyScreen.tsx`, `src/screens/DesignCustomizeScreen.tsx`
 
 ### 6. AI Generation & Progress
 - **Real-Time Progress**: Live API call progress tracking (not fake delays)

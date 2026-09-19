@@ -1,19 +1,18 @@
 import { databaseService } from './databaseService';
 import { UsageStats } from '../types';
-import { aiApiService } from './aiApiService';
+import { subscriptionService } from './subscriptionService';
 
 export const FREE_GENERATION_LIMIT = 5;
 
 class UsageTrackingService {
-  /** Check the server-authoritative design balance before generation. */
+  /** Check the RevenueCat SDK design-credit balance before generation. */
   async canGenerateImage(userId: string): Promise<{
     canGenerate: boolean;
     reason?: 'no_subscription' | 'limit_exceeded';
     freeRemaining?: number;
   }> {
     try {
-      const usage = await aiApiService.getUsage();
-      const freeRemaining = usage.generation.remaining ?? 0;
+      const freeRemaining = await subscriptionService.getDesignCreditBalance(userId);
 
       if (freeRemaining > 0) {
         return {
@@ -22,14 +21,13 @@ class UsageTrackingService {
         };
       }
 
-      // The free allowance and paid design credits share one server balance.
       return {
         canGenerate: false,
         reason: 'limit_exceeded',
         freeRemaining: 0,
       };
     } catch (error) {
-      console.error('Error checking if user can generate:', error);
+      console.error('Error checking RevenueCat design credits:', error);
       return { canGenerate: false, reason: 'no_subscription' };
     }
   }
@@ -57,8 +55,7 @@ class UsageTrackingService {
    */
   async getFreeGenerationsRemaining(userId: string): Promise<number> {
     try {
-      const usage = await aiApiService.getUsage();
-      return Math.max(0, usage.generation.remaining ?? 0);
+      return await subscriptionService.getDesignCreditBalance(userId);
     } catch (error) {
       console.error('Error getting free generations remaining:', error);
       return 0;

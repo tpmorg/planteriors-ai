@@ -343,6 +343,17 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     });
   }, [accountSheetProgress]);
 
+  const openPurchaseOptionsFromAccount = useCallback(() => {
+    Animated.timing(accountSheetProgress, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsAccountSheetMounted(false);
+      onUpgradePress?.();
+    });
+  }, [accountSheetProgress, onUpgradePress]);
+
   const clearSelection = () => {
     setSelectedDesignIds(new Set());
     setCollectionTargetIds([]);
@@ -810,7 +821,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
             <AccountScreen
               presentation="sheet"
               onClose={closeAccountSheet}
-              onUpgradePress={onUpgradePress}
+              onUpgradePress={openPurchaseOptionsFromAccount}
             />
           </Animated.View>
         </View>

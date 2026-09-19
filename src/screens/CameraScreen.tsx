@@ -6,8 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   Image,
-  ActivityIndicator,
-  ScrollView,
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +13,6 @@ import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camer
 import * as ImagePicker from 'expo-image-picker';
 import { AppIcon } from '../components/AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
-import { compressImageForAI } from '../utils/imageUtils';
 
 interface CameraScreenProps {
   onImageTaken: (imageUri: string) => void;
@@ -32,10 +29,11 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
-  const [isCropping, setIsCropping] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
+  const [recentPage, setRecentPage] = useState(0);
   const [isSystemCropping, setIsSystemCropping] = useState(false);
+  const [unavailableRecent, setUnavailableRecent] = useState<Set<string>>(() => new Set());
   const cameraRef = useRef<CameraView>(null);
 
   const { theme } = useTheme();
@@ -62,8 +60,6 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     processingLabel: isPlantIdMode ? 'Identifying…' : 'Processing…',
   };
 
-  const hasPermission = permission?.granted;
-
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
@@ -72,11 +68,9 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           base64: false,
-          skipProcessing: true,
           shutterSound: false,
         });
-        const optimizedUri = await compressImageForAI(photo.uri);
-        setPreviewImage(optimizedUri);
+        await onImageTaken(photo.uri);
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to take picture');
@@ -91,15 +85,12 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypes as any,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 1,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const optimizedUri = await compressImageForAI(result.assets[0].uri);
-        setPreviewImage(optimizedUri);
-        setShowOptions(false);
+        await onImageTaken(result.assets[0].uri);
       }
       setIsSystemCropping(false);
     } catch (error) {
@@ -109,37 +100,28 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     }
   };
 
-  const openCamera = () => {
+  const openCamera = async () => {
+    if (!permission?.granted) {
+      const nextPermission = await requestPermission();
+      if (!nextPermission.granted) {
+        Alert.alert('Camera unavailable', 'You can still choose a photo from your library.');
+        return;
+      }
+    }
     setShowOptions(false);
   };
 
   const useRecentImage = (uri: string) => {
-    setPreviewImage(uri);
-    setShowOptions(false);
-  };
-
-  const confirmImage = async () => {
-    if (!previewImage) return;
-    setIsCropping(true);
-    try {
-      onImageTaken(previewImage);
-    } finally {
-      setIsCropping(false);
-    }
-  };
-
-  const retakePhoto = () => {
-    setPreviewImage(null);
-    setShowOptions(true);
+    void onImageTaken(uri);
   };
 
   useEffect(() => {
     const handleHardwareBack = () => {
-      if (isSystemCropping || isCropping) {
+      if (isSystemCropping) {
         return true;
       }
-      if (previewImage) {
-        retakePhoto();
+      if (showRecent) {
+        setShowRecent(false);
         return true;
       }
       if (!showOptions) {
@@ -152,36 +134,42 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
     return () => subscription.remove();
-  }, [isSystemCropping, isCropping, previewImage, showOptions, onClose]);
-
-
-  if (!permission) {
-    return (
-      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Requesting camera permission...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Camera permission required</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Grant Permission</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={pickImage}>
-          <Text style={styles.buttonText}>Choose from Gallery</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={onClose}>
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
+  }, [isSystemCropping, showOptions, showRecent, onClose]);
 
   if (isSystemCropping) {
     return <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container} />;
+  }
+
+  if (showRecent) {
+    const pageCount = Math.max(1, Math.ceil(recentSourceImages.length / 3));
+    const visibleRecent = recentSourceImages.slice(recentPage * 3, recentPage * 3 + 3);
+    return (
+      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowRecent(false)} style={styles.headerButton} accessibilityLabel="Back to photo sources">
+            <AppIcon name="ArrowLeft" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Recent rooms</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close recent rooms"><AppIcon name="X" size={20} color="white" /></TouchableOpacity>
+        </View>
+        <View style={styles.recentPicker}>
+          <Text style={styles.optionsTitle}>Choose a recent room</Text>
+          <View style={styles.recentPickerGrid}>
+            {visibleRecent.map((uri, index) => (
+              <TouchableOpacity key={`${uri}-${index}`} style={styles.recentPickerButton} onPress={() => useRecentImage(uri)} disabled={unavailableRecent.has(uri)}>
+                <Image source={{ uri }} style={styles.recentPickerImage} onError={() => setUnavailableRecent((current) => new Set(current).add(uri))} />
+                {unavailableRecent.has(uri) ? <View style={styles.unavailableOverlay}><Text style={styles.unavailableText}>Photo unavailable</Text></View> : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+          {pageCount > 1 ? <View style={styles.recentPagination}>
+            <TouchableOpacity onPress={() => setRecentPage((value) => Math.max(0, value - 1))} disabled={recentPage === 0}><Text style={[styles.recentPageButton, recentPage === 0 && styles.recentPageDisabled]}>Previous</Text></TouchableOpacity>
+            <Text style={styles.recentPageLabel}>{recentPage + 1} of {pageCount}</Text>
+            <TouchableOpacity onPress={() => setRecentPage((value) => Math.min(pageCount - 1, value + 1))} disabled={recentPage === pageCount - 1}><Text style={[styles.recentPageButton, recentPage === pageCount - 1 && styles.recentPageDisabled]}>Next</Text></TouchableOpacity>
+          </View> : null}
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (showOptions) {
@@ -212,105 +200,25 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
 
         <View style={styles.optionsContainer}>
           <View style={styles.optionsContent}>
-            <Text style={styles.optionsTitle}>{copy.optionsTitle}</Text>
+            <Text style={styles.optionsTitle}>{isPlantIdMode ? copy.optionsTitle : 'Choose room photo'}</Text>
 
             <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
               <AppIcon name="Camera" size={32} color={theme.colors.primary} />
-              <Text style={styles.optionTitle}>Take Photo</Text>
+              <Text style={styles.optionTitle}>Take photo</Text>
               <Text style={styles.optionSubtitle}>{copy.cameraSubtitle}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
               <AppIcon name="Images" size={32} color={theme.colors.primary} />
-              <Text style={styles.optionTitle}>Import from Gallery</Text>
+              <Text style={styles.optionTitle}>Choose photo</Text>
               <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
             </TouchableOpacity>
 
-            {recentSourceImages.length > 0 && (
-              <View style={styles.recentSection}>
-                <View style={styles.recentHeader}>
-                  <AppIcon name="ClockCounterClockwise" size={16} color={theme.colors.primary} />
-                  <Text style={styles.recentTitle}>{copy.recentTitle}</Text>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.recentScrollContent}
-                >
-                  {recentSourceImages.map((uri, index) => (
-                    <TouchableOpacity
-                      key={`${uri}-${index}`}
-                      style={styles.recentThumbButton}
-                      onPress={() => useRecentImage(uri)}
-                      activeOpacity={0.82}
-                    >
-                      <Image source={{ uri }} style={styles.recentThumbImage} />
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (previewImage) {
-    return (
-      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={retakePhoto} style={styles.headerButton}>
-            <AppIcon name="ArrowLeft" size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Preview</Text>
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.closeButton}
-            accessibilityRole="button"
-            accessibilityLabel="Close photo preview"
-          >
-            <AppIcon name="X" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: previewImage }} style={styles.previewImage} />
-        </View>
-
-        <View style={styles.previewControls}>
-          <View style={styles.previewCopy}>
-            <Text style={styles.previewTitle}>Review Your Photo</Text>
-            <Text style={styles.previewSubtitle}>
-              {copy.previewSubtitle}
-            </Text>
-          </View>
-
-          <View style={styles.previewButtons}>
-            <TouchableOpacity
-              style={[styles.secondaryButton, isCropping && styles.buttonDisabled]}
-              onPress={retakePhoto}
-              disabled={isCropping}
-            >
-              <AppIcon name="Camera" size={18} color={theme.colors.primary} />
-              <Text style={styles.secondaryButtonText}>Retake</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, isCropping && styles.buttonDisabled]}
-              onPress={confirmImage}
-              disabled={isCropping}
-            >
-              {isCropping ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <AppIcon name="Check" size={18} color="white" />
-              )}
-              <Text style={styles.primaryButtonText}>
-                {isCropping ? copy.processingLabel : 'Continue'}
-              </Text>
-            </TouchableOpacity>
+            {recentSourceImages.length > 0 ? <TouchableOpacity style={styles.optionButton} onPress={() => setShowRecent(true)}>
+              <AppIcon name="ClockCounterClockwise" size={32} color={theme.colors.primary} />
+              <Text style={styles.optionTitle}>Recent room</Text>
+              <Text style={styles.optionSubtitle}>Reuse a room photo from a previous design</Text>
+            </TouchableOpacity> : null}
           </View>
         </View>
       </SafeAreaView>
@@ -670,4 +578,44 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  unavailableOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.72)',
+  },
+  unavailableText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  recentPicker: {
+    flex: 1,
+    padding: 20,
+  },
+  recentPickerGrid: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 14,
+  },
+  recentPickerButton: {
+    height: 150,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  recentPickerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  recentPagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  recentPageButton: { color: 'white', fontWeight: '700', padding: 10 },
+  recentPageDisabled: { opacity: 0.35 },
+  recentPageLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 13 },
 });

@@ -19,15 +19,6 @@ type ApiJob<T = unknown> = {
   pollAfterMs?: number | null;
 };
 
-export type AiUsage = {
-  entitlement: { active: boolean };
-  generation: { consumed: number; reserved: number; remaining: number | null };
-  identification: { consumed: number; reserved: number; remaining: number | null };
-  activeJobs: number;
-  capabilities: { generation: boolean; identification: boolean };
-  policyVersion: string;
-};
-
 export class AiApiError extends Error {
   constructor(
     message: string,
@@ -51,7 +42,7 @@ class AiApiService {
     onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
   ): Promise<{ imageUri: string; isGenerated: true; jobId: string }> {
     onPhase?.('preparing');
-    const uploadId = await this.uploadImage(request.imageUri, onPhase);
+    const uploadId = await this.uploadImage(request.imageUri, onPhase, request.imagePrepared);
     onPhase?.('generating');
 
     const body = this.generationPayload(uploadId, request);
@@ -80,10 +71,6 @@ class AiApiService {
     return Array.isArray(result.plants) ? result.plants : [];
   }
 
-  async getUsage(): Promise<AiUsage> {
-    return this.request<AiUsage>('/api/v1/usage');
-  }
-
   private async identify<T>(imageUri: string, operation: 'identify-plant' | 'analyze-design'): Promise<T> {
     const uploadId = await this.uploadImage(imageUri);
     const response = await this.request<{ identification: ApiJob<T> }>('/api/v1/identifications', {
@@ -99,8 +86,9 @@ class AiApiService {
   private async uploadImage(
     imageUri: string,
     onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
+    isPrepared: boolean = false,
   ) {
-    const jpegUri = await compressImageForAI(imageUri);
+    const jpegUri = isPrepared ? imageUri : await compressImageForAI(imageUri);
     const info = await FileSystem.getInfoAsync(jpegUri);
     if (!info.exists || typeof info.size !== 'number') throw new Error('Prepared image could not be read.');
 

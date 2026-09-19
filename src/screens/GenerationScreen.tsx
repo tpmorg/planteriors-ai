@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
 import { AiApiError } from "../services/aiApiService";
@@ -27,6 +28,12 @@ interface GenerationScreenProps {
   request: GenerationRequest;
   onGenerationComplete: (result: GeneratedImage) => void;
   onBack: () => void;
+  onAdjust: (imageUri: string) => void;
+  onClose: () => void;
+  onResultVisible?: (imageUri: string, jobId: string) => void;
+  initialResultUri?: string;
+  initialSavedDesignId?: string;
+  onRequestUnknown?: () => void;
   onUpgradePress?: () => void;
 }
 
@@ -36,6 +43,12 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   request,
   onGenerationComplete,
   onBack,
+  onAdjust,
+  onClose,
+  onResultVisible,
+  initialResultUri,
+  initialSavedDesignId,
+  onRequestUnknown,
   onUpgradePress,
 }) => {
   const { user } = useAuth();
@@ -49,15 +62,20 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const styles = createStyles(theme, isTablet);
 
   const [isGenerating, setIsGenerating] = useState(false); // Changed to false initially
-  const [isCheckingUsage, setIsCheckingUsage] = useState(true); // New state for usage check
+  const [isCheckingUsage, setIsCheckingUsage] = useState(!initialResultUri); // New state for usage check
   const [currentStatus, setCurrentStatus] = useState("");
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(
-    null,
+    initialResultUri || null,
   );
-  const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
+  const [isImageGenerated, setIsImageGenerated] = useState<boolean>(!!initialResultUri);
   const [error, setError] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRequestUnknown, setIsRequestUnknown] = useState(false);
+  const [savedDesignId, setSavedDesignId] = useState<string | null>(initialSavedDesignId || null);
+  const generationInFlightRef = useRef(false);
+  const saveInFlightRef = useRef(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -76,7 +94,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       : 'Creating your design with:';
 
   useEffect(() => {
-    checkUsageAndStart();
+    if (!initialResultUri) checkUsageAndStart();
   }, []);
 
   const checkUsageAndStart = async () => {
@@ -87,6 +105,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     }
 
     try {
+      setIsRequestUnknown(false);
       setIsCheckingUsage(true);
 
       if (!requireNetwork()) {
@@ -147,12 +166,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   }, [generatedImageUri, fadeAnim, scaleAnim]);
 
   const startGeneration = async () => {
+    if (generationInFlightRef.current) return;
+    generationInFlightRef.current = true;
     try {
       setCurrentStatus("Preparing photo...");
       setApiCallStarted(true);
 
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(
+      const { imageUri: generatedUri, isGenerated, jobId } = await geminiService.generatePlantImage(
         request,
         (phase) => setCurrentStatus({
           preparing: 'Preparing photo...',
@@ -167,6 +188,12 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setGeneratedImageUri(generatedUri);
       setIsImageGenerated(isGenerated);
       setIsGenerating(false);
+      if (isGenerated) {
+        onResultVisible?.(generatedUri, jobId);
+        refreshStatus().catch((refreshError) => {
+          console.warn('Failed to refresh RevenueCat credits after generation:', refreshError);
+        });
+      }
 
       // Only show success state for actually generated images
       if (!isGenerated) {
@@ -179,10 +206,16 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       reportNetworkIssue('generation', err);
       if (err instanceof AiApiError && (err.code === 'allowance_exhausted' || err.code === 'forbidden')) {
         setShowPaywall(true);
+      } else if (err instanceof AiApiError && err.code === 'timeout') {
+        setIsRequestUnknown(true);
+        onRequestUnknown?.();
+        setError('The request was interrupted, so its final status is unknown. Edit the setup before deciding whether to submit a new generation.');
       } else {
         setError(err instanceof Error ? err.message : "Failed to generate image");
       }
       setIsGenerating(false);
+    } finally {
+      generationInFlightRef.current = false;
     }
   };
 
@@ -197,12 +230,14 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   };
 
   const handleUseResult = async () => {
-    if (generatedImageUri && isImageGenerated && user) {
+    if (generatedImageUri && isImageGenerated && user && !saveInFlightRef.current && !savedDesignId) {
+      saveInFlightRef.current = true;
       try {
+        setIsSaving(true);
         console.log("Saving design locally...");
 
         const savedDesign = await databaseService.saveDesign({
-          originalImageUri: request.imageUri,
+          originalImageUri: request.originalImageUri || request.imageUri,
           generatedImageUri: generatedImageUri,
           userId: user.id, // NEW: Add user ID
           mode: request.mode,
@@ -222,7 +257,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
         const result: GeneratedImage = {
           id: savedDesign.id,
-          originalImageUri: request.imageUri,
+          originalImageUri: request.originalImageUri || request.imageUri,
           generatedImageUri: generatedImageUri,
           plantType: request.plantType!,
           plantStyle: request.plantStyle!,
@@ -232,21 +267,20 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
         console.log("Design saved locally with ID:", savedDesign.id);
         showToast("Saved on this device", "success");
+        setSavedDesignId(savedDesign.id);
         onGenerationComplete(result);
 
-        // Usage was consumed when generation completed. Refresh in the background so
-        // the local save and navigation are never held up by another network request.
-        refreshStatus().catch((refreshError) => {
-          console.warn("Failed to refresh usage after local save:", refreshError);
-        });
       } catch (error) {
         console.error("Failed to save design locally:", error);
         showToast("Failed to save on this device", "error");
+      } finally {
+        setIsSaving(false);
+        saveInFlightRef.current = false;
       }
     }
   };
 
-  if (error) {
+  if (error && !generatedImageUri) {
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.backdropBlobA} />
@@ -273,16 +307,16 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             </View>
           )}
 
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+          {!isRequestUnknown ? <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
             <AppIcon name="ArrowClockwise" size={20} color="white" />
             <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> : null}
 
           <TouchableOpacity
             style={styles.backToSelectionButton}
             onPress={onBack}
           >
-            <Text style={styles.backToSelectionText}>Back</Text>
+            <Text style={styles.backToSelectionText}>Edit setup</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -301,38 +335,42 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             },
           ]}
         >
-          <Image
-            source={{ uri: generatedImageUri }}
-            style={styles.resultImage}
-          />
+          <BeforeAfterSlider originalUri={request.imageUri} generatedUri={generatedImageUri} />
 
           {/* Overlay header with back button */}
           <View style={styles.resultHeader}>
             <TouchableOpacity onPress={onBack} style={styles.overlayBackButton}>
               <AppIcon name="ArrowLeft" size={24} color="white" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.overlayBackButton} accessibilityLabel="Close result">
+              <AppIcon name="X" size={22} color="white" />
+            </TouchableOpacity>
           </View>
 
           {/* Compact info overlay at bottom */}
           <View style={styles.resultOverlay}>
             <Text style={styles.resultSubtitle}>{requestPlantSummary}</Text>
+            {error ? <Text style={styles.previousResultError}>The new version failed. Your previous result is still here.</Text> : null}
           </View>
 
           {/* Action buttons overlaid at bottom */}
           <View style={styles.resultActionsOverlay}>
-            <TouchableOpacity
-              style={styles.generateAgainButton}
-              onPress={handleRetry}
-            >
-              <AppIcon name="ArrowClockwise" size={20} color="white" />
-              <Text style={styles.generateAgainText}>Again</Text>
+            <TouchableOpacity style={styles.generateAgainButton} onPress={() => onAdjust(generatedImageUri)}>
+              <AppIcon name="SlidersHorizontal" size={19} color="white" />
+              <Text style={styles.generateAgainText}>Adjust</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.generateAgainButton, isRequestUnknown && styles.buttonDisabled]} disabled={isRequestUnknown} onPress={() => { setError(null); setSavedDesignId(null); setIsGenerating(true); void startGeneration(); }}>
+              <AppIcon name="ArrowClockwise" size={19} color="white" />
+              <Text style={styles.generateAgainText}>Another version</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.useResultButton}
+              style={[styles.useResultButton, (isSaving || !!savedDesignId) && styles.buttonDisabled]}
               onPress={handleUseResult}
+              disabled={isSaving || !!savedDesignId}
             >
-              <Text style={styles.useResultText}>Save</Text>
+              <Text style={styles.useResultText}>{savedDesignId ? 'Saved' : isSaving ? 'Saving…' : 'Save'}</Text>
               <AppIcon name="Check" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -666,6 +704,7 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     right: 0,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "rgba(0,0,0,0.22)",
@@ -698,6 +737,12 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     opacity: 0.95,
+  },
+  previousResultError: {
+    color: '#fecaca',
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
   },
   identificationBlock: {
     marginTop: 12,
@@ -767,14 +812,14 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     left: 16,
     right: 16,
     flexDirection: "row",
-    gap: 14,
+    gap: 8,
   },
   generateAgainButton: {
     flex: 1,
     height: 50,
     backgroundColor: "rgba(255,255,255,0.16)",
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
     borderRadius: 16,
     flexDirection: "row",
     justifyContent: "center",
@@ -789,16 +834,16 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   },
   generateAgainText: {
     color: "white",
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "700",
-    marginLeft: 8,
+    marginLeft: 5,
   },
   useResultButton: {
     flex: 1,
     height: 50,
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
     borderRadius: 16,
     flexDirection: "row",
     justifyContent: "center",
@@ -811,9 +856,12 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   },
   useResultText: {
     color: "white",
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "700",
-    marginRight: 8,
+    marginRight: 5,
+  },
+  buttonDisabled: {
+    opacity: 0.58,
   },
   placeholderInfo: {
     backgroundColor: "#fef3c7",

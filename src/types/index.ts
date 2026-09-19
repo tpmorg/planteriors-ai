@@ -139,6 +139,8 @@ export interface PlantOptions {
 
 export interface GenerationRequest {
   imageUri: string;
+  imagePrepared?: boolean;
+  originalImageUri?: string;
   mode: PlantSelectionMode;
   // Multi-plant mode fields (existing)
   plantType?: PlantType;
@@ -151,6 +153,69 @@ export interface GenerationRequest {
   location?: PlantLocation;
   // Common
   prompt?: string;
+}
+
+export type DesignIntent = 'restyle' | 'add' | 'replace';
+export type DesignFlowEntryPoint = 'new-design' | 'reuse-room' | 'plant-detail' | 'saved-design';
+export type DesignFlowStep =
+  | 'photo'
+  | 'intent'
+  | 'plant'
+  | 'target'
+  | 'ready'
+  | 'customization'
+  | 'generating'
+  | 'result'
+  | 'recoverable-error';
+
+export interface DesignPhotoAsset {
+  originalUri: string;
+  preparedUri: string;
+  width?: number;
+  height?: number;
+  orientation?: 'portrait' | 'landscape' | 'square';
+  revision: number;
+}
+
+export interface RecoverableDesignResult {
+  requestId: string;
+  jobId?: string;
+  imageUri: string;
+  createdAt: number;
+  savedDesignId?: string;
+}
+
+export interface DesignFlowDraft {
+  id: string;
+  ownerId: string;
+  schemaVersion: 1;
+  createdAt: number;
+  updatedAt: number;
+  entryPoint: DesignFlowEntryPoint;
+  step: DesignFlowStep;
+  photo?: DesignPhotoAsset;
+  intent?: DesignIntent;
+  plantType?: PlantType;
+  plantStyle?: PlantStyle;
+  plantOptions?: PlantOptions;
+  individualPlant?: IndividualPlantSelection;
+  location?: PlantLocation;
+  locationPhotoRevision?: number;
+  prompt?: string;
+  refinementSourceUri?: string;
+  requestId?: string;
+  jobId?: string;
+  requestStatus?: 'idle' | 'submitting' | 'unknown' | 'failed' | 'succeeded';
+  resumeAfterPurchase?: boolean;
+  purchaseEventBaselineId?: number;
+  results: RecoverableDesignResult[];
+}
+
+export interface PurchaseCompletionEvent {
+  id: number;
+  kind: 'monthly' | 'room_pack' | 'restore';
+  productId?: string;
+  completedAt: number;
 }
 
 export interface GeneratedImage {
@@ -239,7 +304,7 @@ export interface IndividualPlant {
   availableSizes: PlantSize[];
   suitablePlacements: PlacementType[];
   careLevel: CareLevel;
-  growthRate: GrowthRate;
+  growthRate?: GrowthRate;
   petSafe: boolean;
   imageUrl?: number; // require() returns a number for local assets
 }

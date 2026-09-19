@@ -956,6 +956,40 @@ export class DatabaseService {
     }
   }
 
+  async getUserAddedPlants(): Promise<any[]> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const rows = await this.db.getAllAsync<any>(
+      `SELECT p.*,
+        pi.local_path as local_image_path,
+        pi.image_url as primary_image_url
+       FROM plants p
+       LEFT JOIN plant_images pi ON p.id = pi.plant_id AND pi.is_primary = 1
+       WHERE p.user_added = 1
+       ORDER BY p.name ASC`
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      scientificName: row.scientific_name,
+      description: row.description,
+      category: row.category,
+      icon: row.icon,
+      careLevel: row.care_level,
+      lightRequirement: row.light_requirement,
+      waterRequirement: row.water_requirement,
+      petSafe: row.pet_safe === 1,
+      availableSizes: row.available_sizes ? JSON.parse(row.available_sizes) : [],
+      suitablePlacements: row.suitable_placements ? JSON.parse(row.suitable_placements) : [],
+      localImagePath: row.local_image_path,
+      primaryImageUrl: row.primary_image_url,
+      isPopular: row.is_popular === 1,
+      userAdded: true,
+    }));
+  }
+
   async getPlantsByCategory(category: string, limit: number = 50): Promise<any[]> {
     await this.ensureConnection();
     if (!this.db) throw new Error('Database not initialized');

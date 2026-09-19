@@ -3,6 +3,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { StackScreenProps } from '@react-navigation/stack';
 
 import type {
+  DesignIntent,
   GenerationRequest,
   IndividualPlantSelection,
   PlantSearchResult,
@@ -25,20 +26,19 @@ export type RootStackParamList = {
 export type DesignFlowStackParamList = {
   Camera: {
     mode?: 'room' | 'plant-id';
-    initialMode?: GenerationRequest['mode'];
+    initialIntent?: DesignIntent;
     initialIndividualSelection?: IndividualPlantSelection;
+    initialPhotoUri?: string;
+    preserveDraft?: boolean;
   } | undefined;
-  PlantSelection: {
-    imageUri: string;
-    initialMode?: GenerationRequest['mode'];
-    initialIndividualSelection?: IndividualPlantSelection;
-  };
+  Intent: undefined;
+  PlantChooser: undefined;
+  Ready: undefined;
+  Customize: undefined;
   PlantLocation: {
-    imageUri: string;
-    request: Omit<GenerationRequest, 'imageUri' | 'location'>;
-    initialPlacementMode?: 'choose' | 'auto';
+    purpose: 'add' | 'replace';
   };
-  Generation: { request: GenerationRequest };
+  Generation: { request?: GenerationRequest } | undefined;
 };
 
 export type TabParamList = {

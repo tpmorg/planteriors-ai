@@ -12,6 +12,7 @@ const ENTITLEMENT_ID =
   Constants.expoConfig?.extra?.revenueCatEntitlementId ||
   Constants.expoConfig?.extra?.REVENUECAT_ENTITLEMENT_ID ||
   'Planterior Pro';
+const DESIGN_CURRENCY_CODE = 'DESIGNS';
 
 class SubscriptionService {
   private isConfigured = false;
@@ -409,6 +410,31 @@ class SubscriptionService {
         runtime: this.getRuntimeDiagnostics(),
       });
       return [];
+    }
+  }
+
+  /** Read the design-credit balance directly from the RevenueCat SDK. */
+  async getDesignCreditBalance(userId?: string, refresh: boolean = false): Promise<number> {
+    const ok = await this.ensureConfigured(userId);
+    if (!ok) return 0;
+
+    try {
+      if (refresh) {
+        await Purchases.invalidateVirtualCurrenciesCache();
+      }
+      const currencies = await Purchases.getVirtualCurrencies();
+      return Math.max(0, Number(currencies.all?.[DESIGN_CURRENCY_CODE]?.balance || 0));
+    } catch (error) {
+      console.error('RevenueCat design credit fetch failed:', error);
+      this.captureRevenueCatException('RevenueCat design credit fetch failed', error, {
+        currencyCode: DESIGN_CURRENCY_CODE,
+      });
+      try {
+        const cachedCurrencies = await Purchases.getCachedVirtualCurrencies();
+        return Math.max(0, Number(cachedCurrencies?.all?.[DESIGN_CURRENCY_CODE]?.balance || 0));
+      } catch {
+        return 0;
+      }
     }
   }
 

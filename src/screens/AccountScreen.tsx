@@ -17,7 +17,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 import { firestoreSyncService } from '../services/firestoreSyncService';
 
@@ -329,6 +328,11 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                   ? (subscription.type === 'annual' ? 'Legacy Annual Plan' : 'Monthly Plan — 30 designs')
                   : 'Debug Layout Preview'}
               </Text>
+              {subscription?.isActive ? (
+                <Text style={styles.expiryText}>
+                  {freeGenerationsRemaining} design credits available
+                </Text>
+              ) : null}
               {subscription?.isActive && subscription.expiryDate && (
                 <Text style={styles.expiryText}>
                   Renews: {formatDate(subscription.expiryDate)}
@@ -356,14 +360,13 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             <View style={styles.subscriptionCard}>
               <Text style={styles.freePlanText}>Free Plan</Text>
               <Text style={styles.freePlanDetails}>
-                {freeGenerationsRemaining} of {FREE_GENERATION_LIMIT} free generations remaining
+                {freeGenerationsRemaining} design credits available
               </Text>
               <TouchableOpacity
                 style={styles.upgradeButton}
                 onPress={handleUpgrade}
               >
-                <AppIcon name="ArrowCircleUp" size={20} color="white" />
-                <Text style={styles.upgradeButtonText}>View Design Options</Text>
+                <Text style={styles.upgradeButtonText}>See Plans &amp; Credits</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -726,10 +729,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   upgradeButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     borderRadius: 12,

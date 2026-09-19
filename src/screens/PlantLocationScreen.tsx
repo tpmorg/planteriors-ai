@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,10 +44,28 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
 
   // Image container dimensions
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
   // Selection state
   const [hasSelection, setHasSelection] = useState(false);
-  const [placementMode, setPlacementMode] = useState<'choose' | 'auto'>(initialPlacementMode);
+  const isReplaceMode = request.mode === 'replace-plant';
+  const [placementMode, setPlacementMode] = useState<'choose' | 'auto'>(
+    isReplaceMode ? 'choose' : initialPlacementMode
+  );
+
+  useEffect(() => {
+    Image.getSize(imageUri, (width, height) => setImageSize({ width, height }), () => setImageSize({ width: 0, height: 0 }));
+  }, [imageUri]);
+
+  const imageFrame = useMemo(() => {
+    if (!containerSize.width || !containerSize.height || !imageSize.width || !imageSize.height) {
+      return { x: 0, y: 0, width: containerSize.width, height: containerSize.height };
+    }
+    const scale = Math.min(containerSize.width / imageSize.width, containerSize.height / imageSize.height);
+    const width = imageSize.width * scale;
+    const height = imageSize.height * scale;
+    return { x: (containerSize.width - width) / 2, y: (containerSize.height - height) / 2, width, height };
+  }, [containerSize, imageSize]);
 
   // Gesture state for drawing the rectangle
   const startX = useSharedValue(0);
@@ -66,12 +84,12 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   };
 
   const updateFinalSelection = (x: number, y: number, width: number, height: number) => {
-    if (containerSize.width > 0 && containerSize.height > 0) {
+    if (imageFrame.width > 0 && imageFrame.height > 0) {
       finalSelection.current = {
-        x: x / containerSize.width,
-        y: y / containerSize.height,
-        width: width / containerSize.width,
-        height: height / containerSize.height,
+        x: Math.max(0, Math.min(1, (x - imageFrame.x) / imageFrame.width)),
+        y: Math.max(0, Math.min(1, (y - imageFrame.y) / imageFrame.height)),
+        width: Math.max(0, Math.min(1, width / imageFrame.width)),
+        height: Math.max(0, Math.min(1, height / imageFrame.height)),
       };
     }
   };
@@ -79,18 +97,20 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   // Pan gesture for creating/resizing selection
   const panGesture = Gesture.Pan()
     .onBegin((e) => {
-      startX.value = e.x;
-      startY.value = e.y;
-      selectionX.value = e.x;
-      selectionY.value = e.y;
+      const x = Math.max(imageFrame.x, Math.min(e.x, imageFrame.x + imageFrame.width));
+      const y = Math.max(imageFrame.y, Math.min(e.y, imageFrame.y + imageFrame.height));
+      startX.value = x;
+      startY.value = y;
+      selectionX.value = x;
+      selectionY.value = y;
       selectionWidth.value = 0;
       selectionHeight.value = 0;
       isDragging.value = true;
     })
     .onUpdate((e) => {
       // Calculate the rectangle from start point to current point
-      const currentX = Math.max(0, Math.min(e.x, containerSize.width));
-      const currentY = Math.max(0, Math.min(e.y, containerSize.height));
+      const currentX = Math.max(imageFrame.x, Math.min(e.x, imageFrame.x + imageFrame.width));
+      const currentY = Math.max(imageFrame.y, Math.min(e.y, imageFrame.y + imageFrame.height));
 
       // Handle dragging in any direction
       const minX = Math.min(startX.value, currentX);
@@ -125,6 +145,20 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         runOnJS(updateHasSelection)(false);
       }
     });
+
+  const tapGesture = Gesture.Tap().onEnd((event) => {
+    const width = Math.min(110, imageFrame.width * 0.35);
+    const height = Math.min(140, imageFrame.height * 0.4);
+    const x = Math.max(imageFrame.x, Math.min(imageFrame.x + imageFrame.width - width, event.x - width / 2));
+    const y = Math.max(imageFrame.y, Math.min(imageFrame.y + imageFrame.height - height, event.y - height / 2));
+    selectionX.value = x;
+    selectionY.value = y;
+    selectionWidth.value = withSpring(width);
+    selectionHeight.value = withSpring(height);
+    runOnJS(updateHasSelection)(true);
+    runOnJS(updateFinalSelection)(x, y, width, height);
+  });
+  const selectionGesture = Gesture.Race(panGesture, tapGesture);
 
   // Animated style for the selection rectangle
   const selectionAnimatedStyle = useAnimatedStyle(() => {
@@ -163,15 +197,23 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   };
 
   const handleModeChange = (mode: 'choose' | 'auto') => {
+    if (isReplaceMode && mode === 'auto') return;
     setPlacementMode(mode);
     if (mode === 'auto') {
       handleReset();
     }
   };
 
+  const nudgeSelection = (dx: number, dy: number) => {
+    const x = Math.max(imageFrame.x, Math.min(imageFrame.x + imageFrame.width - selectionWidth.value, selectionX.value + dx));
+    const y = Math.max(imageFrame.y, Math.min(imageFrame.y + imageFrame.height - selectionHeight.value, selectionY.value + dy));
+    selectionX.value = withSpring(x);
+    selectionY.value = withSpring(y);
+    updateFinalSelection(x, y, selectionWidth.value, selectionHeight.value);
+  };
+
   const plantName = request.individualPlant?.plant.name || 'Plant';
   const plantSize = request.individualPlant?.size || 'medium';
-  const isReplaceMode = request.mode === 'replace-plant';
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
@@ -202,7 +244,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         <View style={styles.instructionText}>
           <Text style={styles.instructionTitle}>
             {isReplaceMode
-              ? `Place ${plantName} in the same spot`
+              ? 'Mark the plant you want to replace'
               : `Place ${plantName} exactly where you want it`}
           </Text>
           <Text style={styles.instructionSubtitle}>
@@ -213,7 +255,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         </View>
       </View>
 
-      <View style={styles.modeToggle}>
+      {!isReplaceMode ? <View style={styles.modeToggle}>
         <TouchableOpacity
           style={[
             styles.modeButton,
@@ -243,14 +285,14 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               placementMode === 'auto' && styles.modeButtonTextActive,
             ]}
           >
-            {isReplaceMode ? 'Let AI find the plant' : 'Let AI choose the spot'}
+            Let AI choose the spot
           </Text>
         </TouchableOpacity>
-      </View>
+      </View> : null}
 
       {/* Image with Selection Area */}
       <View style={styles.imageSection}>
-        <GestureDetector gesture={panGesture}>
+        <GestureDetector gesture={selectionGesture}>
           <View
             style={styles.imageContainer}
             onLayout={handleContainerLayout}
@@ -321,6 +363,12 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               <Text style={styles.selectionPreviewText}>
                 Selected area
               </Text>
+              <View style={styles.adjustRow}>
+                <TouchableOpacity accessibilityLabel="Move selection left" onPress={() => nudgeSelection(-8, 0)} style={styles.adjustButton}><AppIcon name="ArrowLeft" size={16} color={theme.colors.text} /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel="Move selection up" onPress={() => nudgeSelection(0, -8)} style={styles.adjustButton}><AppIcon name="ArrowUp" size={16} color={theme.colors.text} /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel="Move selection down" onPress={() => nudgeSelection(0, 8)} style={styles.adjustButton}><AppIcon name="ArrowDown" size={16} color={theme.colors.text} /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel="Move selection right" onPress={() => nudgeSelection(8, 0)} style={styles.adjustButton}><AppIcon name="ArrowRight" size={16} color={theme.colors.text} /></TouchableOpacity>
+              </View>
             </View>
           ) : (
             <View style={styles.selectionPreview}>
@@ -356,7 +404,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
                 onPress={handleContinue}
                 disabled={!hasSelection}
               >
-                <Text style={styles.continueButtonText}>Preview</Text>
+                <Text style={styles.continueButtonText}>{isReplaceMode ? 'Confirm target' : 'Confirm spot'}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -364,7 +412,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               style={styles.continueButton}
               onPress={handleContinue}
             >
-              <Text style={styles.continueButtonText}>Preview</Text>
+              <Text style={styles.continueButtonText}>Use automatic placement</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -595,6 +643,22 @@ const createStyles = (theme: any) =>
       color: theme.colors.primary,
       fontWeight: '500',
       textAlign: 'center',
+    },
+    adjustRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 10,
+    },
+    adjustButton: {
+      width: 38,
+      height: 34,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     continueButton: {
       backgroundColor: theme.colors.primary,

@@ -1,0 +1,114 @@
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { AppIcon } from '../components/AppIcon';
+import { DesignFlowShell } from '../components/DesignFlowShell';
+import { useTheme } from '../contexts/ThemeContext';
+import { MAINTENANCE_LEVELS, PLACEMENT_DENSITIES, PLANT_TYPES, POT_COLORS, POT_STYLES } from '../designFlow/designFlow';
+import type { DesignFlowDraft, PlantSize } from '../types';
+
+type Group = 'plants' | 'pots' | 'preferences';
+type Leaf = 'plant-type' | 'style' | 'density' | 'species' | 'size' | 'placement' | 'pot-style' | 'pot-color' | 'planter-box' | 'care' | 'instructions';
+
+export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onChooseSpot, onDone, onBack, onClose }: {
+  draft: DesignFlowDraft;
+  updateDraft: (patch: Partial<DesignFlowDraft>) => void;
+  onChoosePlant: () => void;
+  onChooseSpot: () => void;
+  onDone: () => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  const [group, setGroup] = useState<Group | null>(null);
+  const [leaf, setLeaf] = useState<Leaf | null>(null);
+  const [page, setPage] = useState(0);
+  const [prompt, setPrompt] = useState(draft.prompt || '');
+  const isRestyle = draft.intent === 'restyle';
+
+  const groups = useMemo(() => isRestyle ? [
+    { id: 'plants' as Group, title: 'Plants and arrangement', detail: `${draft.plantType?.name} • ${draft.plantStyle?.name} • ${draft.plantOptions?.placementDensity.name}` },
+    { id: 'pots' as Group, title: 'Pots', detail: `${draft.plantOptions?.potStyle.name} • ${draft.plantOptions?.potColor.name}` },
+    { id: 'preferences' as Group, title: 'Preferences', detail: `${draft.plantOptions?.maintenanceLevel.name} care${draft.prompt ? ' • Instructions added' : ''}` },
+  ] : [
+    { id: 'plants' as Group, title: 'Plant and placement', detail: `${draft.individualPlant?.plant.name} • ${draft.individualPlant?.size} • ${draft.location ? 'chosen spot' : 'automatic'}` },
+    { id: 'preferences' as Group, title: 'Preferences', detail: draft.prompt ? 'Instructions added' : 'No special instructions' },
+  ], [draft, isRestyle]);
+
+  const leaves: Record<Group, Array<{ id: Leaf; title: string; detail: string }>> = {
+    plants: isRestyle ? [
+      { id: 'plant-type', title: 'Plant type', detail: draft.plantType?.name || '' },
+      { id: 'style', title: 'Style', detail: draft.plantStyle?.name || '' },
+      { id: 'density', title: 'Density', detail: draft.plantOptions?.placementDensity.name || '' },
+    ] : [
+      { id: 'species', title: 'Plant', detail: draft.individualPlant?.plant.name || '' },
+      { id: 'size', title: 'Size', detail: draft.individualPlant?.size || '' },
+      { id: 'placement', title: 'Placement', detail: draft.location ? 'Chosen spot' : 'Automatic' },
+    ],
+    pots: [
+      { id: 'pot-style', title: 'Pot style', detail: draft.plantOptions?.potStyle.name || '' },
+      { id: 'pot-color', title: 'Pot color', detail: draft.plantOptions?.potColor.name || '' },
+      { id: 'planter-box', title: 'Planter boxes', detail: draft.plantOptions?.usePlanterBox ? 'Included' : 'Not included' },
+    ],
+    preferences: isRestyle ? [
+      { id: 'care', title: 'Care level', detail: draft.plantOptions?.maintenanceLevel.name || '' },
+      { id: 'instructions', title: 'Special instructions', detail: draft.prompt ? 'Added' : 'Optional' },
+    ] : [
+      { id: 'instructions', title: 'Special instructions', detail: draft.prompt ? 'Added' : 'Optional' },
+    ],
+  };
+
+  const setOptions = (values: Array<{ id: string; name: string }>, currentId: string | undefined, choose: (id: string) => void) => {
+    const pages = Math.max(1, Math.ceil(values.length / 3));
+    const visible = values.slice(page * 3, page * 3 + 3);
+    return <><View style={styles.optionList}>{visible.map((value) => <TouchableOpacity key={value.id} style={[styles.option, currentId === value.id && styles.optionSelected]} onPress={() => { choose(value.id); setLeaf(null); setPage(0); }}><Text style={[styles.optionTitle, currentId === value.id && styles.optionTitleSelected]}>{value.name}</Text>{currentId === value.id ? <AppIcon name="Check" size={18} color={theme.colors.primary} /> : null}</TouchableOpacity>)}</View>{pages > 1 ? <View style={styles.pages}><TouchableOpacity onPress={() => setPage((value) => Math.max(0, value - 1))}><Text style={[styles.pageButton, page === 0 && styles.disabled]}>Previous</Text></TouchableOpacity><Text style={styles.pageLabel}>{page + 1} of {pages}</Text><TouchableOpacity onPress={() => setPage((value) => Math.min(pages - 1, value + 1))}><Text style={[styles.pageButton, page === pages - 1 && styles.disabled]}>Next</Text></TouchableOpacity></View> : null}</>;
+  };
+
+  const renderLeaf = () => {
+    if (!leaf) return null;
+    if (leaf === 'species' || leaf === 'placement') return null;
+    if (leaf === 'plant-type') return setOptions(PLANT_TYPES, draft.plantType?.id, (id) => { const plantType = PLANT_TYPES.find((value) => value.id === id)!; updateDraft({ plantType, plantStyle: plantType.styles[0] }); });
+    if (leaf === 'style') return setOptions(draft.plantType?.styles || [], draft.plantStyle?.id, (id) => updateDraft({ plantStyle: draft.plantType?.styles.find((value) => value.id === id) }));
+    if (leaf === 'density') return setOptions(PLACEMENT_DENSITIES, draft.plantOptions?.placementDensity.id, (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, placementDensity: PLACEMENT_DENSITIES.find((value) => value.id === id)! } }));
+    if (leaf === 'pot-style') return setOptions(POT_STYLES, draft.plantOptions?.potStyle.id, (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, potStyle: POT_STYLES.find((value) => value.id === id)! } }));
+    if (leaf === 'pot-color') return setOptions(POT_COLORS, draft.plantOptions?.potColor.id, (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, potColor: POT_COLORS.find((value) => value.id === id)! } }));
+    if (leaf === 'care') return setOptions(MAINTENANCE_LEVELS, draft.plantOptions?.maintenanceLevel.id, (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, maintenanceLevel: MAINTENANCE_LEVELS.find((value) => value.id === id)! } }));
+    if (leaf === 'size') {
+      const sizes = draft.individualPlant?.plant.availableSizes || [];
+      return setOptions(sizes.map((id) => ({ id, name: id[0].toUpperCase() + id.slice(1) })), draft.individualPlant?.size, (id) => updateDraft({ individualPlant: { ...draft.individualPlant!, size: id as PlantSize } }));
+    }
+    if (leaf === 'planter-box') return setOptions([{ id: 'no', name: 'No planter boxes' }, { id: 'yes', name: 'Include planter boxes' }], draft.plantOptions?.usePlanterBox ? 'yes' : 'no', (id) => updateDraft({ plantOptions: { ...draft.plantOptions!, usePlanterBox: id === 'yes' } }));
+    if (leaf === 'instructions') return <View style={styles.instructions}><TextInput style={styles.textArea} multiline value={prompt} onChangeText={setPrompt} placeholder="Describe anything else you want" placeholderTextColor={theme.colors.textSecondary} /><TouchableOpacity style={styles.apply} onPress={() => { updateDraft({ prompt: prompt.trim() || undefined }); setLeaf(null); }}><Text style={styles.applyText}>Apply instructions</Text></TouchableOpacity></View>;
+    return null;
+  };
+
+  const back = () => {
+    if (leaf) { setLeaf(null); setPage(0); return; }
+    if (group) { setGroup(null); return; }
+    onBack();
+  };
+  const title = leaf ? leaves[group!].find((value) => value.id === leaf)?.title || 'Customize' : group ? groups.find((value) => value.id === group)?.title || 'Customize' : 'Customize';
+  return (
+    <DesignFlowShell title={title} subtitle={leaf ? 'Choose one setting' : 'Optional changes'} onBack={back} onClose={onClose}
+      footer={!group && !leaf ? <TouchableOpacity style={styles.done} onPress={onDone}><Text style={styles.doneText}>Done</Text></TouchableOpacity> : undefined}>
+      {!group && !leaf ? <View style={styles.list}>{groups.map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => setGroup(item.id)}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View> : null}
+      {group && !leaf ? <View style={styles.list}>{leaves[group].map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => {
+        if (item.id === 'species') { onChoosePlant(); return; }
+        if (item.id === 'placement') { onChooseSpot(); return; }
+        setLeaf(item.id);
+      }}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View> : null}
+      {renderLeaf()}
+    </DesignFlowShell>
+  );
+}
+
+const createStyles = (theme: any) => StyleSheet.create({
+  list: { flex: 1, justifyContent: 'center', gap: 12 },
+  row: { minHeight: 82, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, padding: 16, flexDirection: 'row', alignItems: 'center' },
+  rowCopy: { flex: 1 }, rowTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' }, rowDetail: { color: theme.colors.textSecondary, marginTop: 5, textTransform: 'capitalize' },
+  optionList: { flex: 1, justifyContent: 'center', gap: 12 }, option: { minHeight: 72, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, optionSelected: { borderColor: theme.colors.primary, backgroundColor: theme.colors.borderLight }, optionTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '700' }, optionTitleSelected: { color: theme.colors.primary },
+  pages: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 }, pageButton: { color: theme.colors.primary, fontWeight: '700' }, pageLabel: { color: theme.colors.textSecondary }, disabled: { opacity: 0.35 },
+  instructions: { flex: 1, justifyContent: 'center', gap: 14 }, textArea: { minHeight: 150, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 16, textAlignVertical: 'top', fontSize: 16 }, apply: { minHeight: 52, borderRadius: 17, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }, applyText: { color: 'white', fontWeight: '800' },
+  done: { minHeight: 52, borderRadius: 17, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }, doneText: { color: 'white', fontWeight: '800', fontSize: 16 },
+});

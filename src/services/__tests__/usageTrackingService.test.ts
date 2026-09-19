@@ -1,11 +1,6 @@
 import { databaseService } from '../databaseService';
 import { subscriptionService } from '../subscriptionService';
-import { FREE_GENERATION_LIMIT, usageTrackingService } from '../usageTrackingService';
-import { aiApiService } from '../aiApiService';
-
-jest.mock('../aiApiService', () => ({
-  aiApiService: { getUsage: jest.fn() },
-}));
+import { usageTrackingService } from '../usageTrackingService';
 
 jest.mock('../databaseService', () => ({
   databaseService: {
@@ -19,83 +14,48 @@ jest.mock('../databaseService', () => ({
 
 jest.mock('../subscriptionService', () => ({
   subscriptionService: {
-    getSubscriptionStatus: jest.fn(),
+    getDesignCreditBalance: jest.fn(),
   },
 }));
 
 const mockedDatabaseService = databaseService as jest.Mocked<typeof databaseService>;
 const mockedSubscriptionService = subscriptionService as jest.Mocked<typeof subscriptionService>;
-const mockedAiApiService = aiApiService as jest.Mocked<typeof aiApiService>;
 
 describe('usageTrackingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedSubscriptionService.getSubscriptionStatus.mockResolvedValue({
-      isActive: false,
-      type: null,
-      expiryDate: null,
-      isMock: false,
-    });
+    mockedSubscriptionService.getDesignCreditBalance.mockResolvedValue(5);
     mockedDatabaseService.getFreeTrialUsage.mockResolvedValue({
       userId: 'user-123',
       generationsUsed: 0,
       firstGenerationAt: null,
       lastGenerationAt: null,
     });
-    mockedAiApiService.getUsage.mockResolvedValue({
-      entitlement: { active: false },
-      generation: { consumed: 0, reserved: 0, remaining: FREE_GENERATION_LIMIT },
-      identification: { consumed: 0, reserved: 0, remaining: 0 },
-      activeJobs: 0,
-      capabilities: { generation: true, identification: false },
-      policyVersion: 'test',
-    });
   });
 
   describe('canGenerateImage', () => {
-    it('uses the bounded balance returned for active monthly subscribers', async () => {
-      mockedAiApiService.getUsage.mockResolvedValue({
-        entitlement: { active: true },
-        generation: { consumed: 0, reserved: 0, remaining: 30 },
-        identification: { consumed: 0, reserved: 0, remaining: null },
-        activeJobs: 0,
-        capabilities: { generation: true, identification: true },
-        policyVersion: 'test',
-      });
+    it('uses the RevenueCat design-credit balance', async () => {
+      mockedSubscriptionService.getDesignCreditBalance.mockResolvedValue(30);
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
       expect(result).toEqual({ canGenerate: true, freeRemaining: 30 });
-      expect(mockedAiApiService.getUsage).toHaveBeenCalled();
+      expect(mockedSubscriptionService.getDesignCreditBalance).toHaveBeenCalledWith('user-123');
     });
 
-    it('allows free users while free generations remain', async () => {
-      mockedAiApiService.getUsage.mockResolvedValue({
-        entitlement: { active: false },
-        generation: { consumed: 2, reserved: 0, remaining: FREE_GENERATION_LIMIT - 2 },
-        identification: { consumed: 0, reserved: 0, remaining: 0 },
-        activeJobs: 0,
-        capabilities: { generation: true, identification: false },
-        policyVersion: 'test',
-      });
+    it('allows users while RevenueCat credits remain', async () => {
+      mockedSubscriptionService.getDesignCreditBalance.mockResolvedValue(3);
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
       expect(result).toEqual({
         canGenerate: true,
-        freeRemaining: FREE_GENERATION_LIMIT - 2,
+        freeRemaining: 3,
       });
     });
 
-    it('blocks free users after the free generation limit is exhausted', async () => {
-      mockedAiApiService.getUsage.mockResolvedValue({
-        entitlement: { active: false },
-        generation: { consumed: FREE_GENERATION_LIMIT, reserved: 0, remaining: 0 },
-        identification: { consumed: 0, reserved: 0, remaining: 0 },
-        activeJobs: 0,
-        capabilities: { generation: false, identification: false },
-        policyVersion: 'test',
-      });
+    it('blocks users when RevenueCat reports no design credits', async () => {
+      mockedSubscriptionService.getDesignCreditBalance.mockResolvedValue(0);
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
@@ -106,9 +66,9 @@ describe('usageTrackingService', () => {
       });
     });
 
-    it('blocks generation if the authoritative check fails', async () => {
+    it('blocks generation if the RevenueCat check fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(jest.fn());
-      mockedAiApiService.getUsage.mockRejectedValue(new Error('API down'));
+      mockedSubscriptionService.getDesignCreditBalance.mockRejectedValue(new Error('RevenueCat down'));
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
@@ -134,18 +94,11 @@ describe('usageTrackingService', () => {
     });
   });
 
-  it('returns the bounded remaining design balance for active subscribers', async () => {
-    mockedAiApiService.getUsage.mockResolvedValue({
-      entitlement: { active: true },
-      generation: { consumed: 0, reserved: 0, remaining: 30 },
-      identification: { consumed: 0, reserved: 0, remaining: null },
-      activeJobs: 0,
-      capabilities: { generation: true, identification: true },
-      policyVersion: 'test',
-    });
+  it('returns the RevenueCat design-credit balance', async () => {
+    mockedSubscriptionService.getDesignCreditBalance.mockResolvedValue(30);
 
     await expect(usageTrackingService.getFreeGenerationsRemaining('user-123')).resolves.toBe(30);
-    expect(mockedAiApiService.getUsage).toHaveBeenCalled();
+    expect(mockedSubscriptionService.getDesignCreditBalance).toHaveBeenCalledWith('user-123');
   });
 
   it('aggregates user usage stats from total and free usage', async () => {

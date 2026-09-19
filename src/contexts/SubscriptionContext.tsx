@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import Purchases from 'react-native-purchases';
 import { subscriptionService } from '../services/subscriptionService';
 import { usageTrackingService } from '../services/usageTrackingService';
-import { SubscriptionStatus, UsageStats } from '../types';
+import { PurchaseCompletionEvent, SubscriptionStatus, UsageStats } from '../types';
 import { useAuth } from './AuthContext';
 
 interface SubscriptionContextType {
@@ -11,6 +11,7 @@ interface SubscriptionContextType {
   freeGenerationsRemaining: number;
   canGenerate: boolean;
   usageStats: UsageStats | null;
+  purchaseCompletion: PurchaseCompletionEvent | null;
 
   purchaseSubscription: (productId: string, rcPackage?: any) => Promise<{
     success: boolean;
@@ -44,10 +45,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [freeGenerationsRemaining, setFreeGenerationsRemaining] = useState(5);
-  const [canGenerate, setCanGenerate] = useState(true);
+  const [freeGenerationsRemaining, setFreeGenerationsRemaining] = useState(0);
+  const [canGenerate, setCanGenerate] = useState(false);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [isRevenueCatReady, setIsRevenueCatReady] = useState(false);
+  const [purchaseCompletion, setPurchaseCompletion] = useState<PurchaseCompletionEvent | null>(null);
 
   // Initialize RevenueCat and load status when user changes
   useEffect(() => {
@@ -56,10 +58,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     } else {
       subscriptionService.logOut();
       setSubscription(null);
-      setFreeGenerationsRemaining(5);
-      setCanGenerate(true);
+      setFreeGenerationsRemaining(0);
+      setCanGenerate(false);
       setUsageStats(null);
       setIsRevenueCatReady(false);
+      setPurchaseCompletion(null);
       setIsLoading(false);
     }
   }, [user]);
@@ -68,7 +71,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   useEffect(() => {
     if (!user || !isRevenueCatReady) return;
     const onCustomerInfoUpdate = () => {
-      loadSubscriptionStatus();
+      loadSubscriptionStatus(true);
     };
     Purchases.addCustomerInfoUpdateListener(onCustomerInfoUpdate);
     return () => {
@@ -84,7 +87,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         await subscriptionService.identifyUser(userId);
       }
       setIsRevenueCatReady(configured);
-      await loadSubscriptionStatus();
+      await loadSubscriptionStatus(true);
     } catch (error) {
       console.error('Error initializing RevenueCat:', error);
       setIsRevenueCatReady(false);
@@ -92,26 +95,20 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
   };
 
-  const loadSubscriptionStatus = async () => {
+  const loadSubscriptionStatus = async (refreshCredits: boolean = false) => {
     if (!user) return;
 
     try {
       setIsLoading(true);
 
-      // Load subscription status
-      const subStatus = await subscriptionService.getSubscriptionStatus(user.id);
+      const [subStatus, remaining, stats] = await Promise.all([
+        subscriptionService.getSubscriptionStatus(user.id),
+        subscriptionService.getDesignCreditBalance(user.id, refreshCredits),
+        usageTrackingService.getUserUsageStats(user.id),
+      ]);
       setSubscription(subStatus);
-
-      // Load free generations remaining
-      const remaining = await usageTrackingService.getFreeGenerationsRemaining(user.id);
       setFreeGenerationsRemaining(remaining);
-
-      // Check if user can generate
-      const { canGenerate: canGen } = await usageTrackingService.canGenerateImage(user.id);
-      setCanGenerate(canGen);
-
-      // Load usage statistics
-      const stats = await usageTrackingService.getUserUsageStats(user.id);
+      setCanGenerate(remaining > 0);
       setUsageStats(stats);
     } catch (error) {
       console.error('Error loading subscription status:', error);
@@ -138,7 +135,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       if (result.success) {
         // Refresh subscription status after successful purchase
-        await loadSubscriptionStatus();
+        await loadSubscriptionStatus(true);
+        const purchaseKind = result.debug?.purchaseKind === 'room_pack' ? 'room_pack' : 'monthly';
+        setPurchaseCompletion((current) => ({
+          id: Math.max(Date.now(), (current?.id || 0) + 1),
+          kind: purchaseKind,
+          productId,
+          completedAt: Date.now(),
+        }));
       }
 
       return {
@@ -181,7 +185,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       if (result.success && result.restored > 0) {
         // Refresh subscription status after restoring
-        await loadSubscriptionStatus();
+        await loadSubscriptionStatus(true);
+        setPurchaseCompletion((current) => ({
+          id: Math.max(Date.now(), (current?.id || 0) + 1),
+          kind: 'restore',
+          completedAt: Date.now(),
+        }));
       }
 
       return result;
@@ -198,7 +207,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   };
 
   const refreshStatus = async (): Promise<void> => {
-    await loadSubscriptionStatus();
+    await loadSubscriptionStatus(true);
   };
 
   const resetUsageForTesting = async (): Promise<void> => {
@@ -219,6 +228,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     freeGenerationsRemaining,
     canGenerate,
     usageStats,
+    purchaseCompletion,
     purchaseSubscription,
     restorePurchases,
     refreshStatus,

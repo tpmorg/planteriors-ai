@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { useTheme } from '../contexts/ThemeContext';
-import { FREE_GENERATION_LIMIT } from '../services/usageTrackingService';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
 interface UsageIndicatorProps {
@@ -37,14 +36,13 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
       <View style={[styles.container, styles.containerCompact]}>
         <AppIcon name="Leaf" size={16} color={theme.colors.primary} />
         <Text style={styles.compactText}>
-          {freeRemaining} of {FREE_GENERATION_LIMIT} free remaining
+          {freeRemaining} design credits
         </Text>
       </View>
     );
   }
 
   // Full variant for free plan
-  const progressPercentage = (freeRemaining / FREE_GENERATION_LIMIT) * 100;
   const hasReachedLimit = freeRemaining === 0;
   const shouldHideBanner = isUpgradeCtaDismissed;
   const showUpgradeCta = Boolean(onUpgradePress) && (hasReachedLimit || !isUpgradeCtaDismissed);
@@ -70,7 +68,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       <View style={styles.header}>
         <Text style={[styles.planName, hasReachedLimit && styles.limitPlanName]}>
-          {hasReachedLimit ? 'Free Trial Complete' : 'Free Plan'}
+          {hasReachedLimit ? 'No Design Credits' : 'Design Credits'}
         </Text>
         {hasReachedLimit && (
           <View style={styles.limitBadge}>
@@ -80,21 +78,12 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
       </View>
 
       <Text style={styles.planSummary}>
-        Free includes {FREE_GENERATION_LIMIT} room designs. Continue with 30 designs monthly or a 20-design pack that never expires.
+        Each room design uses one credit. Add 30 monthly or buy a 20-design pack that never expires.
       </Text>
 
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${progressPercentage}%` },
-              freeRemaining === 0 && styles.progressEmpty,
-            ]}
-          />
-        </View>
         <Text style={styles.progressText}>
-          {freeRemaining} of {FREE_GENERATION_LIMIT} remaining
+          {freeRemaining} credits available
         </Text>
       </View>
 
