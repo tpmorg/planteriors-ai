@@ -70,7 +70,7 @@ All new public endpoints live under `/api/v1`. JSON responses include a request 
 | `GET /generations/:id` | Return owned job state, safe error, and expiring result/thumbnail URLs when complete. |
 | `GET /generations?status=active&cursor=...` | Paginated job recovery across devices; also allow recent completed jobs. |
 | `POST /generations/:id/cancel` | Cancel work before provider submission; cancellation during provider execution is best effort. |
-| `POST /generations/:id/save` | Idempotently create/retrieve the canonical saved design and return its remote ID. |
+| `POST /generations/:id/save` | Legacy remote-save endpoint; the mobile app does not call it when the user saves a result locally. |
 | `POST /identifications` | Run a metered identification or generated-plant analysis synchronously and return the completed resource. |
 | `GET /identifications/:id` | Return validated structured plant results; confidence is model output, not a calibrated probability. |
 | `GET /usage` | Return authoritative free remaining, active reservations, entitlement and capability flags. |
@@ -119,10 +119,10 @@ Existing local free-use history is not trustworthy server evidence. Proposed mig
 
 - Keep input/output bytes in private Storage, never base64 strings in Firestore. Return short-lived signed URLs from authenticated status endpoints and refresh them when expired.
 - Stage jobs outside the saved-design namespace. Proposed unsaved-result retention is seven days; abandoned uploads expire after 24 hours. Cleanup must exclude active jobs and saved references. Document retention in user-facing copy before rollout.
-- Save into the current `users/{uid}/designs/{designId}` contract with deterministic job-to-design mapping. Persist canonical object paths, compatible metadata and all three generation modes.
-- On mobile, upsert the saved design using its returned remote ID and mark it synced. A retry, restore, or subsequent manual sync must not create another design or re-upload unchanged images.
+- Saving a generated result is local-only: persist it in the mobile SQLite/library flow with `sync_status = pending_upload`, without calling the API save endpoint or creating a durable remote design.
+- Cloud library storage is a separate, explicit Account action for eligible paid users. Manual sync uploads pending local designs into the existing `users/{uid}/designs/{designId}` contract and marks them synced only after the Firestore and Storage writes succeed.
 - Update sync serialization, which currently collapses non-multi-plant modes to `individual`, to preserve `replace-plant` while tolerating older records. Verify both web rendering and old mobile compatibility.
-- Only discard temporary objects after durable saved-object references are committed. Account deletion must include staged inputs/results, saved assets and sensitive job data, subject to the documented retention policy.
+- AI job uploads and results remain temporary even after a local save; lifecycle cleanup may remove them after the documented retention window because manual cloud sync uploads from the device's local files independently.
 - Fix local gallery account scoping during integration: `getAllDesigns()` currently reads all nondeleted local designs without a UID filter.
 
 ## Performance work

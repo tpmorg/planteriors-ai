@@ -298,6 +298,7 @@ export const PlantSelectionScreen: React.FC<PlantSelectionScreenProps> = ({
           selection={individualSelection}
           onSelectionChange={setIndividualSelection}
           onSearchActiveChange={setIsPlantSearchActive}
+          autoScrollToGrid={mode === 'individual'}
           listFooterSpacerHeight={
             isPlantSearchActive && !individualSelection
               ? 24 + insets.bottom

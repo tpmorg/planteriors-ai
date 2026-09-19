@@ -197,9 +197,11 @@ export const SubscriptionScreen: React.FC = () => {
       return;
     }
 
-    // Pre-select annual plan (better value)
+    // The monthly plan is the primary recurring option.
     if (availableProducts.length > 0) {
-      const defaultProductId = availableProducts[1]?.id || availableProducts[0].id;
+      const defaultProductId =
+        availableProducts.find((product) => product.kind === 'monthly')?.id ||
+        availableProducts[0].id;
       setSelectedProductId(defaultProductId);
       captureSubscriptionScreenMessage('Subscription default product selected', 'warning', {
         selectedProductId: defaultProductId,
@@ -260,8 +262,8 @@ export const SubscriptionScreen: React.FC = () => {
         },
       });
       Alert.alert(
-        'Subscription Unavailable',
-        'We could not load this subscription from the App Store. Please try again.'
+        'Purchase Unavailable',
+        'We could not load this product from the store. Please try again.'
       );
       return;
     }
@@ -282,9 +284,12 @@ export const SubscriptionScreen: React.FC = () => {
       const result = await purchaseSubscription(selectedProductId, selectedProduct?.rcPackage);
 
       if (result.success) {
+        const isRoomPack = selectedProduct.kind === 'room_pack';
         Alert.alert(
           'Success!',
-          'Your subscription is now active. Enjoy unlimited generations!',
+          isRoomPack
+            ? '20 design credits were added to your account. They do not expire.'
+            : 'Your monthly plan is active with 30 designs per billing cycle.',
           [
             {
               text: 'OK',
@@ -389,9 +394,9 @@ export const SubscriptionScreen: React.FC = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Unlock Unlimited Plant Designs</Text>
+          <Text style={styles.title}>Choose How You Create</Text>
           <Text style={styles.subtitle}>
-            Create as many AI-generated designs as you want
+            Get 30 designs each month or buy 20 that never expire
           </Text>
         </View>
 
@@ -399,7 +404,7 @@ export const SubscriptionScreen: React.FC = () => {
           <View style={styles.currentPlanBadge}>
             <AppIcon name="CheckCircle" size={20} color={theme.colors.primary} />
             <Text style={styles.currentPlanText}>
-              Current Plan: {subscription.type === 'annual' ? 'Annual' : 'Monthly'}
+              Current Plan: {subscription.type === 'annual' ? 'Legacy Annual' : 'Monthly — 30 designs'}
             </Text>
           </View>
         )}
@@ -431,7 +436,7 @@ export const SubscriptionScreen: React.FC = () => {
                 isSelected={selectedProductId === product.id}
                 onSelect={() => setSelectedProductId(product.id)}
                 theme={theme}
-                isCurrentPlan={!!(subscription?.isActive && ((subscription.type === 'monthly' && product.period === 'month') || (subscription.type === 'annual' && product.period === 'year')))}
+                isCurrentPlan={!!(subscription?.isActive && product.kind === 'monthly')}
               />
             ))
           )}
@@ -452,7 +457,11 @@ export const SubscriptionScreen: React.FC = () => {
             ) : (
               <>
                 <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
-                <Text style={styles.purchaseButtonText}>Subscribe Now</Text>
+                <Text style={styles.purchaseButtonText}>
+                  {products.find((product) => product.id === selectedProductId)?.kind === 'room_pack'
+                    ? 'Buy Room Pack'
+                    : 'Subscribe Monthly'}
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -473,7 +482,7 @@ export const SubscriptionScreen: React.FC = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By subscribing, you agree to our{' '}
+            By purchasing, you agree to our{' '}
             <Text
               style={styles.footerLink}
               onPress={() => openExternalLink('https://planterior.app/terms')}
@@ -487,9 +496,9 @@ export const SubscriptionScreen: React.FC = () => {
             >
               Privacy Policy
             </Text>
-            . Subscriptions
-            renew automatically unless canceled at least 24 hours before the end of the current
-            period. Payment is charged to your Apple ID at confirmation of purchase.
+            . Monthly plans renew automatically unless canceled at least 24 hours before the end
+            of the current period. Room Pack purchases are one-time and do not expire. Payment is
+            charged to your store account at confirmation of purchase.
           </Text>
         </View>
       </ScrollView>
@@ -512,7 +521,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   theme,
   isCurrentPlan,
 }) => {
-  const isAnnual = product.period === 'year';
+  const isRoomPack = product.kind === 'room_pack';
 
   return (
     <TouchableOpacity
@@ -536,7 +545,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
       activeOpacity={0.7}
       disabled={isCurrentPlan}
     >
-      {isAnnual && (
+      {isRoomPack && (
         <View
           style={{
             position: 'absolute',
@@ -556,7 +565,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               letterSpacing: 0.3,
             }}
           >
-            BEST VALUE
+            NO EXPIRY
           </Text>
         </View>
       )}

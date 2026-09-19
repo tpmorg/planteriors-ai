@@ -80,7 +80,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
       </View>
 
       <Text style={styles.planSummary}>
-        Free includes {FREE_GENERATION_LIMIT} room designs. Premium unlocks unlimited generations, faster processing, and cloud backup.
+        Free includes {FREE_GENERATION_LIMIT} room designs. Continue with 30 designs monthly or a 20-design pack that never expires.
       </Text>
 
       <View style={styles.progressContainer}>
@@ -100,7 +100,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       {hasReachedLimit && (
         <Text style={styles.limitMessage}>
-          You have used all free generations. Subscribe only if you want ongoing unlimited design creation.
+          You have used all free generations. Choose a monthly plan or a one-time Room Pack to continue.
         </Text>
       )}
 
@@ -111,11 +111,11 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
             onPress={onUpgradePress}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={hasReachedLimit ? 'Subscribe to continue creating designs' : 'Upgrade to Premium'}
+            accessibilityLabel={hasReachedLimit ? 'View design purchase options' : 'View design options'}
           >
             <AppIcon name={hasReachedLimit ? 'LockKeyOpen' : 'ArrowCircleUp'} size={18} color={theme.colors.surface} />
             <Text style={styles.upgradeButtonText}>
-              {hasReachedLimit ? 'Subscribe to Continue' : 'Upgrade to Premium'}
+              {hasReachedLimit ? 'View Design Options' : 'View Options'}
             </Text>
             {hasReachedLimit && (
               <AppIcon name="ArrowRight" size={18} color={theme.colors.surface} />
@@ -126,7 +126,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       {hasReachedLimit && !onUpgradePress && (
         <Text style={styles.warningText}>
-          You've used all your free generations. Upgrade to continue creating designs.
+          You've used all your free generations. Choose a monthly plan or Room Pack to continue.
         </Text>
       )}
     </View>

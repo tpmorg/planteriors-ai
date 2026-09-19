@@ -46,6 +46,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const { suppressFreePlanWarnings } = useDebugPreferences();
   const styles = createStyles(theme);
   const showPaidLayout = subscription?.isActive || suppressFreePlanWarnings;
+  const hasCloudSyncAccess = subscription?.isActive === true;
   const isSheetPresentation = presentation === 'sheet';
 
   const [isRestoring, setRestoring] = React.useState(false);
@@ -99,6 +100,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
   const runSyncNow = async () => {
     if (!user) return;
+    if (!hasCloudSyncAccess) {
+      Alert.alert('Monthly plan required', 'Cloud backup is available with the monthly plan.');
+      return;
+    }
     setSyncingLibrary(true);
     try {
       const result = await firestoreSyncService.syncUserData(user);
@@ -113,6 +118,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
   const runRestoreNow = async () => {
     if (!user) return;
+    if (!hasCloudSyncAccess) {
+      Alert.alert('Monthly plan required', 'Cloud restore is available with the monthly plan.');
+      return;
+    }
     setSyncingLibrary(true);
     try {
       const result = await firestoreSyncService.restoreUserData(user.id);
@@ -126,6 +135,18 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   };
 
   const handleCloudSync = () => {
+    if (!hasCloudSyncAccess) {
+      Alert.alert(
+        'Cloud Backup',
+        'Your designs are saved on this device. Cloud backup and restore are included with the monthly plan.',
+        [
+          { text: 'View Monthly Plan', onPress: handleUpgrade },
+          { text: 'Not Now', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
     if (!user) {
       Alert.alert('Sign in required', 'Please sign in to sync your library.');
       return;
@@ -305,7 +326,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               </View>
               <Text style={styles.subscriptionType}>
                 {subscription?.isActive
-                  ? (subscription.type === 'annual' ? 'Annual Plan' : 'Monthly Plan')
+                  ? (subscription.type === 'annual' ? 'Legacy Annual Plan' : 'Monthly Plan — 30 designs')
                   : 'Debug Layout Preview'}
               </Text>
               {subscription?.isActive && subscription.expiryDate && (
@@ -342,7 +363,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 onPress={handleUpgrade}
               >
                 <AppIcon name="ArrowCircleUp" size={20} color="white" />
-                <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                <Text style={styles.upgradeButtonText}>View Design Options</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -364,7 +385,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <Text style={styles.usageStatValue}>{usageStats.freeUsed}</Text>
               </View>
               <View style={styles.usageStat}>
-                <Text style={styles.usageStatLabel}>Premium Used</Text>
+                <Text style={styles.usageStatLabel}>Paid Used</Text>
                 <Text style={styles.usageStatValue}>{usageStats.paidUsed}</Text>
               </View>
               {__DEV__ && (
@@ -385,7 +406,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           </View>
           <View style={styles.syncCard}>
             <Text style={styles.syncDescription}>
-              Sync your saved designs and collections to your account, or restore them on this device.
+              {hasCloudSyncAccess
+                ? 'When you choose, sync locally saved designs and collections to your account or restore them on this device.'
+                : 'Designs are saved locally on this device. Cloud backup and restore are available with the monthly plan.'}
             </Text>
             <TouchableOpacity
               style={[styles.syncButton, isSyncingLibrary && styles.syncButtonDisabled]}
@@ -396,8 +419,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <ActivityIndicator color={theme.colors.surface} />
               ) : (
                 <>
-                  <AppIcon name="ArrowCircleUp" size={20} color={theme.colors.surface} />
-                  <Text style={styles.syncButtonText}>Sync / Restore Library</Text>
+                  <AppIcon
+                    name={hasCloudSyncAccess ? "ArrowCircleUp" : "Lock"}
+                    size={20}
+                    color={theme.colors.surface}
+                  />
+                  <Text style={styles.syncButtonText}>
+                    {hasCloudSyncAccess ? 'Sync / Restore Library' : 'View Monthly Plan'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

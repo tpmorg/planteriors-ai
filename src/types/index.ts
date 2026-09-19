@@ -340,7 +340,9 @@ export interface SubscriptionProduct {
   price: string;
   priceValue: number;
   currency: string;
-  period: 'month' | 'year';
+  kind: 'monthly' | 'room_pack';
+  period: 'month' | 'one_time';
+  designCredits: number;
   features: string[];
   savings?: string;
   rcPackage?: any; // RevenueCat PurchasesPackage for purchase flow

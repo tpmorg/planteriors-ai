@@ -5,9 +5,7 @@ import { aiApiService } from './aiApiService';
 export const FREE_GENERATION_LIMIT = 5;
 
 class UsageTrackingService {
-  /**
-   * Check if a user can generate an image based on their subscription and usage
-   */
+  /** Check the server-authoritative design balance before generation. */
   async canGenerateImage(userId: string): Promise<{
     canGenerate: boolean;
     reason?: 'no_subscription' | 'limit_exceeded';
@@ -15,7 +13,6 @@ class UsageTrackingService {
   }> {
     try {
       const usage = await aiApiService.getUsage();
-      if (usage.entitlement.active) return { canGenerate: true };
       const freeRemaining = usage.generation.remaining ?? 0;
 
       if (freeRemaining > 0) {
@@ -25,7 +22,7 @@ class UsageTrackingService {
         };
       }
 
-      // User has exhausted free generations and has no subscription
+      // The free allowance and paid design credits share one server balance.
       return {
         canGenerate: false,
         reason: 'limit_exceeded',
@@ -61,7 +58,7 @@ class UsageTrackingService {
   async getFreeGenerationsRemaining(userId: string): Promise<number> {
     try {
       const usage = await aiApiService.getUsage();
-      return usage.entitlement.active ? 999 : Math.max(0, usage.generation.remaining ?? 0);
+      return Math.max(0, usage.generation.remaining ?? 0);
     } catch (error) {
       console.error('Error getting free generations remaining:', error);
       return 0;

@@ -50,29 +50,29 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                 <Text style={styles.title}>You've Reached Your Limit!</Text>
 
                 <Text style={styles.description}>
-                  You've used all {FREE_GENERATION_LIMIT} free generations. Upgrade to Premium
-                  to continue creating beautiful plant-enhanced designs.
+                  You've used all {FREE_GENERATION_LIMIT} free generations. Choose a monthly plan
+                  with 30 designs or a one-time pack of 20 designs to keep creating.
                 </Text>
 
                 <View style={styles.featuresList}>
                   <Feature
-                    icon="Infinity"
-                    text="Unlimited AI generations"
+                    icon="Calendar"
+                    text="$4.99 monthly for 30 designs"
                     theme={theme}
                   />
                   <Feature
-                    icon="Lightning"
-                    text="Priority processing"
+                    icon="Package"
+                    text="$4.99 for 20 one-time designs"
                     theme={theme}
                   />
                   <Feature
-                    icon="Image"
-                    text="HD exports"
+                    icon="Clock"
+                    text="Room Pack credits never expire"
                     theme={theme}
                   />
                   <Feature
-                    icon="Folder"
-                    text="Save unlimited designs"
+                    icon="CheckCircle"
+                    text="Choose the option that fits your project"
                     theme={theme}
                   />
                 </View>
@@ -82,8 +82,8 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                   onPress={onUpgrade}
                   activeOpacity={0.8}
                 >
-                  <AppIcon name="StarFour" size={20} color={theme.colors.surface} />
-                  <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                  <AppIcon name="CreditCard" size={20} color={theme.colors.surface} />
+                  <Text style={styles.upgradeButtonText}>View Design Options</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

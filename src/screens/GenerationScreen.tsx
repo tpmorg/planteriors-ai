@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
-import { aiApiService, AiApiError } from "../services/aiApiService";
+import { AiApiError } from "../services/aiApiService";
 import { databaseService } from "../services/databaseService";
 import { useAuth } from "../contexts/AuthContext";
 import { useSubscription } from "../contexts/SubscriptionContext";
@@ -54,7 +54,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(
     null,
   );
-  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [apiCallStarted, setApiCallStarted] = useState(false);
@@ -153,7 +152,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setApiCallStarted(true);
 
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated, jobId } = await geminiService.generatePlantImage(
+      const { imageUri: generatedUri, isGenerated } = await geminiService.generatePlantImage(
         request,
         (phase) => setCurrentStatus({
           preparing: 'Preparing photo...',
@@ -166,7 +165,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setCurrentStatus("Generation complete!");
 
       setGeneratedImageUri(generatedUri);
-      setGenerationJobId(jobId);
       setIsImageGenerated(isGenerated);
       setIsGenerating(false);
 
@@ -192,7 +190,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     setError(null);
     setCurrentStatus("");
     setGeneratedImageUri(null);
-    setGenerationJobId(null);
     setIsImageGenerated(false);
     setApiCallStarted(false);
     setIsGenerating(true);
@@ -200,11 +197,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   };
 
   const handleUseResult = async () => {
-    if (generatedImageUri && isImageGenerated && generationJobId && user) {
+    if (generatedImageUri && isImageGenerated && user) {
       try {
-        console.log("Saving design to database...");
-
-        const remoteDesign = await aiApiService.saveGeneration(generationJobId);
+        console.log("Saving design locally...");
 
         const savedDesign = await databaseService.saveDesign({
           originalImageUri: request.imageUri,
@@ -225,11 +220,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           customPrompt: request.prompt,
         });
 
-        await databaseService.markDesignSynced(savedDesign.id, remoteDesign.designId);
-
-        // Refresh subscription context to update UI
-        await refreshStatus();
-
         const result: GeneratedImage = {
           id: savedDesign.id,
           originalImageUri: request.imageUri,
@@ -240,12 +230,18 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           createdAt: new Date(),
         };
 
-        console.log("Design saved successfully with ID:", savedDesign.id);
-        showToast("Design saved", "success");
+        console.log("Design saved locally with ID:", savedDesign.id);
+        showToast("Saved on this device", "success");
         onGenerationComplete(result);
+
+        // Usage was consumed when generation completed. Refresh in the background so
+        // the local save and navigation are never held up by another network request.
+        refreshStatus().catch((refreshError) => {
+          console.warn("Failed to refresh usage after local save:", refreshError);
+        });
       } catch (error) {
-        console.error("Failed to save design:", error);
-        showToast("Failed to save design", "error");
+        console.error("Failed to save design locally:", error);
+        showToast("Failed to save on this device", "error");
       }
     }
   };

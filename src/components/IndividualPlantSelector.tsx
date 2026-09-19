@@ -36,6 +36,7 @@ interface IndividualPlantSelectorProps {
   listHeader?: React.ReactNode;
   listFooterSpacerHeight?: number;
   petSafeOnly?: boolean;
+  autoScrollToGrid?: boolean;
 }
 
 export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = ({
@@ -45,6 +46,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   listHeader,
   listFooterSpacerHeight = 0,
   petSafeOnly = false,
+  autoScrollToGrid = false,
 }) => {
   const { width, height } = useWindowDimensions();
   const isTablet = Platform.OS === 'ios' && Math.min(width, height) >= 768;
@@ -69,6 +71,7 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
   const scrollOffsetRef = useRef(0);
   const searchContainerTopRef = useRef(0);
   const lastSearchActiveRef = useRef(false);
+  const pendingAutoScrollRef = useRef(false);
 
   const { theme } = useTheme();
   const { showToast } = useToast();
@@ -233,7 +236,23 @@ export const IndividualPlantSelector: React.FC<IndividualPlantSelectorProps> = (
 
   const handleSearchContainerLayout = (event: LayoutChangeEvent) => {
     searchContainerTopRef.current = event.nativeEvent.layout.y;
+    if (pendingAutoScrollRef.current) {
+      pendingAutoScrollRef.current = false;
+      listRef.current?.scrollToOffset({ offset: searchContainerTopRef.current, animated: true });
+    }
   };
+
+  useEffect(() => {
+    if (!autoScrollToGrid || selectedPlant) {
+      return;
+    }
+
+    if (searchContainerTopRef.current > 0) {
+      listRef.current?.scrollToOffset({ offset: searchContainerTopRef.current, animated: true });
+    } else {
+      pendingAutoScrollRef.current = true;
+    }
+  }, [autoScrollToGrid, selectedPlant]);
 
   const toggleViewMode = () => {
     setShouldRestoreScroll(true);

@@ -80,13 +80,6 @@ class AiApiService {
     return Array.isArray(result.plants) ? result.plants : [];
   }
 
-  async saveGeneration(jobId: string): Promise<{ designId: string }> {
-    return this.request(`/api/v1/generations/${encodeURIComponent(jobId)}/save`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-  }
-
   async getUsage(): Promise<AiUsage> {
     return this.request<AiUsage>('/api/v1/usage');
   }

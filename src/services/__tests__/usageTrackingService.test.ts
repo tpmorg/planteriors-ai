@@ -53,10 +53,10 @@ describe('usageTrackingService', () => {
   });
 
   describe('canGenerateImage', () => {
-    it('allows active subscribers without checking free trial usage', async () => {
+    it('uses the bounded balance returned for active monthly subscribers', async () => {
       mockedAiApiService.getUsage.mockResolvedValue({
         entitlement: { active: true },
-        generation: { consumed: 0, reserved: 0, remaining: null },
+        generation: { consumed: 0, reserved: 0, remaining: 30 },
         identification: { consumed: 0, reserved: 0, remaining: null },
         activeJobs: 0,
         capabilities: { generation: true, identification: true },
@@ -65,7 +65,7 @@ describe('usageTrackingService', () => {
 
       const result = await usageTrackingService.canGenerateImage('user-123');
 
-      expect(result).toEqual({ canGenerate: true });
+      expect(result).toEqual({ canGenerate: true, freeRemaining: 30 });
       expect(mockedAiApiService.getUsage).toHaveBeenCalled();
     });
 
@@ -134,17 +134,17 @@ describe('usageTrackingService', () => {
     });
   });
 
-  it('returns unlimited remaining generations for active subscribers', async () => {
+  it('returns the bounded remaining design balance for active subscribers', async () => {
     mockedAiApiService.getUsage.mockResolvedValue({
       entitlement: { active: true },
-      generation: { consumed: 0, reserved: 0, remaining: null },
+      generation: { consumed: 0, reserved: 0, remaining: 30 },
       identification: { consumed: 0, reserved: 0, remaining: null },
       activeJobs: 0,
       capabilities: { generation: true, identification: true },
       policyVersion: 'test',
     });
 
-    await expect(usageTrackingService.getFreeGenerationsRemaining('user-123')).resolves.toBe(999);
+    await expect(usageTrackingService.getFreeGenerationsRemaining('user-123')).resolves.toBe(30);
     expect(mockedAiApiService.getUsage).toHaveBeenCalled();
   });
 

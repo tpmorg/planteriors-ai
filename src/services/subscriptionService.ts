@@ -3,7 +3,6 @@ import Purchases, {
   PurchasesPackage,
   CustomerInfo,
   LOG_LEVEL,
-  PACKAGE_TYPE,
 } from 'react-native-purchases';
 import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
@@ -345,9 +344,7 @@ class SubscriptionService {
     }
   }
 
-  /**
-   * Get available subscription products from RevenueCat offerings.
-   */
+  /** Get the monthly plan and one-time credit pack from RevenueCat. */
   async getAvailableProducts(): Promise<SubscriptionProduct[]> {
     const ok = await this.ensureConfigured();
     if (!ok) {
@@ -415,9 +412,7 @@ class SubscriptionService {
     }
   }
 
-  /**
-   * Purchase a subscription package.
-   */
+  /** Purchase either the monthly plan or a one-time room pack. */
   async purchaseSubscription(
     _userId: string,
     productId: string,
@@ -491,6 +486,24 @@ class SubscriptionService {
       const originalAppUserId = (customerInfo as CustomerInfo & { originalAppUserId?: string })
         .originalAppUserId;
       const status = this.mapCustomerInfoToStatus(customerInfo);
+      const isRoomPack = this.isRoomPack(rcPackage);
+      let designCreditBalance: number | undefined;
+
+      if (isRoomPack) {
+        try {
+          await Purchases.invalidateVirtualCurrenciesCache();
+          const currencies = await Purchases.getVirtualCurrencies() as unknown as {
+            all?: Record<string, { balance?: number }>;
+          };
+          designCreditBalance = currencies.all?.DESIGNS?.balance;
+        } catch (creditError) {
+          this.captureRevenueCatException('RevenueCat design credit refresh failed', creditError, {
+            productId,
+          });
+        }
+      }
+
+      const purchaseSucceeded = isRoomPack || status.isActive;
       this.addRevenueCatBreadcrumb('RevenueCat purchase completed', {
         requestedUserId: _userId,
         appUserID,
@@ -502,12 +515,14 @@ class SubscriptionService {
         allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
         activeSubscriptions: customerInfo.activeSubscriptions,
         allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+        purchaseKind: isRoomPack ? 'room_pack' : 'monthly',
+        designCreditBalance,
       });
 
       return {
-        success: status.isActive,
+        success: purchaseSucceeded,
         subscription: status,
-        error: status.isActive ? undefined : 'Purchase completed, but no active subscription entitlement was returned.',
+        error: purchaseSucceeded ? undefined : 'Purchase completed, but no active monthly entitlement was returned.',
         debug: {
           ...getPurchaseDebug(),
           source: 'revenuecat_customer_info',
@@ -516,6 +531,8 @@ class SubscriptionService {
           allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
           activeSubscriptions: customerInfo.activeSubscriptions,
           allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+          purchaseKind: isRoomPack ? 'room_pack' : 'monthly',
+          designCreditBalance,
         },
       };
     } catch (error: any) {
@@ -638,7 +655,7 @@ class SubscriptionService {
 
   private mapPackageToProduct(pkg: PurchasesPackage): SubscriptionProduct {
     const product = pkg.product;
-    const isAnnual = pkg.packageType === PACKAGE_TYPE.ANNUAL;
+    const isRoomPack = this.isRoomPack(pkg);
 
     this.addRevenueCatBreadcrumb('RevenueCat package mapped to subscription product', {
       packageIdentifier: pkg.identifier,
@@ -650,17 +667,25 @@ class SubscriptionService {
 
     return {
       id: product.identifier,
-      name: isAnnual ? 'Premium Annual' : 'Premium Monthly',
+      name: isRoomPack ? 'One-time Room Pack' : 'Monthly Plan',
       price: product.priceString,
       priceValue: product.price,
       currency: product.currencyCode,
-      period: isAnnual ? 'year' : 'month',
-      features: isAnnual
-        ? ['Everything in Monthly', 'Save 33% vs monthly', 'Priority support']
-        : ['Unlimited AI generations', 'Priority processing', 'HD image exports', 'Save unlimited designs'],
-      savings: isAnnual ? 'BEST VALUE' : undefined,
+      kind: isRoomPack ? 'room_pack' : 'monthly',
+      period: isRoomPack ? 'one_time' : 'month',
+      designCredits: isRoomPack ? 20 : 30,
+      features: isRoomPack
+        ? ['20 plant designs', 'Credits never expire', 'No subscription']
+        : ['30 plant designs each month', 'Credits refresh every billing cycle', 'Cancel anytime'],
+      savings: isRoomPack ? 'NO EXPIRY' : undefined,
       rcPackage: pkg,
     };
+  }
+
+  private isRoomPack(pkg: PurchasesPackage): boolean {
+    const packageId = pkg.identifier.toLowerCase();
+    const productId = pkg.product.identifier.toLowerCase();
+    return packageId.includes('room_pack') || productId.includes('roompack') || productId.includes('room_pack');
   }
 
   private mapCustomerInfoToStatus(customerInfo: CustomerInfo): SubscriptionStatus {
