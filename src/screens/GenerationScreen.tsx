@@ -10,6 +10,16 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { AppIcon } from '../components/AppIcon';
 import { AppButton } from '../components/AppButton';
 import { GenerationRequest, GeneratedImage } from "../types";
@@ -76,8 +86,15 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const generationInFlightRef = useRef(false);
   const saveInFlightRef = useRef(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  // Match the saved-design detail view: pinch to zoom, drag while zoomed,
+  // and double-tap to return to the fitted image.
+  const resultScale = useSharedValue(1);
+  const savedResultScale = useSharedValue(1);
+  const resultTranslateX = useSharedValue(0);
+  const resultTranslateY = useSharedValue(0);
+  const savedResultTranslateX = useSharedValue(0);
+  const savedResultTranslateY = useSharedValue(0);
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const isSinglePlantRequest =
     (request.mode === 'individual' || request.mode === 'replace-plant') &&
@@ -149,20 +166,74 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   useEffect(() => {
     if (generatedImageUri) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      resultScale.value = 1;
+      savedResultScale.value = 1;
+      resultTranslateX.value = 0;
+      resultTranslateY.value = 0;
+      savedResultTranslateX.value = 0;
+      savedResultTranslateY.value = 0;
     }
-  }, [generatedImageUri, fadeAnim, scaleAnim]);
+  }, [
+    generatedImageUri,
+    resultScale,
+    resultTranslateX,
+    resultTranslateY,
+    savedResultScale,
+    savedResultTranslateX,
+    savedResultTranslateY,
+  ]);
+
+  const resultPinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      resultScale.value = Math.max(0.5, Math.min(savedResultScale.value * event.scale, 3));
+    })
+    .onEnd(() => {
+      savedResultScale.value = resultScale.value;
+      if (resultScale.value < 1) {
+        resultScale.value = withSpring(1);
+        savedResultScale.value = 1;
+        resultTranslateX.value = withSpring(0);
+        resultTranslateY.value = withSpring(0);
+        savedResultTranslateX.value = 0;
+        savedResultTranslateY.value = 0;
+      }
+    });
+
+  const resultPanGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (resultScale.value > 1) {
+        resultTranslateX.value = savedResultTranslateX.value + event.translationX;
+        resultTranslateY.value = savedResultTranslateY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedResultTranslateX.value = resultTranslateX.value;
+      savedResultTranslateY.value = resultTranslateY.value;
+    });
+
+  const resultDoubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (resultScale.value > 1) {
+        resultScale.value = withSpring(1);
+        savedResultScale.value = 1;
+        resultTranslateX.value = withSpring(0);
+        resultTranslateY.value = withSpring(0);
+        savedResultTranslateX.value = 0;
+        savedResultTranslateY.value = 0;
+      } else {
+        resultScale.value = withSpring(2);
+        savedResultScale.value = 2;
+      }
+    });
+
+  const resultImageAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: resultTranslateX.value },
+      { translateY: resultTranslateY.value },
+      { scale: resultScale.value },
+    ],
+  }));
 
   const startGeneration = async () => {
     if (generationInFlightRef.current) return;
@@ -347,72 +418,77 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
   if (generatedImageUri && !isGenerating && isImageGenerated) {
     return (
-      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.fullScreenContainer}>
-        <Animated.View
-          style={[
-            styles.resultContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Image
-            source={{ uri: generatedImageUri }}
-            style={styles.resultImage}
-            accessibilityLabel="Generated plant design"
-          />
+      <GestureHandlerRootView style={styles.fullScreenContainer}>
+        <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.fullScreenContainer}>
+          <View style={styles.resultContainer}>
+            <GestureDetector
+              gesture={Gesture.Simultaneous(
+                resultDoubleTapGesture,
+                resultPinchGesture,
+                resultPanGesture
+              )}
+            >
+              <Reanimated.View collapsable={false} style={styles.resultImageViewport}>
+                <Reanimated.Image
+                  source={{ uri: generatedImageUri }}
+                  style={[styles.resultImage, { width, height }, resultImageAnimatedStyle]}
+                  resizeMode="contain"
+                  accessibilityLabel="Generated plant design. Pinch to zoom and drag to inspect details."
+                />
+              </Reanimated.View>
+            </GestureDetector>
 
-          {/* Overlay header with back button */}
-          <View style={styles.resultHeader}>
-            <AppButton
-              variant="icon"
-              size="md"
-              icon="ArrowLeft"
-              overlay
-              onPress={onBack}
-              accessibilityLabel="Back"
-            />
-            <AppButton
-              variant="icon"
-              size="md"
-              icon="X"
-              overlay
-              onPress={onClose}
-              accessibilityLabel="Close result"
-            />
+            {/* Overlay header with back button */}
+            <View pointerEvents="box-none" style={styles.resultHeader}>
+              <AppButton
+                variant="icon"
+                size="md"
+                icon="ArrowLeft"
+                overlay
+                onPress={onBack}
+                accessibilityLabel="Back"
+              />
+              <AppButton
+                variant="icon"
+                size="md"
+                icon="X"
+                overlay
+                onPress={onClose}
+                accessibilityLabel="Close result"
+              />
+            </View>
+
+            {/* Action buttons overlaid at bottom */}
+            <View pointerEvents="box-none" style={styles.resultActionsOverlay}>
+              <AppButton
+                variant="chip"
+                size="md"
+                overlay
+                icon="ArrowClockwise"
+                title="Re-try"
+                disabled={isRequestUnknown}
+                onPress={handleRetry}
+                fullWidth
+                style={styles.overlayActionButton}
+              />
+
+              <AppButton
+                variant="primary"
+                size="md"
+                icon="Check"
+                iconPosition="right"
+                title={savedDesignId ? 'Saved' : isSaving ? 'Saving…' : 'Save'}
+                loading={isSaving}
+                disabled={!!savedDesignId}
+                onPress={handleUseResult}
+                elevated
+                fullWidth
+                style={styles.overlayActionButton}
+              />
+            </View>
           </View>
-
-          {/* Action buttons overlaid at bottom */}
-          <View style={styles.resultActionsOverlay}>
-            <AppButton
-              variant="chip"
-              size="md"
-              overlay
-              icon="ArrowClockwise"
-              title="Re-try"
-              disabled={isRequestUnknown}
-              onPress={handleRetry}
-              fullWidth
-              style={styles.overlayActionButton}
-            />
-
-            <AppButton
-              variant="primary"
-              size="md"
-              icon="Check"
-              iconPosition="right"
-              title={savedDesignId ? 'Saved' : isSaving ? 'Saving…' : 'Save'}
-              loading={isSaving}
-              disabled={!!savedDesignId}
-              onPress={handleUseResult}
-              elevated
-              fullWidth
-              style={styles.overlayActionButton}
-            />
-          </View>
-        </Animated.View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     );
   }
 
@@ -701,9 +777,14 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     position: "relative",
   },
   resultImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
+    maxWidth: "100%",
+    maxHeight: "100%",
+  },
+  resultImageViewport: {
+    flex: 1,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   resultHeader: {
     position: "absolute",
