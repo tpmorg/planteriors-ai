@@ -103,7 +103,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     setSyncingLibrary(true);
     try {
       const result = await firestoreSyncService.syncUserData(user);
-      Alert.alert('Sync complete', `Synced ${result.designs} design(s) and ${result.collections} collection(s).`);
+      Alert.alert('Backup complete', `Backed up ${result.designs} design(s) and ${result.collections} collection(s) from this device.`);
     } catch (error) {
       console.error('Failed to sync library:', error);
       Alert.alert('Sync failed', 'Could not sync your library right now.');
@@ -121,7 +121,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     setSyncingLibrary(true);
     try {
       const result = await firestoreSyncService.restoreUserData(user.id);
-      Alert.alert('Restore complete', `Restored ${result.designs} design(s) and ${result.collections} collection(s).`);
+      Alert.alert('Cloud merge complete', `Merged ${result.designs} design(s) and ${result.collections} collection(s) from the cloud. Unsynced local changes were preserved.`);
     } catch (error) {
       console.error('Failed to restore library:', error);
       Alert.alert('Restore failed', 'Could not restore your library right now.');
@@ -148,9 +148,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       return;
     }
 
-    Alert.alert('Cloud Sync', 'Choose an option', [
+    Alert.alert('Cloud Library', 'Back up this device, or safely merge records from your cloud library.', [
       {
-        text: 'Sync Now',
+        text: 'Back Up This Device',
         onPress: async () => {
           if (!requireNetwork('Please connect to the internet to sync your library.')) {
             return;
@@ -160,11 +160,11 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             const preflight = await firestoreSyncService.getSyncPreflight(user.id);
             if (preflight.hasPotentialMergeRisk) {
               Alert.alert(
-                'Potential duplicate risk',
-                `This device has ${preflight.localUnsyncedDesigns} unsynced design(s) and ${preflight.localUnsyncedCollections} unsynced collection(s), while your cloud library already has ${preflight.remoteDesigns} design(s) and ${preflight.remoteCollections} collection(s).\n\nTo avoid duplicates, restoring first is usually safer.`,
+                'Local and cloud records found',
+                `This device has ${preflight.localUnsyncedDesigns} unsynced design(s) and ${preflight.localUnsyncedCollections} unsynced collection(s), while your cloud library has ${preflight.remoteDesigns} design(s) and ${preflight.remoteCollections} collection(s).\n\nMerge from Cloud preserves unsynced local changes. Back Up Anyway uploads this device's records to the cloud.`,
                 [
                   {
-                    text: 'Restore First',
+                    text: 'Merge from Cloud',
                     onPress: async () => {
                       if (!requireNetwork('Please connect to the internet to restore your library.')) {
                         return;
@@ -173,7 +173,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     },
                   },
                   {
-                    text: 'Merge Anyway',
+                    text: 'Back Up Anyway',
                     style: 'destructive',
                     onPress: async () => {
                       if (!requireNetwork('Please connect to the internet to sync your library.')) {
@@ -196,7 +196,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         },
       },
       {
-        text: 'Restore from Cloud',
+        text: 'Merge from Cloud',
         onPress: async () => {
           if (!requireNetwork('Please connect to the internet to restore your library.')) {
             return;

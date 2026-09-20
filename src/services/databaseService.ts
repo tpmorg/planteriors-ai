@@ -8,11 +8,25 @@ import {
   SubscriptionData,
   FreeTrialUsage,
   Collection,
-  IdentifiedDesignPlant
+  IdentifiedDesignPlant,
+  SyncStatus,
 } from '../types';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 
 const DB_VERSION = 8; // Current database version
+
+export interface LocalCollectionRestoreState {
+  id: number;
+  updatedAt: number;
+  syncStatus: SyncStatus;
+  version: number;
+}
+
+export interface LocalDesignRestoreState extends LocalCollectionRestoreState {
+  originalImageUri: string;
+  generatedImageUri: string;
+  localImagePath: string | null;
+}
 
 export class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -2072,6 +2086,65 @@ export class DatabaseService {
     );
   }
 
+  async getCollectionRestoreState(userId: string, remoteId: string): Promise<LocalCollectionRestoreState | null> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const row = await this.db.getFirstAsync<{
+      id: number;
+      updated_at: number | null;
+      sync_status: SyncStatus | null;
+      version: number | null;
+    }>(
+      `SELECT id, updated_at, sync_status, version
+       FROM collections
+       WHERE user_id = ? AND remote_id = ?
+       LIMIT 1`,
+      [userId, remoteId]
+    );
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      updatedAt: row.updated_at ?? 0,
+      syncStatus: row.sync_status ?? 'pending_upload',
+      version: row.version ?? 1,
+    };
+  }
+
+  async getDesignRestoreState(userId: string, remoteId: string): Promise<LocalDesignRestoreState | null> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const row = await this.db.getFirstAsync<{
+      id: number;
+      original_image_uri: string;
+      generated_image_uri: string;
+      local_image_path: string | null;
+      updated_at: number | null;
+      sync_status: SyncStatus | null;
+      version: number | null;
+    }>(
+      `SELECT id, original_image_uri, generated_image_uri, local_image_path,
+              updated_at, sync_status, version
+       FROM saved_designs
+       WHERE user_id = ? AND remote_id = ?
+       LIMIT 1`,
+      [userId, remoteId]
+    );
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      originalImageUri: row.original_image_uri,
+      generatedImageUri: row.generated_image_uri,
+      localImagePath: row.local_image_path,
+      updatedAt: row.updated_at ?? 0,
+      syncStatus: row.sync_status ?? 'pending_upload',
+      version: row.version ?? 1,
+    };
+  }
+
   async upsertRestoredCollection(input: {
     userId: string;
     remoteId: string;
@@ -2086,8 +2159,8 @@ export class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const existing = await this.db.getFirstAsync<{ id: number }>(
-      'SELECT id FROM collections WHERE remote_id = ? LIMIT 1',
-      [input.remoteId]
+      'SELECT id FROM collections WHERE user_id = ? AND remote_id = ? LIMIT 1',
+      [input.userId, input.remoteId]
     );
 
     const now = Date.now();
@@ -2096,7 +2169,10 @@ export class DatabaseService {
         `UPDATE collections
          SET user_id = ?, name = ?, created_at = ?, updated_at = ?, deleted_at = ?,
              device_id = ?, version = ?, last_synced_at = ?, sync_status = 'synced'
-         WHERE id = ?`,
+         WHERE id = ?
+           AND sync_status = 'synced'
+           AND COALESCE(version, 1) <= ?
+           AND COALESCE(updated_at, 0) <= ?`,
         [
           input.userId,
           input.name,
@@ -2107,6 +2183,8 @@ export class DatabaseService {
           input.version ?? 1,
           now,
           existing.id,
+          input.version ?? 1,
+          input.updatedAt,
         ]
       );
       return String(existing.id);
@@ -2162,8 +2240,8 @@ export class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const existing = await this.db.getFirstAsync<{ id: number }>(
-      'SELECT id FROM saved_designs WHERE remote_id = ? LIMIT 1',
-      [input.remoteId]
+      'SELECT id FROM saved_designs WHERE user_id = ? AND remote_id = ? LIMIT 1',
+      [input.userId, input.remoteId]
     );
     const now = Date.now();
     const values = [
@@ -2202,8 +2280,11 @@ export class DatabaseService {
              individual_plant_name = ?, individual_plant_scientific_name = ?, individual_plant_size = ?, individual_plant_placement = ?,
              individual_plant_id = ?, generated_plants_json = ?, custom_prompt = ?, created_at = ?, updated_at = ?, deleted_at = ?,
              remote_id = ?, last_synced_at = ?, device_id = ?, version = ?, is_favorite = ?, sync_status = 'synced'
-         WHERE id = ?`,
-        [...values, existing.id]
+         WHERE id = ?
+           AND sync_status = 'synced'
+           AND COALESCE(version, 1) <= ?
+           AND COALESCE(updated_at, 0) <= ?`,
+        [...values, existing.id, input.version ?? 1, input.updatedAt]
       );
       return String(existing.id);
     }

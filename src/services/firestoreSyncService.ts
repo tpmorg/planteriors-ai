@@ -24,6 +24,22 @@ import { databaseService } from './databaseService';
 
 const SYNC_SCHEMA_VERSION = 1 as const;
 
+interface RestoreConflictState {
+  updatedAt: number;
+  syncStatus: string;
+  version: number;
+}
+
+export const shouldPreserveLocalRecord = (
+  local: RestoreConflictState | null,
+  remoteUpdatedAt: number,
+  remoteVersion: number
+): boolean => {
+  if (!local) return false;
+  if (local.syncStatus !== 'synced') return true;
+  return local.version > remoteVersion || local.updatedAt > remoteUpdatedAt;
+};
+
 const toTimestamp = (value?: Timestamp | null): number | null => {
   if (!value) return null;
   return value.toMillis();
@@ -207,20 +223,29 @@ export class FirestoreSyncService {
     );
     const collectionsSnap = await getDocs(collectionsQuery);
     const localCollectionMap = new Map<string, string>();
+    let restoredCollections = 0;
 
     for (const docSnap of collectionsSnap.docs) {
       const data = docSnap.data() as FirestoreCollectionDoc;
+      const remoteUpdatedAt = data.updatedAt.toMillis();
+      const localState = await databaseService.getCollectionRestoreState(userId, docSnap.id);
+      if (shouldPreserveLocalRecord(localState, remoteUpdatedAt, data.version ?? 1)) {
+        localCollectionMap.set(docSnap.id, String(localState!.id));
+        continue;
+      }
+
       const localId = await databaseService.upsertRestoredCollection({
         userId,
         remoteId: docSnap.id,
         name: data.name,
         createdAt: data.createdAt.toMillis(),
-        updatedAt: data.updatedAt.toMillis(),
+        updatedAt: remoteUpdatedAt,
         deletedAt: toTimestamp(data.deletedAt),
         deviceId: data.deviceId,
         version: data.version,
       });
       localCollectionMap.set(docSnap.id, localId);
+      restoredCollections += 1;
     }
 
     const designsQuery = query(
@@ -228,22 +253,59 @@ export class FirestoreSyncService {
       orderBy('updatedAt', 'desc')
     );
     const designsSnap = await getDocs(designsQuery);
+    let restoredDesigns = 0;
 
     for (const docSnap of designsSnap.docs) {
       const data = docSnap.data() as FirestoreDesignDoc;
+      const remoteUpdatedAt = data.updatedAt.toMillis();
+      const remoteVersion = data.version ?? 1;
+      const localState = await databaseService.getDesignRestoreState(userId, docSnap.id);
+
+      if (shouldPreserveLocalRecord(localState, remoteUpdatedAt, remoteVersion)) {
+        continue;
+      }
+
+      // A remote tombstone has nothing to restore on a device that never had the record.
+      if (data.deletedAt && !localState) {
+        continue;
+      }
+
+      const generatedImageUrl = data.deletedAt
+        ? null
+        : await this.resolveStorageDownloadUrl(data.generatedImageUrl, data.generatedImagePath);
+      const originalImageUrl = data.deletedAt
+        ? null
+        : await this.resolveStorageDownloadUrl(data.originalImageUrl, data.originalImagePath);
+      const cacheKey = `${docSnap.id}_${remoteVersion}_${remoteUpdatedAt}`;
       const generatedLocalPath = data.deletedAt
         ? null
-        : await this.downloadToCache(data.generatedImageUrl, `${docSnap.id}_generated.jpg`);
+        : await this.downloadToCache(generatedImageUrl, `${cacheKey}_generated.jpg`);
       const originalLocalPath = data.deletedAt
         ? null
-        : await this.downloadToCache(data.originalImageUrl, `${docSnap.id}_original.jpg`);
+        : await this.downloadToCache(originalImageUrl, `${cacheKey}_original.jpg`);
+
+      const generatedImageUri = generatedLocalPath
+        || localState?.generatedImageUri
+        || generatedImageUrl;
+      if (!generatedImageUri) {
+        console.warn(`Skipping cloud design ${docSnap.id}: no usable generated image is available.`);
+        continue;
+      }
+
+      const originalImageUri = originalLocalPath
+        || localState?.originalImageUri
+        || originalImageUrl;
+      if (!originalImageUri) {
+        console.warn(`Skipping cloud design ${docSnap.id}: no usable original image is available.`);
+        continue;
+      }
 
       await databaseService.upsertRestoredDesign({
         userId,
         remoteId: docSnap.id,
-        originalImageUri: originalLocalPath || data.originalImageUrl || data.originalImagePath,
-        generatedImageUri: generatedLocalPath || data.generatedImageUrl || data.generatedImagePath,
-        localImagePath: generatedLocalPath,
+        originalImageUri,
+        generatedImageUri,
+        localImagePath: generatedLocalPath || localState?.localImagePath || null,
         mode: data.mode,
         collectionLocalId: data.collectionId ? localCollectionMap.get(data.collectionId) || null : null,
         plantTypeName: data.plantTypeName,
@@ -258,19 +320,20 @@ export class FirestoreSyncService {
         generatedPlants: data.generatedPlants,
         customPrompt: data.customPrompt,
         createdAt: data.createdAt.toMillis(),
-        updatedAt: data.updatedAt.toMillis(),
+        updatedAt: remoteUpdatedAt,
         deletedAt: toTimestamp(data.deletedAt),
         isFavorite: data.isFavorite,
         deviceId: data.deviceId,
-        version: data.version,
+        version: remoteVersion,
       });
+      restoredDesigns += 1;
     }
 
     await this.updateSyncMeta(userId, { lastRestoreAt: Timestamp.now() });
 
     return {
-      collections: collectionsSnap.size,
-      designs: designsSnap.size,
+      collections: restoredCollections,
+      designs: restoredDesigns,
     };
   }
 
@@ -305,6 +368,21 @@ export class FirestoreSyncService {
     return response.blob();
   }
 
+  private async resolveStorageDownloadUrl(
+    downloadUrl: string | null,
+    storagePath: string | null
+  ): Promise<string | null> {
+    if (downloadUrl) return downloadUrl;
+    if (!storagePath) return null;
+
+    try {
+      return await getDownloadURL(ref(storage, storagePath));
+    } catch (error) {
+      console.warn(`Could not resolve cloud image path ${storagePath}:`, error);
+      return null;
+    }
+  }
+
   private async downloadToCache(url: string | null, fileName: string): Promise<string | null> {
     if (!url) return null;
 
@@ -315,8 +393,27 @@ export class FirestoreSyncService {
     }
 
     const localPath = `${directory}${fileName}`;
-    await FileSystem.downloadAsync(url, localPath);
-    return localPath;
+    const existing = await FileSystem.getInfoAsync(localPath);
+    if (existing.exists && (!('size' in existing) || existing.size > 0)) {
+      return localPath;
+    }
+
+    try {
+      const result = await FileSystem.downloadAsync(url, localPath);
+      if (result.status < 200 || result.status >= 300) {
+        console.warn(`Cloud image download returned HTTP ${result.status}: ${url}`);
+        return null;
+      }
+      const downloaded = await FileSystem.getInfoAsync(localPath);
+      if (!downloaded.exists || ('size' in downloaded && downloaded.size <= 0)) {
+        console.warn(`Cloud image download produced an empty file: ${url}`);
+        return null;
+      }
+      return localPath;
+    } catch (error) {
+      console.warn(`Could not download cloud image: ${url}`, error);
+      return null;
+    }
   }
 }
 
