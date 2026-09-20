@@ -2,22 +2,21 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
-  ImageBackground,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   ImageSourcePropType,
 } from 'react-native';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
+import { PlantCatalogCard } from '../components/PlantCatalogCard';
 import { useTabBar } from '../contexts/TabBarContext';
-import { useTheme, Theme } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
@@ -89,153 +88,6 @@ function getPlantImageSource(plant: PlantSearchResult): ImageSourcePropType | un
   const seedPlant = getSeedPlantById(plant.id);
   return seedPlant?.imageUrl;
 }
-
-interface PlantCardProps {
-  plant: PlantSearchResult;
-  onPress: () => void;
-  theme: Theme;
-}
-
-function formatLightLabel(lightRequirement: string) {
-  switch (lightRequirement) {
-    case 'low':
-      return 'Low light';
-    case 'low-to-bright':
-      return 'Flexible light';
-    case 'bright-direct':
-      return 'Direct sun';
-    case 'bright-indirect':
-      return 'Bright indirect';
-    default:
-      return lightRequirement;
-  }
-}
-
-function formatCareLabel(careLevel: string) {
-  switch (careLevel) {
-    case 'easy':
-      return 'Easy care';
-    case 'moderate':
-      return 'Moderate care';
-    case 'difficult':
-      return 'Advanced care';
-    default:
-      return careLevel;
-  }
-}
-
-const PlantCard = React.memo(({ plant, onPress, theme }: PlantCardProps) => {
-  const imageSource = getPlantImageSource(plant);
-  const metadata = plant.petSafe
-    ? ['Pet safe', formatLightLabel(plant.lightRequirement)]
-    : [formatCareLabel(plant.careLevel), formatLightLabel(plant.lightRequirement)];
-
-  return (
-    <TouchableOpacity
-      style={styles.plantCard}
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityLabel={`Open ${plant.name}`}
-    >
-      {imageSource ? (
-        <ImageBackground source={imageSource} style={styles.plantImageFrame} imageStyle={styles.plantImage}>
-          <View style={styles.imageOverlay} />
-          {plant.userAdded && (
-            <View style={styles.userAddedBadge}>
-              <Text style={styles.userAddedBadgeText}>Imported</Text>
-            </View>
-          )}
-          <View style={styles.plantCardBody}>
-            <Text style={styles.plantCategory} numberOfLines={1}>
-              {plant.category}
-            </Text>
-            <Text style={styles.plantName} numberOfLines={1}>
-              {plant.name}
-            </Text>
-            <Text style={styles.scientificName} numberOfLines={1}>
-              {plant.scientificName}
-            </Text>
-
-            <View style={styles.metadataRow}>
-              {metadata.map((label) => (
-                <View
-                  key={`${plant.id}-${label}`}
-                  style={[
-                    styles.metadataChip,
-                    {
-                      backgroundColor: 'rgba(0, 0, 0, 0.36)',
-                      borderColor: 'rgba(255,255,255,0.18)',
-                    },
-                  ]}
-                >
-                  <Text style={styles.metadataChipText} numberOfLines={1}>
-                    {label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </ImageBackground>
-      ) : (
-        <View
-          style={[
-            styles.plantImageFrame,
-            styles.plantFallbackFrame,
-            { backgroundColor: theme.colors.surface },
-          ]}
-        >
-          <AppIcon
-            name={plant.icon || 'Leaf'}
-            size={56}
-            color={theme.colors.primary}
-            weight="fill"
-          />
-          {plant.userAdded && (
-            <View style={styles.userAddedBadge}>
-              <Text style={styles.userAddedBadgeText}>Imported</Text>
-            </View>
-          )}
-          <View style={styles.plantCardBody}>
-            <Text style={[styles.plantCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-              {plant.category}
-            </Text>
-            <Text style={[styles.plantName, { color: theme.colors.text }]} numberOfLines={1}>
-              {plant.name}
-            </Text>
-            <Text
-              style={[styles.scientificName, { color: theme.colors.textSecondary }]}
-              numberOfLines={1}
-            >
-              {plant.scientificName}
-            </Text>
-
-            <View style={styles.metadataRow}>
-              {metadata.map((label) => (
-                <View
-                  key={`${plant.id}-${label}`}
-                  style={[
-                    styles.metadataChip,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#f6f7f4',
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.metadataChipText, { color: theme.colors.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-});
 
 export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) => {
   const [plants, setPlants] = useState<PlantSearchResult[]>([]);
@@ -376,14 +228,15 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   const renderPlantCard = useCallback(
     ({ item }: { item: PlantSearchResult }) => (
       <View style={styles.rowItem}>
-        <PlantCard
+        <PlantCatalogCard
           plant={item}
+          imageSource={getPlantImageSource(item)}
           onPress={() => onPlantSelect(item)}
-          theme={theme}
+          variant="hero"
         />
       </View>
     ),
-    [onPlantSelect, theme]
+    [onPlantSelect]
   );
 
   const renderEmptyState = useCallback(() => (
@@ -484,61 +337,53 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
               autoCorrect={false}
               returnKeyType="search"
             />
-            <TouchableOpacity
+            <AppButton
+              variant="icon"
+              size="sm"
+              icon="Microphone"
+              iconWeight={isVoiceSearchBusy ? 'fill' : 'regular'}
+              iconColor={isVoiceSearchBusy ? theme.colors.onPrimary : theme.colors.textSecondary}
+              loading={isVoiceSearchStarting}
               onPress={handleVoiceSearchPress}
               accessibilityLabel={isVoiceSearchBusy ? 'Stop voice search' : 'Start voice search'}
-              activeOpacity={0.85}
-              style={[
-                styles.voiceSearchButton,
-                {
-                  backgroundColor: isVoiceSearchBusy ? theme.colors.primary : 'transparent',
-                },
-              ]}
-            >
-              {isVoiceSearchStarting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <AppIcon
-                  name="Microphone"
-                  size={18}
-                  color={isVoiceSearchBusy ? '#ffffff' : theme.colors.textSecondary}
-                  weight={isVoiceSearchBusy ? 'fill' : 'regular'}
-                />
-              )}
-            </TouchableOpacity>
+              style={
+                isVoiceSearchBusy
+                  ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                  : undefined
+              }
+            />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear plant search">
-                <AppIcon name="XCircle" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <AppButton
+                variant="icon"
+                size="sm"
+                icon="XCircle"
+                onPress={() => setSearchQuery('')}
+                accessibilityLabel="Clear plant search"
+              />
             )}
           </View>
 
-          <TouchableOpacity
+          <AppButton
+            variant="icon"
+            size="md"
+            icon="SlidersHorizontal"
+            iconWeight="bold"
+            iconColor={showFilters ? theme.colors.onPrimary : theme.colors.text}
+            badge={activeFilterCount > 0 ? activeFilterCount : null}
+            onPress={() => setShowFilters((visible) => !visible)}
+            accessibilityLabel={
+              activeFilterCount > 0
+                ? `${showFilters ? 'Hide' : 'Show'} library filters, ${activeFilterCount} active`
+                : `${showFilters ? 'Hide' : 'Show'} library filters`
+            }
             style={[
               styles.filterButton,
-              {
-                backgroundColor: showFilters ? theme.colors.primary : theme.colors.surface,
-                borderColor: showFilters ? theme.colors.primary : theme.colors.border,
-                shadowColor: theme.colors.shadow,
-                shadowOpacity: theme.isDark ? 0.18 : 0.08,
-              },
+              { shadowColor: theme.colors.shadow, shadowOpacity: theme.isDark ? 0.18 : 0.08 },
+              showFilters
+                ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                : { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
             ]}
-            onPress={() => setShowFilters((visible) => !visible)}
-            accessibilityLabel="Show library filters"
-            activeOpacity={0.85}
-          >
-            <AppIcon
-              name="SlidersHorizontal"
-              size={17}
-              color={showFilters ? '#ffffff' : theme.colors.text}
-              weight="bold"
-            />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterCountBadge}>
-                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          />
         </View>
 
         {activeFilterCount > 0 && (
@@ -549,18 +394,18 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
             style={styles.activeChipsScroll}
           >
             {activeFilterChips.map((chip) => (
-              <TouchableOpacity
+              <AppButton
                 key={chip.key}
-                style={[styles.activeChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                variant="chip"
+                size="sm"
+                title={chip.label}
+                icon="X"
+                iconPosition="right"
+                textStyle={styles.activeChipText}
                 onPress={() => removeFilter(chip.key)}
                 accessibilityLabel={`Remove ${chip.label} filter`}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.activeChipText, { color: theme.colors.text }]} numberOfLines={1}>
-                  {chip.label}
-                </Text>
-                <AppIcon name="X" size={12} color={theme.colors.textSecondary} weight="bold" />
-              </TouchableOpacity>
+                style={styles.activeChip}
+              />
             ))}
           </ScrollView>
         )}
@@ -575,28 +420,17 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
               },
             ]}
           >
-            <TouchableOpacity
-              style={[
-                styles.petSafePill,
-                {
-                  backgroundColor: filters.petSafe ? theme.colors.primary : theme.colors.surface,
-                  borderColor: filters.petSafe ? theme.colors.primary : theme.colors.border,
-                },
-              ]}
+            <AppButton
+              variant="chip"
+              size="sm"
+              icon="ShieldCheck"
+              iconWeight="bold"
+              title="Pet safe"
+              selected={!!filters.petSafe}
               onPress={togglePetSafe}
-              activeOpacity={0.85}
               accessibilityLabel="Filter pet safe plants"
-            >
-              <AppIcon
-                name="ShieldCheck"
-                size={16}
-                color={filters.petSafe ? '#ffffff' : theme.colors.text}
-                weight="bold"
-              />
-              <Text style={[styles.petSafePillText, { color: filters.petSafe ? '#ffffff' : theme.colors.text }]}>
-                Pet safe
-              </Text>
-            </TouchableOpacity>
+              style={styles.petSafePill}
+            />
 
             {FILTER_GROUPS.map((group) => (
               <View key={group.key} style={styles.filterGroup}>
@@ -609,28 +443,16 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
                   {group.options.map((option) => {
                     const isSelected = filters[group.key] === option.value;
                     return (
-                      <TouchableOpacity
+                      <AppButton
                         key={option.value}
-                        style={[
-                          styles.filterOption,
-                          {
-                            backgroundColor: isSelected ? theme.colors.primary : theme.colors.surface,
-                            borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                          },
-                        ]}
+                        variant="chip"
+                        size="sm"
+                        title={option.label}
+                        selected={isSelected}
                         onPress={() => setFilter(group.key, option.value)}
-                        activeOpacity={0.85}
                         accessibilityLabel={`Filter ${group.title} by ${option.label}`}
-                      >
-                        <Text
-                          style={[
-                            styles.filterOptionText,
-                            { color: isSelected ? '#ffffff' : theme.colors.text },
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
+                        style={styles.filterOption}
+                      />
                     );
                   })}
                 </ScrollView>
@@ -638,9 +460,14 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
             ))}
 
             {activeFilterCount > 0 && (
-              <TouchableOpacity onPress={clearFilters} style={styles.clearFiltersButton} accessibilityLabel="Clear filters">
-                <Text style={[styles.clearFiltersText, { color: theme.colors.primary }]}>Clear filters</Text>
-              </TouchableOpacity>
+              <AppButton
+                variant="ghost"
+                size="sm"
+                title="Clear filters"
+                onPress={clearFilters}
+                accessibilityLabel="Clear filters"
+                style={styles.clearFiltersButton}
+              />
             )}
           </View>
         )}
@@ -810,40 +637,10 @@ const styles = StyleSheet.create({
     height: 48,
     paddingVertical: 0,
   },
-  voiceSearchButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 18,
     elevation: 3,
-  },
-  filterCountBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterCountText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#111111',
   },
   activeChipsScroll: {
     marginTop: -2,
@@ -853,19 +650,10 @@ const styles = StyleSheet.create({
     paddingRight: 2,
   },
   activeChip: {
-    height: 30,
     maxWidth: 150,
-    borderRadius: 15,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   activeChipText: {
     fontSize: 12,
-    fontWeight: '700',
-    flexShrink: 1,
   },
   filterPanel: {
     marginTop: 10,
@@ -899,18 +687,7 @@ const styles = StyleSheet.create({
   },
   petSafePill: {
     alignSelf: 'flex-start',
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     marginBottom: 10,
-  },
-  petSafePillText: {
-    fontSize: 13,
-    fontWeight: '700',
   },
   filterGroup: {
     marginTop: 8,
@@ -925,25 +702,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 4,
   },
-  filterOption: {
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  filterOptionText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  filterOption: {},
   clearFiltersButton: {
     alignSelf: 'flex-start',
     paddingTop: 12,
     paddingBottom: 2,
-  },
-  clearFiltersText: {
-    fontSize: 13,
-    fontWeight: '800',
   },
   listContent: {
     paddingTop: 4,
@@ -953,86 +716,6 @@ const styles = StyleSheet.create({
   },
   listSeparator: {
     height: 10,
-  },
-  plantCard: {
-    overflow: 'hidden',
-  },
-  plantImageFrame: {
-    width: '100%',
-    minHeight: 220,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
-  plantFallbackFrame: {
-    alignItems: 'flex-start',
-  },
-  plantCardBody: {
-    paddingHorizontal: 18,
-    paddingTop: 48,
-    paddingBottom: 18,
-    justifyContent: 'flex-end',
-  },
-  plantCategory: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    color: '#f3f5f2',
-  },
-  plantImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
-  },
-  userAddedBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(47,122,82,0.92)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userAddedBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  plantName: {
-    marginTop: 4,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  scientificName: {
-    marginTop: 2,
-    fontSize: 14,
-    fontStyle: 'italic',
-    color: 'rgba(255,255,255,0.82)',
-  },
-  metadataRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
-  },
-  metadataChip: {
-    maxWidth: '100%',
-    minHeight: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    justifyContent: 'center',
-  },
-  metadataChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#ffffff',
   },
   loadingContainer: {
     flex: 1,

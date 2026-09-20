@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Linking,
 } from 'react-native';
 import { AppIcon } from './AppIcon';
+import { AppButton } from './AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { IdentifiedDesignPlant, SavedDesign } from '../types';
 import * as WebBrowser from 'expo-web-browser';
@@ -49,22 +49,24 @@ function PlantShopItem({ name, subtitle, meta, theme, onFindNearby, onBuyOnline 
         </View>
       </View>
       <View style={styles.itemActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+        <AppButton
+          variant="primary"
+          size="sm"
+          icon="MapPin"
+          title="Find Nearby"
           onPress={onFindNearby}
-          activeOpacity={0.85}
-        >
-          <AppIcon name="MapPin" size={14} color="white" />
-          <Text style={styles.actionButtonText}>Find Nearby</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : '#f8fafc', borderColor: theme.colors.border }]}
+          accessibilityLabel={`Find ${name} at nearby shops`}
+          style={styles.actionButton}
+        />
+        <AppButton
+          variant="secondary"
+          size="sm"
+          icon="ShoppingCart"
+          title="Buy Online"
           onPress={onBuyOnline}
-          activeOpacity={0.85}
-        >
-          <AppIcon name="ShoppingCart" size={14} color={theme.colors.text} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>Buy Online</Text>
-        </TouchableOpacity>
+          accessibilityLabel={`Search for ${name} online`}
+          style={styles.actionButton}
+        />
       </View>
     </View>
   );
@@ -134,16 +136,12 @@ export const ShoppingListSection: React.FC<ShoppingListSectionProps> = ({
     return (
       <View style={styles.container}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Shopping List</Text>
-        <TouchableOpacity
-          style={[styles.identifyPrompt, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
-          activeOpacity={0.8}
-          disabled
-        >
+        <View style={[styles.identifyPrompt, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
           <AppIcon name="MagnifyingGlass" size={18} color={theme.colors.primary} />
           <Text style={[styles.identifyPromptText, { color: theme.colors.textSecondary }]}>
             Identify plants in this design to build a shopping list
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -206,19 +204,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '700',
   },
   identifyPrompt: {
     flexDirection: 'row',

@@ -5,13 +5,13 @@ import {
   Text,
   StyleSheet,
   Image,
-  TouchableOpacity,
   Animated,
   Platform,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { GenerationRequest, GeneratedImage } from "../types";
 import { createGeminiService } from "../services/geminiService";
 import { describeAiError } from "../services/aiErrorPresentation";
@@ -27,7 +27,6 @@ interface GenerationScreenProps {
   request: GenerationRequest;
   onGenerationComplete: (result: GeneratedImage) => void;
   onBack: () => void;
-  onAdjust: (imageUri: string) => void;
   onClose: () => void;
   onResultVisible?: (imageUri: string, jobId: string) => void;
   initialResultUri?: string;
@@ -42,7 +41,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   request,
   onGenerationComplete,
   onBack,
-  onAdjust,
   onClose,
   onResultVisible,
   initialResultUri,
@@ -295,15 +293,19 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
         <View style={styles.backdropBlobA} />
         <View style={styles.backdropBlobB} />
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
+          <AppButton
+            variant="icon"
+            size="md"
+            icon="ArrowLeft"
+            onPress={onBack}
+            accessibilityLabel="Back"
+          />
           <Text style={styles.headerTitle}>Generation Failed</Text>
           <View style={styles.placeholder} />
         </View>
 
         <View style={styles.errorContainer}>
-          <AppIcon name="WarningCircle" size={64} color="#dc2626" />
+          <AppIcon name="WarningCircle" size={64} color={theme.colors.destructive} />
           <Text style={styles.errorTitle}>{errorTitle ?? 'Generation failed'}</Text>
           <Text style={styles.errorText}>{error}</Text>
           {errorReference ? (
@@ -319,17 +321,25 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             </View>
           )}
 
-          {!isRequestUnknown ? <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <AppIcon name="ArrowClockwise" size={20} color="white" />
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity> : null}
+          {!isRequestUnknown ? (
+            <AppButton
+              variant="primary"
+              size="lg"
+              icon="ArrowClockwise"
+              title="Try Again"
+              onPress={handleRetry}
+              elevated
+              style={styles.retryButton}
+            />
+          ) : null}
 
-          <TouchableOpacity
-            style={styles.backToSelectionButton}
+          <AppButton
+            variant="secondary"
+            size="sm"
+            title="Edit setup"
             onPress={onBack}
-          >
-            <Text style={styles.backToSelectionText}>Edit setup</Text>
-          </TouchableOpacity>
+            accessibilityHint="Returns to the design setup"
+          />
         </View>
       </SafeAreaView>
     );
@@ -355,12 +365,22 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
           {/* Overlay header with back button */}
           <View style={styles.resultHeader}>
-            <TouchableOpacity onPress={onBack} style={styles.overlayBackButton}>
-              <AppIcon name="ArrowLeft" size={24} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.overlayBackButton} accessibilityLabel="Close result">
-              <AppIcon name="X" size={22} color="white" />
-            </TouchableOpacity>
+            <AppButton
+              variant="icon"
+              size="md"
+              icon="ArrowLeft"
+              overlay
+              onPress={onBack}
+              accessibilityLabel="Back"
+            />
+            <AppButton
+              variant="icon"
+              size="md"
+              icon="X"
+              overlay
+              onPress={onClose}
+              accessibilityLabel="Close result"
+            />
           </View>
 
           {/* Compact info overlay at bottom */}
@@ -372,24 +392,31 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
 
           {/* Action buttons overlaid at bottom */}
           <View style={styles.resultActionsOverlay}>
-            <TouchableOpacity style={styles.generateAgainButton} onPress={() => onAdjust(generatedImageUri)}>
-              <AppIcon name="SlidersHorizontal" size={19} color="white" />
-              <Text style={styles.generateAgainText}>Adjust</Text>
-            </TouchableOpacity>
+            <AppButton
+              variant="chip"
+              size="md"
+              overlay
+              icon="ArrowClockwise"
+              title="Re-try"
+              disabled={isRequestUnknown}
+              onPress={handleRetry}
+              fullWidth
+              style={styles.overlayActionButton}
+            />
 
-            <TouchableOpacity style={[styles.generateAgainButton, isRequestUnknown && styles.buttonDisabled]} disabled={isRequestUnknown} onPress={() => { setError(null); setErrorTitle(null); setErrorReference(null); setSavedDesignId(null); setIsGenerating(true); void startGeneration(); }}>
-              <AppIcon name="ArrowClockwise" size={19} color="white" />
-              <Text style={styles.generateAgainText}>Another version</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.useResultButton, (isSaving || !!savedDesignId) && styles.buttonDisabled]}
+            <AppButton
+              variant="primary"
+              size="md"
+              icon="Check"
+              iconPosition="right"
+              title={savedDesignId ? 'Saved' : isSaving ? 'Saving…' : 'Save'}
+              loading={isSaving}
+              disabled={!!savedDesignId}
               onPress={handleUseResult}
-              disabled={isSaving || !!savedDesignId}
-            >
-              <Text style={styles.useResultText}>{savedDesignId ? 'Saved' : isSaving ? 'Saving…' : 'Save'}</Text>
-              <AppIcon name="Check" size={20} color="white" />
-            </TouchableOpacity>
+              elevated
+              fullWidth
+              style={styles.overlayActionButton}
+            />
           </View>
         </Animated.View>
       </SafeAreaView>
@@ -401,9 +428,13 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <AppButton
+          variant="icon"
+          size="md"
+          icon="ArrowLeft"
+          onPress={onBack}
+          accessibilityLabel="Back"
+        />
         <Text style={styles.headerTitle}>Generating Design</Text>
         <View style={styles.placeholder} />
       </View>
@@ -500,13 +531,6 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     backgroundColor: "transparent",
-  },
-  backButton: {
-    padding: 10,
-    borderRadius: 22,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 28,
@@ -658,7 +682,7 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
   errorTitle: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#dc2626",
+    color: theme.colors.destructive,
     marginTop: 16,
     marginBottom: 8,
     fontFamily: "serif",
@@ -677,40 +701,7 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: theme.colors.primary,
-    minHeight: 50,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
     marginBottom: 16,
-    justifyContent: "center",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: theme.isDark ? 0.28 : 0.14,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  retryButtonText: {
-    color: "white",
-    fontSize: 15,
-    fontWeight: "700",
-    marginLeft: 8,
-  },
-  backToSelectionButton: {
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: theme.colors.borderLight,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  backToSelectionText: {
-    color: theme.colors.text,
-    fontSize: 14,
-    fontWeight: "700",
   },
   resultContainer: {
     flex: 1,
@@ -733,14 +724,9 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: "rgba(0,0,0,0.22)",
   },
-  overlayBackButton: {
-    padding: 8,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 20,
-  },
   resultOverlay: {
     position: "absolute",
-    bottom: 124,
+    bottom: 146,
     left: 16,
     right: 16,
     backgroundColor: "rgba(0,0,0,0.72)",
@@ -835,57 +821,11 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     bottom: 24,
     left: 16,
     right: 16,
-    flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
-  generateAgainButton: {
-    flex: 1,
-    height: 50,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+  overlayActionButton: {
+    minHeight: 48,
     borderRadius: 16,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  generateAgainText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "700",
-    marginLeft: 5,
-  },
-  useResultButton: {
-    flex: 1,
-    height: 50,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  useResultText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "700",
-    marginRight: 5,
-  },
-  buttonDisabled: {
-    opacity: 0.58,
   },
   placeholderInfo: {
     backgroundColor: "#fef3c7",

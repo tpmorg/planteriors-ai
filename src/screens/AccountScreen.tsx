@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Alert,
   Linking,
@@ -435,23 +435,29 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         </View>
 
         <View style={styles.menuSection}>
-          <TouchableOpacity
-            style={styles.menuItem}
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
             onPress={() => openExternalLink('https://planterior.app/contact')}
+            accessibilityRole="button"
+            accessibilityLabel="Support"
+            accessibilityHint="Opens in your browser"
           >
             <AppIcon name="Question" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Support</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemLast]}
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, styles.menuItemLast, pressed && styles.menuItemPressed]}
             onPress={() => openExternalLink('https://planterior.app/privacy')}
+            accessibilityRole="button"
+            accessibilityLabel="Privacy Policy"
+            accessibilityHint="Opens in your browser"
           >
             <AppIcon name="FileText" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Privacy Policy</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.logoutSection}>
@@ -601,10 +607,14 @@ const createStyles = (theme: any) => StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 56,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
+  },
+  menuItemPressed: {
+    backgroundColor: theme.colors.borderLight,
   },
   menuItemLast: {
     borderBottomWidth: 0,

@@ -4,7 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Alert,
   Share,
   Dimensions,
@@ -47,8 +47,6 @@ import {
 } from '../data/plantDatabase';
 import { saveDesignImageToDevice } from '../utils/imageSave';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
-import { ShoppingListSection } from '../components/ShoppingListSection';
-import { NearbyShopsModal } from '../components/NearbyShopsModal';
 
 interface DesignDetailScreenProps {
   design: SavedDesign;
@@ -221,8 +219,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       text: 'Tell me what to change. I will create a new iteration from this design.',
     },
   ]);
-  const [showShopsModal, setShowShopsModal] = useState(false);
-  const [shopsModalPlantName, setShopsModalPlantName] = useState('');
   const [showCollectionsModal, setShowCollectionsModal] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionName, setActiveCollectionName] = useState<string | null>(null);
@@ -426,14 +422,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
       hideModal();
     }
     setIsCompareMode((prev) => !prev);
-  };
-
-  const handleFindNearby = (plantName: string) => {
-    if (showInfoModal) {
-      hideModal();
-    }
-    setShopsModalPlantName(plantName);
-    setShowShopsModal(true);
   };
 
   const identifyGeneratedDesignPlants = async () => {
@@ -927,17 +915,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
 
           {/* Refinement trigger temporarily disabled */}
           {false && (
-            <TouchableOpacity
+            <Pressable
               onPress={openRefineModal}
-              style={styles.aiRefineTrigger}
-              activeOpacity={0.9}
+              style={({ pressed }) => [styles.aiRefineTrigger, pressed && styles.pressedSurface]}
+              accessibilityRole="button"
+              accessibilityLabel="Refine this design with AI"
             >
               <View style={styles.aiRefineOuterGlow}>
                 <View style={styles.aiRefineInnerRing}>
                   <AppIcon name="Lightning" size={22} color="#d7ffe9" weight="fill" />
                 </View>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
@@ -1064,10 +1053,11 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           <>
             {/* Backdrop */}
             <Animated.View style={[styles.backdrop, backdropStyle]}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.backdropTouchable}
                 onPress={hideModal}
-                activeOpacity={1}
+                accessibilityRole="button"
+                accessibilityLabel="Close design details"
               />
             </Animated.View>
 
@@ -1077,13 +1067,15 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 {/* Draggable Header */}
                 <GestureDetector gesture={modalHeaderPanGesture}>
                   <Animated.View style={styles.modalHeader}>
-                    <TouchableOpacity
+                    <Pressable
                       onPress={hideModal}
                       style={styles.modalHeaderTouchable}
-                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Close design details"
+                      accessibilityHint="Or swipe down to close"
                     >
                       <View style={styles.modalHandle} />
-                    </TouchableOpacity>
+                    </Pressable>
                   </Animated.View>
                 </GestureDetector>
 
@@ -1093,10 +1085,12 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                   contentContainerStyle={{ paddingBottom: 24 }}
                   showsVerticalScrollIndicator={false}
                 >
-                  <TouchableOpacity
-                    style={styles.quickReplaceButton}
+                  <Pressable
+                    style={({ pressed }) => [styles.quickReplaceButton, pressed && styles.pressedSurface]}
                     onPress={startPlantReplacement}
-                    activeOpacity={0.82}
+                    accessibilityRole="button"
+                    accessibilityLabel="Replace plant"
+                    accessibilityHint="Use this image and choose a different plant"
                   >
                     <View style={styles.quickReplaceIcon}>
                       <AppIcon name="ArrowsClockwise" size={18} color={theme.colors.surface} />
@@ -1108,16 +1102,18 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                       </Text>
                     </View>
                     <AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   <View style={styles.infoGrid}>
                     {/* Individual plant mode info */}
                     {(design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant && (
                       <>
-                        <TouchableOpacity
-                          style={styles.infoItem}
+                        <Pressable
+                          style={({ pressed }) => [styles.infoItem, pressed && styles.pressedSurface]}
                           onPress={showPlantProfile}
-                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Plant: ${design.individualPlant.name}`}
+                          accessibilityHint="Opens the plant profile"
                         >
                           <AppIcon name="Leaf" size={20} color={theme.colors.primary} />
                           <View style={styles.infoContent}>
@@ -1128,7 +1124,7 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                             </Text>
                           </View>
                           <AppIcon name="CaretRight" size={16} color={theme.colors.textSecondary} />
-                        </TouchableOpacity>
+                        </Pressable>
 
                         <View style={styles.infoItem}>
                           <AppIcon name="ArrowsOut" size={20} color={theme.colors.primary} />
@@ -1219,36 +1215,21 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                               <Text style={styles.infoDescription}>
                                 Get suggested plant matches from the generated image.
                               </Text>
-                              <TouchableOpacity
-                                style={[
-                                  styles.identifyPlantsButton,
-                                  isIdentifyingDesignPlants && styles.identifyPlantsButtonDisabled,
-                                ]}
+                              <AppButton
+                                variant="primary"
+                                size="sm"
+                                icon="MagnifyingGlass"
+                                title={isIdentifyingDesignPlants ? 'Identifying plants...' : 'Identify plants'}
+                                loading={isIdentifyingDesignPlants}
                                 onPress={identifyGeneratedDesignPlants}
-                                disabled={isIdentifyingDesignPlants}
-                                activeOpacity={0.8}
-                              >
-                                {isIdentifyingDesignPlants ? (
-                                  <ActivityIndicator size="small" color="white" />
-                                ) : (
-                                  <AppIcon name="MagnifyingGlass" size={16} color="white" />
-                                )}
-                                <Text style={styles.identifyPlantsButtonText}>
-                                  {isIdentifyingDesignPlants ? 'Identifying plants...' : 'Identify plants'}
-                                </Text>
-                              </TouchableOpacity>
+                              />
                             </>
                           )}
                         </View>
                       </View>
                     )}
 
-                    <View style={styles.shoppingListWrapper}>
-                      <ShoppingListSection
-                        design={design}
-                        onFindNearby={handleFindNearby}
-                      />
-                    </View>
+                    {/* Shopping List is temporarily hidden. The reusable section and nearby-shops modal remain available for reactivation. */}
 
                     {design.customPrompt && (
                       <View style={styles.infoItem}>
@@ -1289,9 +1270,13 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
             <View style={[styles.refinePanel, isKeyboardVisible && styles.refinePanelKeyboard]}>
               <View style={styles.refineHeader}>
                 <Text style={styles.refineTitle}>Refine Design</Text>
-                <TouchableOpacity onPress={closeRefineModal} style={styles.refineCloseButton}>
-                  <AppIcon name="X" size={18} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
+                <AppButton
+                  variant="icon"
+                  size="sm"
+                  icon="X"
+                  onPress={closeRefineModal}
+                  accessibilityLabel="Close refine design"
+                />
               </View>
 
               <ScrollView
@@ -1332,10 +1317,14 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
                 />
               </View>
 
-              <TouchableOpacity style={styles.refineSubmitButton} onPress={submitRefinement}>
-                <AppIcon name="ArrowUpRight" size={18} color={theme.colors.surface} />
-                <Text style={styles.refineSubmitText}>Generate Iteration</Text>
-              </TouchableOpacity>
+              <AppButton
+                variant="primary"
+                size="md"
+                icon="ArrowUpRight"
+                title="Generate Iteration"
+                onPress={submitRefinement}
+                elevated
+              />
             </View>
           </KeyboardAvoidingView>
         )}
@@ -1391,11 +1380,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
           }}
         />
 
-        <NearbyShopsModal
-          visible={showShopsModal}
-          plantName={shopsModalPlantName}
-          onDismiss={() => setShowShopsModal(false)}
-        />
       </View>
     </GestureHandlerRootView>
   );
@@ -1643,10 +1627,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   infoGrid: {
     gap: 12,
   },
-  shoppingListWrapper: {
-    marginTop: 4,
-    marginBottom: 4,
-  },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1707,26 +1687,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 17,
-  },
-  identifyPlantsButton: {
-    alignSelf: 'flex-start',
-    minHeight: 36,
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-  },
-  identifyPlantsButtonDisabled: {
-    opacity: 0.72,
-  },
-  identifyPlantsButtonText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '700',
   },
   quickReplaceButton: {
     flexDirection: 'row',
@@ -1796,16 +1756,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.text,
   },
-  refineCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   refineMessages: {
     maxHeight: screenHeight * 0.34,
   },
@@ -1864,19 +1814,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     minHeight: 52,
     maxHeight: 84,
   },
-  refineSubmitButton: {
-    marginTop: 10,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-  },
-  refineSubmitText: {
-    color: theme.colors.surface,
-    fontSize: 14,
-    fontWeight: '700',
+  pressedSurface: {
+    opacity: 0.8,
   },
 });

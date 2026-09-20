@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { AppButton } from './AppButton';
+import { ScrollMoreCue, useScrollOverflow } from './ScrollMoreCue';
 
 interface DesignFlowShellProps {
   title: string;
@@ -21,18 +22,14 @@ export function DesignFlowShell({
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const scrollRef = useRef<ScrollView>(null);
-  const metrics = useRef({ height: 0, content: 0, offset: 0 });
-  const [hasMoreBelow, setHasMoreBelow] = useState(false);
-  const updateOverflow = () => {
-    const { height, content, offset } = metrics.current;
-    setHasMoreBelow(height > 0 && content - height - Math.max(0, offset) > 8);
-  };
+  const overflow = useScrollOverflow();
   const body = scroll ? (
     <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator
-      onLayout={(event) => { metrics.current.height = event.nativeEvent.layout.height; updateOverflow(); }}
-      onContentSizeChange={(_, height) => { metrics.current.content = height; updateOverflow(); }}
-      onScroll={(event) => { metrics.current.offset = event.nativeEvent.contentOffset.y; updateOverflow(); }}
+      keyboardDismissMode="on-drag"
+      onLayout={overflow.onLayout}
+      onContentSizeChange={overflow.onContentSizeChange}
+      onScroll={overflow.onScroll}
       scrollEventThrottle={32}>
       {children}
     </ScrollView>
@@ -40,6 +37,7 @@ export function DesignFlowShell({
 
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+      <KeyboardAvoidingView style={styles.keyboardArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         {onBack ? (
           <AppButton
@@ -65,18 +63,9 @@ export function DesignFlowShell({
         ) : <View style={styles.iconPlaceholder} />}
       </View>
       {body}
-      {scroll ? <View style={styles.scrollCueSlot}>
-        {hasMoreBelow ? <AppButton
-          variant="ghost"
-          size="sm"
-          title="More below"
-          icon="CaretDown"
-          iconPosition="right"
-          accessibilityLabel="More below. Scroll down"
-          onPress={() => scrollRef.current?.scrollTo({ y: Math.min(metrics.current.content - metrics.current.height, metrics.current.offset + metrics.current.height * 0.75), animated: true })} />
-          : null}
-      </View> : null}
+      {scroll ? <ScrollMoreCue visible={overflow.hasMoreBelow} onPress={() => scrollRef.current?.scrollTo({ y: overflow.nextOffset(), animated: true })} /> : null}
       {footer ? <View style={styles.footer}>{footer}</View> : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -91,6 +80,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 20, paddingBottom: 18 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 24 },
   scroll: { flex: 1 },
-  scrollCueSlot: { height: 44, backgroundColor: theme.colors.background },
+  keyboardArea: { flex: 1 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: theme.colors.border, backgroundColor: theme.colors.surface },
 });

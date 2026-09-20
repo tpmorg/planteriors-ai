@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Image,
   Alert,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { Collection, SavedDesign } from '../types';
 import { databaseService } from '../services/databaseService';
 import { useTabBar } from '../contexts/TabBarContext';
@@ -104,13 +104,18 @@ const DesignCard = React.memo(({
     (design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant;
 
   return (
-    <TouchableOpacity
-      style={[styles.designItem, { width: itemSize }, isSelected && styles.designItemSelected]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.designItem,
+        { width: itemSize },
+        isSelected && styles.designItemSelected,
+        pressed && styles.designItemPressed,
+      ]}
       onPress={() => onPress(design, index)}
       onLongPress={() => onLongPress(design.id)}
       delayLongPress={450}
-      activeOpacity={0.8}
       accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
       accessibilityLabel={`${isSelected ? 'Selected' : 'Design'} ${isSinglePlantDesign ? design.individualPlant!.name : design.plantType?.name || 'Custom'}`}
       accessibilityHint={isSelectionMode ? 'Toggles selection' : 'Opens design details'}
     >
@@ -121,8 +126,18 @@ const DesignCard = React.memo(({
           resizeMode="cover"
         />
 
-        <TouchableOpacity
-          style={styles.favoriteButton}
+        <AppButton
+          variant="icon"
+          size="sm"
+          icon="Heart"
+          iconWeight={design.isFavorite ? 'fill' : 'regular'}
+          iconColor={design.isFavorite ? theme.colors.destructive : '#ffffff'}
+          overlay
+          accessibilityLabel={
+            design.isFavorite
+              ? `Remove ${isSinglePlantDesign ? design.individualPlant!.name : 'design'} from favorites`
+              : `Add ${isSinglePlantDesign ? design.individualPlant!.name : 'design'} to favorites`
+          }
           onPress={() => {
             if (isSelectionMode) {
               onToggleSelection(design.id);
@@ -130,14 +145,8 @@ const DesignCard = React.memo(({
             }
             onToggleFavorite(design);
           }}
-        >
-          <AppIcon
-            name="Heart"
-            size={18}
-            color={design.isFavorite ? '#dc2626' : 'white'}
-            weight={design.isFavorite ? 'fill' : 'regular'}
-          />
-        </TouchableOpacity>
+          style={styles.favoriteButton}
+        />
 
         {isSelected && <View style={styles.selectedImageOverlay} />}
 
@@ -167,7 +176,7 @@ const DesignCard = React.memo(({
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -458,10 +467,15 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       <Text style={styles.emptyText}>
         Snap a photo of your room and let AI add the perfect plants
       </Text>
-      <TouchableOpacity style={styles.emptyCreateButton} onPress={startNewDesign}>
-        <AppIcon name="Plus" size={18} color="white" />
-        <Text style={styles.emptyCreateText}>Start With A Photo</Text>
-      </TouchableOpacity>
+      <AppButton
+        variant="primary"
+        size="md"
+        icon="Plus"
+        title="Start With A Photo"
+        onPress={startNewDesign}
+        elevated
+        style={styles.emptyCreateButton}
+      />
     </View>
   ), [startNewDesign, styles, theme.colors.primary]);
 
@@ -579,43 +593,39 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
       {isSelectionMode ? (
         <View style={styles.selectionToolbar}>
-          <TouchableOpacity
+          <AppButton
+            variant="icon"
+            size="md"
+            icon="X"
             onPress={clearSelection}
-            style={styles.selectionCancelButton}
             accessibilityLabel="Cancel selection"
-          >
-            <AppIcon name="X" size={22} color={theme.colors.text} />
-          </TouchableOpacity>
+          />
           <Text style={styles.selectionTitle}>
             {selectedCount} selected
           </Text>
           <View style={styles.selectionActions}>
-            <TouchableOpacity
+            <AppButton
+              variant="icon"
+              size="md"
+              icon="FolderPlus"
               onPress={openSelectedCollectionPicker}
-              style={styles.selectionActionButton}
               accessibilityLabel="Add selected designs to collection"
-            >
-              <AppIcon name="FolderPlus" size={24} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <AppButton
+              variant="icon"
+              size="md"
+              icon="DownloadSimple"
+              loading={isBatchSaving}
               onPress={saveSelectedDesignsToDevice}
-              style={styles.selectionActionButton}
-              disabled={isBatchSaving}
               accessibilityLabel="Save selected designs to device"
-            >
-              <AppIcon
-                name={isBatchSaving ? 'Hourglass' : 'DownloadSimple'}
-                size={24}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <AppButton
+              variant="destructive"
+              size="md"
+              icon="Trash"
               onPress={deleteSelectedDesigns}
-              style={[styles.selectionActionButton, styles.selectionDeleteButton]}
               accessibilityLabel="Delete selected designs"
-            >
-              <AppIcon name="Trash" size={24} color="#dc2626" />
-            </TouchableOpacity>
+            />
           </View>
         </View>
       ) : (
@@ -630,13 +640,12 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
               </Text>
             </View>
 
-            <TouchableOpacity
+            <Pressable
               onPress={openAccountSheet}
-              activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel="Open account"
               accessibilityHint="Show account and subscription options"
-              style={styles.accountButton}
+              style={({ pressed }) => [styles.accountButton, pressed && styles.cardPressed]}
             >
               {user?.picture ? (
                 <Image source={{ uri: user.picture }} style={styles.accountAvatarImage} />
@@ -649,7 +658,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                   />
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {showGalleryHints && (
@@ -664,13 +673,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                 <AppIcon name="CursorClick" size={16} color={theme.colors.primary} />
                 <Text style={styles.galleryHintText}>Long-press images to select</Text>
               </View>
-              <TouchableOpacity
+              <AppButton
+                variant="primary"
+                size="sm"
+                title="Got it"
                 onPress={dismissGalleryHints}
-                style={styles.galleryHintDismiss}
                 accessibilityLabel="Dismiss gallery tips"
-              >
-                <Text style={styles.galleryHintDismissText}>Got it</Text>
-              </TouchableOpacity>
+                style={styles.galleryHintDismiss}
+              />
             </View>
           )}
 
@@ -711,16 +721,16 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
       {!isSelectionMode && (
         <View pointerEvents="box-none" style={styles.floatingActionLayer}>
-          <TouchableOpacity
+          <AppButton
+            variant="icon"
+            size="lg"
+            icon="MagnifyingGlass"
+            elevated
             onPress={startPlantIdentification}
-            activeOpacity={0.9}
-            accessibilityRole="button"
             accessibilityLabel="Identify plant"
             accessibilityHint="Open plant identification"
             style={[styles.secondaryFloatingButton, { bottom: tabBarHeight + 26 }]}
-          >
-            <AppIcon name="MagnifyingGlass" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
+          />
         </View>
       )}
 
@@ -885,14 +895,6 @@ const createStyles = (
     shadowRadius: 16,
     elevation: 8,
   },
-  selectionCancelButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : '#eef2f1',
-  },
   selectionTitle: {
     flex: 1,
     marginLeft: 12,
@@ -904,20 +906,6 @@ const createStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  selectionActionButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
-  },
-  selectionDeleteButton: {
-    borderColor: theme.isDark ? 'rgba(220,38,38,0.4)' : '#fecaca',
-    backgroundColor: theme.isDark ? 'rgba(220,38,38,0.1)' : '#fff1f2',
   },
   galleryHints: {
     marginTop: 10,
@@ -944,15 +932,6 @@ const createStyles = (
   galleryHintDismiss: {
     alignSelf: 'flex-start',
     marginTop: 2,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary,
-  },
-  galleryHintDismissText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.surface,
   },
   placeholder: {
     width: 40,
@@ -1039,6 +1018,13 @@ const createStyles = (
   designItem: {
     marginBottom: 0,
   },
+  designItemPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
+  },
+  cardPressed: {
+    opacity: 0.85,
+  },
   designItemSelected: {
     transform: [{ scale: 0.985 }],
   },
@@ -1063,12 +1049,6 @@ const createStyles = (
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 17,
-    width: 34,
-    height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: 3,
   },
   selectionBadge: {
@@ -1149,19 +1129,7 @@ const createStyles = (
     maxWidth: 270,
   },
   emptyCreateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
     marginTop: 24,
-  },
-  emptyCreateText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#ffffff',
   },
   floatingActionLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -1193,15 +1161,5 @@ const createStyles = (
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: theme.isDark ? 0.34 : 0.16,
-    shadowRadius: 14,
-    elevation: 10,
   },
 });

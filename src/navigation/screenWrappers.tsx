@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -8,6 +8,7 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { CameraScreen } from '../screens/CameraScreen';
 import { PlantLocationScreen } from '../screens/PlantLocationScreen';
 import { GenerationScreen } from '../screens/GenerationScreen';
@@ -148,14 +149,21 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               : route.name;
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={route.key}
             onPress={onPress}
-            style={{
+            accessibilityRole="tab"
+            accessibilityLabel={typeof label === 'string' ? label : route.name}
+            accessibilityState={{ selected: isFocused }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            style={({ pressed }) => ({
               flex: 1,
               alignItems: 'center',
+              minHeight: 48,
+              justifyContent: 'center',
               paddingVertical: 4,
-            }}
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
             <AppIcon
               name={iconName}
@@ -190,17 +198,21 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                   : 'transparent',
               }}
             />
-          </TouchableOpacity>
+          </Pressable>
         );
         })}
       </Animated.View>
 
       {showCreateEntryButton ? (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
-          <TouchableOpacity
+          <AppButton
+            variant="primary"
+            size="lg"
+            icon="Plus"
+            iconWeight="bold"
+            fullWidth={false}
+            elevated
             onPress={handleOpenCreateEntry}
-            activeOpacity={0.9}
-            accessibilityRole="button"
             accessibilityLabel="Start with a photo"
             accessibilityHint="Open the room photo flow"
             style={{
@@ -210,19 +222,9 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               width: 74,
               height: 74,
               borderRadius: 37,
-              backgroundColor: theme.colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
               zIndex: 10,
-              shadowColor: theme.colors.shadow,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: theme.isDark ? 0.42 : 0.22,
-              shadowRadius: 16,
-              elevation: 12,
             }}
-          >
-            <AppIcon name="Plus" size={31} color="white" weight="bold" />
-          </TouchableOpacity>
+          />
         </View>
       ) : null}
     </>
@@ -352,7 +354,7 @@ function DesignFlowNavigatorContent() {
     draft.step === 'intent' ? 'Intent'
       : draft.step === 'plant' ? 'PlantChooser'
         : draft.step === 'target' ? 'PlantLocation'
-          : draft.step === 'customization' ? 'Customize'
+          : draft.step === 'customization' ? (draft.intent === 'restyle' ? 'Ready' : 'Customize')
             : draft.step === 'ready' || draft.step === 'recoverable-error' ? 'Ready'
               : draft.step === 'result' && draft.results.length > 0 ? 'Generation'
               : 'Camera';
@@ -463,8 +465,8 @@ function DesignIntentScreenWrapper({ navigation }: DesignFlowScreenProps<'Intent
 }
 
 function PlantChooserScreenWrapper({ navigation }: DesignFlowScreenProps<'PlantChooser'>) {
-  const { setPlant } = useDesignFlow();
-  return <PlantChooserScreen onSelect={(selection) => { setPlant(selection); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onIdentify={() => navigation.getParent()?.navigate('PlantIdentify')} />;
+  const { draft, setPlant } = useDesignFlow();
+  return <PlantChooserScreen backgroundImageUri={draft.photo?.originalUri} onSelect={(selection) => { setPlant(selection); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onIdentify={() => navigation.getParent()?.navigate('PlantIdentify')} />;
 }
 
 function PlantLocationScreenWrapper({
@@ -484,7 +486,7 @@ function PlantLocationScreenWrapper({
       updateDraft({ step: 'ready' });
       navigation.navigate('Ready');
     }
-  }} onBack={() => navigation.goBack()} initialPlacementMode={purpose === 'replace' ? 'choose' : draft.location ? 'choose' : 'auto'} />;
+  }} onBack={() => navigation.goBack()} initialPlacementMode="choose" />;
 }
 
 function DesignReadyScreenWrapper({ navigation }: DesignFlowScreenProps<'Ready'>) {
@@ -562,12 +564,12 @@ function GenerationScreenWrapper({
   const restoredResult = route.params?.request ? undefined : draft.results[draft.results.length - 1];
 
   const handleGenerationComplete = (result: GeneratedImage) => {
-    // Save remains on the result. The user decides when to leave the flow.
     updateDraft({
       step: 'result',
       requestStatus: 'succeeded',
       results: draft.results.map((item) => item.imageUri === result.generatedImageUri ? { ...item, savedDesignId: result.id } : item),
     });
+    navigation.getParent()?.navigate('MainApp', { screen: 'Gallery' });
   };
 
   const handleBack = () => {
@@ -597,7 +599,6 @@ function GenerationScreenWrapper({
       initialSavedDesignId={restoredResult?.savedDesignId}
       onGenerationComplete={handleGenerationComplete}
       onBack={handleBack}
-      onAdjust={(imageUri) => { updateDraft({ step: 'ready', refinementSourceUri: imageUri }); navigation.navigate('Ready'); }}
       onClose={() => navigation.getParent()?.navigate('MainApp')}
       onResultVisible={(imageUri, jobId) => updateDraft({
         step: 'result',

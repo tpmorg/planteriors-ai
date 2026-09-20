@@ -4,7 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   TouchableWithoutFeedback,
   TextInput,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { AppIcon } from './AppIcon';
+import { AppButton } from './AppButton';
 import { Collection } from '../types';
 
 interface CollectionPickerModalProps {
@@ -89,21 +90,25 @@ export const CollectionPickerModal: React.FC<CollectionPickerModalProps> = ({
               <View style={styles.dialog}>
                 <View style={styles.header}>
                   <Text style={styles.title}>{title}</Text>
-                  <TouchableOpacity onPress={onDismiss} hitSlop={10}>
-                    <AppIcon name="X" size={22} color={theme.colors.text} />
-                  </TouchableOpacity>
+                  <AppButton
+                    variant="icon"
+                    size="sm"
+                    icon="X"
+                    onPress={onDismiss}
+                    accessibilityLabel="Close collections"
+                  />
                 </View>
 
                 {!isCreating && (
                   <View style={styles.createRow}>
-                    <TouchableOpacity
-                      style={styles.newCollectionButton}
+                    <AppButton
+                      variant="secondary"
+                      size="md"
+                      icon="FolderPlus"
+                      title="Add Collection"
                       onPress={() => setIsCreating(true)}
-                      activeOpacity={0.85}
-                    >
-                      <AppIcon name="FolderPlus" size={18} color={theme.colors.primary} />
-                      <Text style={styles.newCollectionButtonText}>Add Collection</Text>
-                    </TouchableOpacity>
+                      style={styles.newCollectionButton}
+                    />
                   </View>
                 )}
 
@@ -124,26 +129,24 @@ export const CollectionPickerModal: React.FC<CollectionPickerModalProps> = ({
                       />
                     </View>
                     <View style={styles.composerActions}>
-                      <TouchableOpacity
-                        style={styles.cancelButton}
+                      <AppButton
+                        variant="ghost"
+                        size="sm"
+                        title="Cancel"
                         onPress={() => {
                           setIsCreating(false);
                           setName('');
                           Keyboard.dismiss();
                         }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.createButton, !name.trim() && styles.createButtonDisabled]}
-                        onPress={handleCreate}
+                      />
+                      <AppButton
+                        variant="primary"
+                        size="sm"
+                        icon="Check"
+                        title="Create"
                         disabled={!name.trim()}
-                        activeOpacity={0.85}
-                      >
-                        <AppIcon name="Check" size={16} color={theme.colors.surface} />
-                        <Text style={styles.createButtonText}>Create</Text>
-                      </TouchableOpacity>
+                        onPress={handleCreate}
+                      />
                     </View>
                   </View>
                 )}
@@ -191,20 +194,24 @@ const Row: React.FC<{
   theme: any;
 }> = ({ label, icon, isSelected, onPress, theme }) => {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.8}
-      style={{
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: isSelected }}
+      style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        minHeight: 48,
         paddingVertical: 14,
         paddingHorizontal: 14,
         borderRadius: 14,
         borderWidth: 1,
         borderColor: isSelected ? theme.colors.primary : theme.colors.border,
         backgroundColor: theme.colors.card,
-      }}
+        opacity: pressed ? 0.8 : 1,
+      })}
     >
       <View
         style={{
@@ -230,7 +237,7 @@ const Row: React.FC<{
         {label}
       </Text>
       {isSelected && <AppIcon name="Check" size={18} color={theme.colors.primary} />}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -280,20 +287,6 @@ const createStyles = (theme: any) =>
     },
     newCollectionButton: {
       width: '100%',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      paddingVertical: 12,
-    },
-    newCollectionButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.colors.primary,
     },
     createComposer: {
       paddingHorizontal: 18,
@@ -317,37 +310,6 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'flex-end',
       gap: 10,
-    },
-    cancelButton: {
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-    },
-    cancelButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
-    },
-    createButton: {
-      height: 40,
-      borderRadius: 10,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 14,
-      flexDirection: 'row',
-      gap: 6,
-    },
-    createButtonDisabled: {
-      opacity: 0.5,
-    },
-    createButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.colors.surface,
     },
     list: {
       paddingHorizontal: 18,

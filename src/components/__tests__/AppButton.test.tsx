@@ -126,6 +126,22 @@ describe('AppButton', () => {
     expect(getByText('Compare')).toHaveStyle({ color: '#ffffff' });
   });
 
+  it('renders a count badge on icon buttons', () => {
+    const { getByText } = render(
+      <AppButton variant="icon" icon="SlidersHorizontal" accessibilityLabel="Filters" badge={2} />
+    );
+
+    expect(getByText('2')).toBeOnTheScreen();
+  });
+
+  it('renders without a badge when the count is zero', () => {
+    const { queryByText } = render(
+      <AppButton variant="icon" icon="SlidersHorizontal" accessibilityLabel="Filters" badge={0} />
+    );
+
+    expect(queryByText('0')).toBeNull();
+  });
+
   it('forwards accessibilityHint and testID', () => {
     const { getByTestId } = render(
       <AppButton

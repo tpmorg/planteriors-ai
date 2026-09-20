@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   Dimensions,
   LayoutChangeEvent,
@@ -17,6 +16,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { PlantLocation, GenerationRequest } from '../types';
 
@@ -36,7 +36,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   request,
   onLocationSelected,
   onBack,
-  initialPlacementMode = 'auto',
+  initialPlacementMode = 'choose',
 }) => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -219,21 +219,23 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <AppIcon name="ArrowLeft" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <AppButton
+          variant="icon"
+          size="md"
+          icon="ArrowLeft"
+          onPress={onBack}
+          accessibilityLabel="Back"
+        />
         <Text style={styles.headerTitle}>{isReplaceMode ? 'Mark Plant' : 'Place Plant'}</Text>
-        <TouchableOpacity
+        <AppButton
+          variant="icon"
+          size="md"
+          icon="ArrowCounterClockwise"
           onPress={handleReset}
-          style={[styles.resetButton, !hasSelection && styles.resetButtonDisabled]}
           disabled={!hasSelection}
-        >
-          <AppIcon
-            name="ArrowCounterClockwise"
-            size={20}
-            color={hasSelection ? theme.colors.primary : theme.colors.textSecondary}
-          />
-        </TouchableOpacity>
+          accessibilityLabel="Reset selection"
+          accessibilityHint="Clears the marked area"
+        />
       </View>
 
       {/* Instructions */}
@@ -256,38 +258,22 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
       </View>
 
       {!isReplaceMode ? <View style={styles.modeToggle}>
-        <TouchableOpacity
-          style={[
-            styles.modeButton,
-            placementMode === 'choose' && styles.modeButtonActive,
-          ]}
+        <AppButton
+          variant="chip"
+          selected={placementMode === 'choose'}
+          title="Choose exact spot"
+          textStyle={styles.modeButtonText}
           onPress={() => handleModeChange('choose')}
-        >
-          <Text
-            style={[
-              styles.modeButtonText,
-              placementMode === 'choose' && styles.modeButtonTextActive,
-            ]}
-          >
-            Choose exact spot
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.modeButton,
-            placementMode === 'auto' && styles.modeButtonActive,
-          ]}
+          style={styles.modeButton}
+        />
+        <AppButton
+          variant="chip"
+          selected={placementMode === 'auto'}
+          title="Let AI choose the spot"
+          textStyle={styles.modeButtonText}
           onPress={() => handleModeChange('auto')}
-        >
-          <Text
-            style={[
-              styles.modeButtonText,
-              placementMode === 'auto' && styles.modeButtonTextActive,
-            ]}
-          >
-            Let AI choose the spot
-          </Text>
-        </TouchableOpacity>
+          style={styles.modeButton}
+        />
       </View> : null}
 
       {/* Image with Selection Area */}
@@ -364,10 +350,10 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
                 Selected area
               </Text>
               <View style={styles.adjustRow}>
-                <TouchableOpacity accessibilityLabel="Move selection left" onPress={() => nudgeSelection(-8, 0)} style={styles.adjustButton}><AppIcon name="ArrowLeft" size={16} color={theme.colors.text} /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel="Move selection up" onPress={() => nudgeSelection(0, -8)} style={styles.adjustButton}><AppIcon name="ArrowUp" size={16} color={theme.colors.text} /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel="Move selection down" onPress={() => nudgeSelection(0, 8)} style={styles.adjustButton}><AppIcon name="ArrowDown" size={16} color={theme.colors.text} /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel="Move selection right" onPress={() => nudgeSelection(8, 0)} style={styles.adjustButton}><AppIcon name="ArrowRight" size={16} color={theme.colors.text} /></TouchableOpacity>
+                <AppButton variant="icon" size="sm" icon="ArrowLeft" onPress={() => nudgeSelection(-8, 0)} accessibilityLabel="Move selection left" />
+                <AppButton variant="icon" size="sm" icon="ArrowUp" onPress={() => nudgeSelection(0, -8)} accessibilityLabel="Move selection up" />
+                <AppButton variant="icon" size="sm" icon="ArrowDown" onPress={() => nudgeSelection(0, 8)} accessibilityLabel="Move selection down" />
+                <AppButton variant="icon" size="sm" icon="ArrowRight" onPress={() => nudgeSelection(8, 0)} accessibilityLabel="Move selection right" />
               </View>
             </View>
           ) : (
@@ -382,38 +368,33 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
 
           {placementMode === 'choose' ? (
             <View style={styles.placementActions}>
-              <TouchableOpacity
-                style={styles.retryButton}
+              <AppButton
+                variant="secondary"
+                size="lg"
+                icon="ArrowCounterClockwise"
+                title="Reset"
+                disabled={!hasSelection}
                 onPress={handleReset}
+                style={styles.placementAction}
+              />
+              <AppButton
+                variant="primary"
+                size="lg"
+                title={isReplaceMode ? 'Confirm target' : 'Confirm spot'}
                 disabled={!hasSelection}
-              >
-                <AppIcon
-                  name="ArrowCounterClockwise"
-                  size={16}
-                  color={!hasSelection ? theme.colors.textSecondary : theme.colors.text}
-                />
-                <Text style={[styles.retryButtonText, !hasSelection && styles.retryButtonTextDisabled]}>
-                  Reset
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.continueButton,
-                  !hasSelection && styles.continueButtonDisabled,
-                ]}
                 onPress={handleContinue}
-                disabled={!hasSelection}
-              >
-                <Text style={styles.continueButtonText}>{isReplaceMode ? 'Confirm target' : 'Confirm spot'}</Text>
-              </TouchableOpacity>
+                elevated
+                style={styles.placementAction}
+              />
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.continueButton}
+            <AppButton
+              variant="primary"
+              size="lg"
+              title="Use automatic placement"
               onPress={handleContinue}
-            >
-              <Text style={styles.continueButtonText}>Use automatic placement</Text>
-            </TouchableOpacity>
+              elevated
+            />
           )}
         </View>
       </View>
@@ -437,19 +418,10 @@ const createStyles = (theme: any) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
-    backButton: {
-      padding: 8,
-    },
     headerTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.primary,
-    },
-    resetButton: {
-      padding: 8,
-    },
-    resetButtonDisabled: {
-      opacity: 0.5,
     },
     instructionContainer: {
       flexDirection: 'row',
@@ -491,26 +463,9 @@ const createStyles = (theme: any) =>
     },
     modeButton: {
       flex: 1,
-      paddingVertical: 7,
-      paddingHorizontal: 8,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modeButtonActive: {
-      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
-      borderColor: theme.colors.primary,
     },
     modeButtonText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-    },
-    modeButtonTextActive: {
-      color: theme.colors.primary,
+      fontSize: 12,
     },
     imageSection: {
       flex: 8,
@@ -650,61 +605,12 @@ const createStyles = (theme: any) =>
       gap: 8,
       marginTop: 10,
     },
-    adjustButton: {
-      width: 38,
-      height: 34,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    continueButton: {
-      backgroundColor: theme.colors.primary,
-      minHeight: 50,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme.isDark ? 0.28 : 0.14,
-      shadowRadius: 10,
-      elevation: 4,
-    },
-    continueButtonDisabled: {
-      backgroundColor: theme.isDark ? '#4b5563' : '#9ca3af',
-    },
-    continueButtonText: {
-      color: 'white',
-      fontSize: 15,
-      fontWeight: '700',
+    placementAction: {
+      flex: 1,
     },
     placementActions: {
       flexDirection: 'row',
       gap: 10,
-    },
-    retryButton: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 16,
-      minHeight: 50,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: 8,
-      backgroundColor: theme.colors.borderLight,
-    },
-    retryButtonText: {
-      color: theme.colors.text,
-      fontSize: 15,
-      fontWeight: '700',
-    },
-    retryButtonTextDisabled: {
-      color: theme.colors.textSecondary,
     },
   });
 

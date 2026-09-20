@@ -9,13 +9,14 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Collection, SavedDesign } from '../types';
@@ -54,10 +55,9 @@ const DesignCard = React.memo(({ design, itemSize, onPress, theme, styles }: Des
     (design.mode === 'individual' || design.mode === 'replace-plant') && design.individualPlant;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.85}
-      style={[styles.designItem, { width: itemSize }]}
+      style={({ pressed }) => [styles.designItem, { width: itemSize }, pressed && styles.designItemPressed]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${isSinglePlantDesign ? design.individualPlant!.name : design.plantType?.name || 'design'}`}
     >
@@ -85,7 +85,7 @@ const DesignCard = React.memo(({ design, itemSize, onPress, theme, styles }: Des
       </View>
 
       <Text style={styles.dateText}>{formatDate(design.createdAt)}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -265,16 +265,15 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Collections</Text>
-            <TouchableOpacity
+            <AppButton
+              variant="secondary"
+              size="sm"
+              icon="Plus"
+              iconWeight="bold"
+              title="New"
               onPress={handleStartCollection}
-              activeOpacity={0.85}
               style={styles.createCollectionButton}
-              accessibilityRole="button"
-              accessibilityLabel="Create collection"
-            >
-              <AppIcon name="Plus" size={16} color={theme.colors.primary} weight="bold" />
-              <Text style={styles.createCollectionButtonText}>New</Text>
-            </TouchableOpacity>
+            />
           </View>
 
           {isCreatingCollection ? (
@@ -284,15 +283,14 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
                   <Text style={styles.createCollectionTitle}>New collection</Text>
                   <Text style={styles.createCollectionSubtitle}>Group favorite designs into sets.</Text>
                 </View>
-                <TouchableOpacity
-                  onPress={handleCancelCollection}
+                <AppButton
+                  variant="icon"
+                  size="sm"
+                  icon="X"
                   disabled={isSavingCollection}
-                  style={styles.createCollectionClose}
-                  accessibilityRole="button"
+                  onPress={handleCancelCollection}
                   accessibilityLabel="Cancel collection creation"
-                >
-                  <AppIcon name="X" size={16} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
+                />
               </View>
 
               <TextInput
@@ -308,32 +306,21 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
               />
 
               <View style={styles.createCollectionActions}>
-                <TouchableOpacity
+                <AppButton
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  disabled={isSavingCollection}
                   onPress={handleCancelCollection}
-                  disabled={isSavingCollection}
-                  style={styles.createCollectionSecondaryButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel"
-                >
-                  <Text style={styles.createCollectionSecondaryButtonText}>Cancel</Text>
-                </TouchableOpacity>
+                />
 
-                <TouchableOpacity
+                <AppButton
+                  variant="primary"
+                  size="sm"
+                  title="Create"
+                  loading={isSavingCollection}
                   onPress={handleCreateCollection}
-                  disabled={isSavingCollection}
-                  style={[
-                    styles.createCollectionPrimaryButton,
-                    isSavingCollection && styles.createCollectionPrimaryButtonDisabled,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Create collection"
-                >
-                  {isSavingCollection ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.createCollectionPrimaryButtonText}>Create</Text>
-                  )}
-                </TouchableOpacity>
+                />
               </View>
             </View>
           ) : null}
@@ -510,20 +497,7 @@ const createStyles = (theme: any, isTablet: boolean) =>
       color: theme.colors.textSecondary,
     },
     createCollectionButton: {
-      height: 34,
-      borderRadius: 17,
-      paddingHorizontal: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    createCollectionButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.colors.primary,
+      minWidth: 92,
     },
     createCollectionCard: {
       marginHorizontal: 16,
@@ -555,14 +529,6 @@ const createStyles = (theme: any, isTablet: boolean) =>
       fontSize: 13,
       color: theme.colors.textSecondary,
     },
-    createCollectionClose: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-    },
     createCollectionInput: {
       height: 48,
       borderRadius: 14,
@@ -579,36 +545,6 @@ const createStyles = (theme: any, isTablet: boolean) =>
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: 10,
-    },
-    createCollectionSecondaryButton: {
-      height: 40,
-      borderRadius: 20,
-      paddingHorizontal: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-    },
-    createCollectionSecondaryButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.colors.text,
-    },
-    createCollectionPrimaryButton: {
-      minWidth: 92,
-      height: 40,
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.primary,
-    },
-    createCollectionPrimaryButtonDisabled: {
-      opacity: 0.7,
-    },
-    createCollectionPrimaryButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#ffffff',
     },
     emptyCard: {
       marginHorizontal: 16,
@@ -653,6 +589,10 @@ const createStyles = (theme: any, isTablet: boolean) =>
     },
     designItem: {
       marginBottom: 18,
+    },
+    designItemPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.99 }],
     },
     imageContainer: {
       position: 'relative',

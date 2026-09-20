@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppIcon } from './AppIcon';
+import { AppButton } from './AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 
@@ -84,15 +85,15 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
   return (
     <View style={[styles.container, hasReachedLimit && styles.limitContainer]}>
-      <TouchableOpacity
+      <AppButton
+        variant="icon"
+        size="sm"
+        icon="X"
+        iconWeight="bold"
         style={styles.dismissButton}
         onPress={() => setHasSeenBanner(true)}
-        hitSlop={10}
-        accessibilityRole="button"
         accessibilityLabel="Dismiss free plan banner"
-      >
-        <AppIcon name="X" size={18} color={theme.colors.text} weight="bold" />
-      </TouchableOpacity>
+      />
 
       <View style={styles.header}>
         <Text style={[styles.planName, hasReachedLimit && styles.limitPlanName]}>
@@ -123,21 +124,15 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
 
       {showUpgradeCta && onUpgradePress && (
         <View style={[styles.upgradeCtaWrap, hasReachedLimit && styles.limitCtaWrap]}>
-          <TouchableOpacity
-            style={[styles.upgradeButton, hasReachedLimit && styles.limitUpgradeButton]}
+          <AppButton
+            variant="primary"
+            size={hasReachedLimit ? 'lg' : 'md'}
+            icon={hasReachedLimit ? 'LockKeyOpen' : 'ArrowCircleUp'}
+            title={hasReachedLimit ? 'View Design Options' : 'View Options'}
             onPress={onUpgradePress}
-            activeOpacity={0.85}
-            accessibilityRole="button"
             accessibilityLabel={hasReachedLimit ? 'View design purchase options' : 'View design options'}
-          >
-            <AppIcon name={hasReachedLimit ? 'LockKeyOpen' : 'ArrowCircleUp'} size={18} color={theme.colors.surface} />
-            <Text style={styles.upgradeButtonText}>
-              {hasReachedLimit ? 'View Design Options' : 'View Options'}
-            </Text>
-            {hasReachedLimit && (
-              <AppIcon name="ArrowRight" size={18} color={theme.colors.surface} />
-            )}
-          </TouchableOpacity>
+            style={styles.upgradeButton}
+          />
         </View>
       )}
 
@@ -267,20 +262,7 @@ const createStyles = (theme: any) =>
       fontWeight: '500',
     },
     upgradeButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: theme.colors.primary,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 8,
       marginTop: 6,
-    },
-    limitUpgradeButton: {
-      paddingVertical: 15,
-      borderRadius: 10,
-      marginTop: 0,
     },
     upgradeCtaWrap: {
       marginTop: 6,
@@ -292,20 +274,7 @@ const createStyles = (theme: any) =>
       position: 'absolute',
       top: 14,
       right: 14,
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.isDark ? theme.colors.card : '#f3f4ef',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
       zIndex: 1,
-    },
-    upgradeButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.colors.surface,
     },
     warningText: {
       fontSize: 13,

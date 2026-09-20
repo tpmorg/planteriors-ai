@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Alert,
   Image,
   BackHandler,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface CameraScreenProps {
@@ -146,26 +147,64 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setShowRecent(false)} style={styles.headerButton} accessibilityLabel="Back to photo sources">
-            <AppIcon name="ArrowLeft" size={24} color="white" />
-          </TouchableOpacity>
+          <AppButton
+            variant="icon"
+            size="sm"
+            icon="ArrowLeft"
+            overlay
+            onPress={() => setShowRecent(false)}
+            accessibilityLabel="Back to photo sources"
+          />
           <Text style={styles.headerTitle}>Recent rooms</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close recent rooms"><AppIcon name="X" size={20} color="white" /></TouchableOpacity>
+          <AppButton
+            variant="icon"
+            size="sm"
+            icon="X"
+            overlay
+            onPress={onClose}
+            accessibilityLabel="Close recent rooms"
+          />
         </View>
         <View style={styles.recentPicker}>
           <Text style={styles.optionsTitle}>Choose a recent room</Text>
           <View style={styles.recentPickerGrid}>
-            {visibleRecent.map((uri, index) => (
-              <TouchableOpacity key={`${uri}-${index}`} style={styles.recentPickerButton} onPress={() => useRecentImage(uri)} disabled={unavailableRecent.has(uri)}>
-                <Image source={{ uri }} style={styles.recentPickerImage} onError={() => setUnavailableRecent((current) => new Set(current).add(uri))} />
-                {unavailableRecent.has(uri) ? <View style={styles.unavailableOverlay}><Text style={styles.unavailableText}>Photo unavailable</Text></View> : null}
-              </TouchableOpacity>
-            ))}
+            {visibleRecent.map((uri, index) => {
+              const isUnavailable = unavailableRecent.has(uri);
+              return (
+                <Pressable
+                  key={`${uri}-${index}`}
+                  style={({ pressed }) => [styles.recentPickerButton, pressed && !isUnavailable && styles.cardPressed]}
+                  onPress={() => useRecentImage(uri)}
+                  disabled={isUnavailable}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Recent room photo ${recentPage * 3 + index + 1}`}
+                  accessibilityHint="Uses this photo for your design"
+                  accessibilityState={{ disabled: isUnavailable }}
+                >
+                  <Image source={{ uri }} style={styles.recentPickerImage} onError={() => setUnavailableRecent((current) => new Set(current).add(uri))} />
+                  {isUnavailable ? <View style={styles.unavailableOverlay}><Text style={styles.unavailableText}>Photo unavailable</Text></View> : null}
+                </Pressable>
+              );
+            })}
           </View>
           {pageCount > 1 ? <View style={styles.recentPagination}>
-            <TouchableOpacity onPress={() => setRecentPage((value) => Math.max(0, value - 1))} disabled={recentPage === 0}><Text style={[styles.recentPageButton, recentPage === 0 && styles.recentPageDisabled]}>Previous</Text></TouchableOpacity>
+            <AppButton
+              variant="ghost"
+              size="sm"
+              overlay
+              title="Previous"
+              disabled={recentPage === 0}
+              onPress={() => setRecentPage((value) => Math.max(0, value - 1))}
+            />
             <Text style={styles.recentPageLabel}>{recentPage + 1} of {pageCount}</Text>
-            <TouchableOpacity onPress={() => setRecentPage((value) => Math.min(pageCount - 1, value + 1))} disabled={recentPage === pageCount - 1}><Text style={[styles.recentPageButton, recentPage === pageCount - 1 && styles.recentPageDisabled]}>Next</Text></TouchableOpacity>
+            <AppButton
+              variant="ghost"
+              size="sm"
+              overlay
+              title="Next"
+              disabled={recentPage === pageCount - 1}
+              onPress={() => setRecentPage((value) => Math.min(pageCount - 1, value + 1))}
+            />
           </View> : null}
         </View>
       </SafeAreaView>
@@ -177,9 +216,14 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
           {showLeadingBackButton ? (
-            <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-              <AppIcon name="ArrowLeft" size={24} color="white" />
-            </TouchableOpacity>
+            <AppButton
+              variant="icon"
+              size="sm"
+              icon="ArrowLeft"
+              overlay
+              onPress={onClose}
+              accessibilityLabel="Back"
+            />
           ) : (
             <View style={styles.headerButtonPlaceholder} />
           )}
@@ -187,14 +231,14 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
           {isPlantIdMode ? (
             <View style={styles.headerButtonPlaceholder} />
           ) : (
-            <TouchableOpacity
+            <AppButton
+              variant="icon"
+              size="sm"
+              icon="X"
+              overlay
               onPress={onClose}
-              style={styles.closeButton}
-              accessibilityRole="button"
               accessibilityLabel="Close add room photo"
-            >
-              <AppIcon name="X" size={20} color="white" />
-            </TouchableOpacity>
+            />
           )}
         </View>
 
@@ -202,23 +246,43 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
           <View style={styles.optionsContent}>
             <Text style={styles.optionsTitle}>{isPlantIdMode ? copy.optionsTitle : 'Choose room photo'}</Text>
 
-            <TouchableOpacity style={styles.optionButton} onPress={openCamera}>
+            <Pressable
+              style={({ pressed }) => [styles.optionButton, pressed && styles.cardPressed]}
+              onPress={openCamera}
+              accessibilityRole="button"
+              accessibilityLabel="Take photo"
+              accessibilityHint={copy.cameraSubtitle}
+            >
               <AppIcon name="Camera" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Take photo</Text>
               <Text style={styles.optionSubtitle}>{copy.cameraSubtitle}</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
+            <Pressable
+              style={({ pressed }) => [styles.optionButton, pressed && styles.cardPressed]}
+              onPress={pickImage}
+              accessibilityRole="button"
+              accessibilityLabel="Choose photo"
+              accessibilityHint="Choose an existing photo from your device"
+            >
               <AppIcon name="Images" size={32} color={theme.colors.primary} />
               <Text style={styles.optionTitle}>Choose photo</Text>
               <Text style={styles.optionSubtitle}>Choose an existing photo from your device</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            {recentSourceImages.length > 0 ? <TouchableOpacity style={styles.optionButton} onPress={() => setShowRecent(true)}>
-              <AppIcon name="ClockCounterClockwise" size={32} color={theme.colors.primary} />
-              <Text style={styles.optionTitle}>Recent room</Text>
-              <Text style={styles.optionSubtitle}>Reuse a room photo from a previous design</Text>
-            </TouchableOpacity> : null}
+            {recentSourceImages.length > 0 ? (
+              <Pressable
+                style={({ pressed }) => [styles.optionButton, pressed && styles.cardPressed]}
+                onPress={() => setShowRecent(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Recent room"
+                accessibilityHint="Reuse a room photo from a previous design"
+              >
+                <AppIcon name="ClockCounterClockwise" size={32} color={theme.colors.primary} />
+                <Text style={styles.optionTitle}>Recent room</Text>
+                <Text style={styles.optionSubtitle}>Reuse a room photo from a previous design</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
@@ -229,29 +293,37 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         {showLeadingBackButton ? (
-          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <AppIcon name="ArrowLeft" size={24} color="white" />
-          </TouchableOpacity>
+          <AppButton
+            variant="icon"
+            size="sm"
+            icon="ArrowLeft"
+            overlay
+            onPress={onClose}
+            accessibilityLabel="Back"
+          />
         ) : (
           <View style={styles.headerButtonPlaceholder} />
         )}
         <Text style={styles.headerTitle}>{copy.takeTitle}</Text>
         {isPlantIdMode ? (
-          <TouchableOpacity
+          <AppButton
+            variant="icon"
+            size="sm"
+            icon="CameraRotate"
+            overlay
             onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
-            style={styles.headerButton}
-          >
-            <AppIcon name="CameraRotate" size={24} color="white" />
-          </TouchableOpacity>
+            accessibilityLabel="Switch camera"
+            accessibilityHint={`Switches to the ${facing === 'back' ? 'front' : 'back'} camera`}
+          />
         ) : (
-          <TouchableOpacity
+          <AppButton
+            variant="icon"
+            size="sm"
+            icon="X"
+            overlay
             onPress={onClose}
-            style={styles.closeButton}
-            accessibilityRole="button"
             accessibilityLabel="Close add room photo"
-          >
-            <AppIcon name="X" size={20} color="white" />
-          </TouchableOpacity>
+          />
         )}
       </View>
 
@@ -267,13 +339,25 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
       </View>
 
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-          <AppIcon name="Images" size={24} color="white" />
-        </TouchableOpacity>
+        <AppButton
+          variant="icon"
+          size="lg"
+          icon="Images"
+          overlay
+          onPress={pickImage}
+          accessibilityLabel="Choose a photo from your library"
+          style={styles.galleryButton}
+        />
 
-        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+        <Pressable
+          style={({ pressed }) => [styles.captureButton, pressed && styles.captureButtonPressed]}
+          onPress={takePicture}
+          accessibilityRole="button"
+          accessibilityLabel="Take photo"
+          accessibilityHint={copy.guideline}
+        >
           <View style={styles.captureButtonInner} />
-        </TouchableOpacity>
+        </Pressable>
 
         <View style={styles.placeholder} />
       </View>
@@ -292,19 +376,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
   },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: theme.colors.background,
-  },
-  permissionText: {
-    fontSize: 18,
-    marginBottom: 20,
-    textAlign: 'center',
-    color: theme.colors.text,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -312,9 +383,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  headerButton: {
-    padding: 8,
   },
   headerButtonPlaceholder: {
     width: 40,
@@ -324,16 +392,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: 'white',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
   },
   cameraContainer: {
     flex: 1,
@@ -377,8 +435,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   galleryButton: {
     width: 50,
     height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderRadius: 25,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
@@ -389,6 +445,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  captureButtonPressed: {
+    transform: [{ scale: 0.96 }],
+  },
+  cardPressed: {
+    opacity: 0.85,
   },
   captureButtonInner: {
     width: 70,
@@ -411,87 +473,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontSize: 12,
-  },
-  previewContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  previewControls: {
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  previewCopy: {
-    marginBottom: 12,
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 4,
-  },
-  previewSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    lineHeight: 18,
-  },
-  previewButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  secondaryButtonText: {
-    color: theme.colors.primary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginVertical: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
   optionsContainer: {
     flex: 1,
@@ -544,40 +525,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  recentSection: {
-    width: '100%',
-    marginTop: 8,
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-    paddingHorizontal: 2,
-  },
-  recentTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  recentScrollContent: {
-    gap: 10,
-    paddingRight: 4,
-    paddingBottom: 4,
-  },
-  recentThumbButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.borderLight,
-  },
-  recentThumbImage: {
-    width: '100%',
-    height: '100%',
-  },
   unavailableOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -615,7 +562,5 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
   },
-  recentPageButton: { color: 'white', fontWeight: '700', padding: 10 },
-  recentPageDisabled: { opacity: 0.35 },
   recentPageLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 13 },
 });

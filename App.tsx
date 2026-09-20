@@ -241,9 +241,9 @@ function AppContent() {
 function App() {
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <EnvValidator>
-          <ThemeProvider>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <EnvValidator>
             <ToastProvider>
               <NetworkProvider>
                 <DebugPreferencesProvider>
@@ -253,9 +253,9 @@ function App() {
                 </DebugPreferencesProvider>
               </NetworkProvider>
             </ToastProvider>
-          </ThemeProvider>
-        </EnvValidator>
-      </ErrorBoundary>
+          </EnvValidator>
+        </ErrorBoundary>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

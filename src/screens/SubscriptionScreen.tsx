@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
   Linking,
@@ -519,8 +519,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const isRoomPack = product.kind === 'room_pack';
 
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         {
           backgroundColor: theme.isDark ? theme.colors.card : theme.colors.surface,
           borderRadius: 20,
@@ -535,10 +535,13 @@ const PlanCard: React.FC<PlanCardProps> = ({
           elevation: 3,
         },
         isCurrentPlan && { opacity: 0.7 },
+        pressed && !isCurrentPlan && { opacity: 0.75 },
       ]}
       onPress={onSelect}
-      activeOpacity={0.7}
       disabled={isCurrentPlan}
+      accessibilityRole="radio"
+      accessibilityLabel={`${product.name}${product.price ? `, ${product.price}` : ''}`}
+      accessibilityState={{ checked: isSelected, disabled: isCurrentPlan }}
     >
       {isRoomPack && (
         <View
@@ -657,7 +660,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           </Text>
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Switch,
   Linking,
@@ -44,6 +44,51 @@ const getAppVersionDisplay = (): string => {
 
   return buildNumber ? `${appVersion}(${buildNumber})` : appVersion;
 };
+
+interface SettingsRowProps {
+  icon: string;
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  value?: string;
+  hint?: string;
+  styles: any;
+  theme: any;
+}
+
+/**
+ * Shared tappable settings row: 56pt+ target, real pressed feedback and
+ * accessibility role/state, so every row in this screen behaves identically.
+ */
+const SettingsRow: React.FC<SettingsRowProps> = ({
+  icon,
+  label,
+  onPress,
+  disabled = false,
+  value,
+  hint,
+  styles,
+  theme,
+}) => (
+  <Pressable
+    style={({ pressed }) => [
+      styles.menuItem,
+      pressed && !disabled && styles.rowPressed,
+      disabled && styles.menuItemDisabled,
+    ]}
+    onPress={onPress}
+    disabled={disabled}
+    accessibilityRole="button"
+    accessibilityLabel={label}
+    accessibilityHint={hint}
+    accessibilityState={{ disabled }}
+  >
+    <AppIcon name={icon} size={24} color={theme.colors.text} />
+    <Text style={styles.menuText}>{label}</Text>
+    {value ? <Text style={styles.menuValueText}>{value}</Text> : null}
+    <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+  </Pressable>
+);
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding }) => {
   const [notifications, setNotifications] = useState(true);
@@ -196,14 +241,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={cycleThroughThemeModes}>
-            <AppIcon name="Palette" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Theme</Text>
-            <View style={styles.menuValue}>
-              <Text style={styles.menuValueText}>{getThemeModeDisplayName(themeMode)}</Text>
-              <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-            </View>
-          </TouchableOpacity>
+          <SettingsRow
+            icon="Palette"
+            label="Theme"
+            value={getThemeModeDisplayName(themeMode)}
+            hint="Cycles between system, light and dark appearance"
+            styles={styles}
+            theme={theme}
+            onPress={cycleThroughThemeModes}
+          />
         </View>
 
         <View style={styles.section}>
@@ -245,15 +291,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={onOpenOnboarding}
+          <SettingsRow
+            icon="Slideshow"
+            label="View Onboarding Again"
             disabled={!onOpenOnboarding}
-          >
-            <AppIcon name="Slideshow" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>View Onboarding Again</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+            styles={styles}
+            theme={theme}
+            onPress={onOpenOnboarding}
+          />
 
           {showDiagnostics && (
             <>
@@ -293,23 +338,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
                 />
               </View>
 
-              <TouchableOpacity style={styles.menuItem} onPress={handleSendSentryTestEvent}>
-                <AppIcon name="BugBeetle" size={24} color={theme.colors.text} />
-                <Text style={styles.menuText}>Send Sentry Test Event</Text>
-                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <SettingsRow
+                icon="BugBeetle"
+                label="Send Sentry Test Event"
+                styles={styles}
+                theme={theme}
+                onPress={handleSendSentryTestEvent}
+              />
 
-              <TouchableOpacity style={styles.menuItem} onPress={handleDebugRevenueCatOfferings}>
-                <AppIcon name="Receipt" size={24} color={theme.colors.text} />
-                <Text style={styles.menuText}>Debug RevenueCat Offerings</Text>
-                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <SettingsRow
+                icon="Receipt"
+                label="Debug RevenueCat Offerings"
+                styles={styles}
+                theme={theme}
+                onPress={handleDebugRevenueCatOfferings}
+              />
 
-              <TouchableOpacity style={styles.menuItem} onPress={handleDebugRevenueCatSanityCheck}>
-                <AppIcon name="ShieldCheck" size={24} color={theme.colors.text} />
-                <Text style={styles.menuText}>RevenueCat Sanity Check</Text>
-                <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <SettingsRow
+                icon="ShieldCheck"
+                label="RevenueCat Sanity Check"
+                styles={styles}
+                theme={theme}
+                onPress={handleDebugRevenueCatSanityCheck}
+              />
 
             </>
           )}
@@ -318,28 +369,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
 
-          <TouchableOpacity style={styles.infoItem} onPress={handleVersionPress} activeOpacity={0.7}>
+          <Pressable
+            style={({ pressed }) => [styles.infoItem, pressed && styles.rowPressed]}
+            onPress={handleVersionPress}
+            accessibilityRole="button"
+            accessibilityLabel="App version"
+            accessibilityHint="Shows developer diagnostics after several taps"
+          >
             <Text style={styles.infoLabel}>Version</Text>
             <Text style={styles.infoValue}>{appVersionDisplay}</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <SettingsRow
+            icon="FileText"
+            label="Privacy Policy"
+            hint="Opens in your browser"
+            styles={styles}
+            theme={theme}
             onPress={() => openExternalLink('https://planterior.app/privacy')}
-          >
-            <AppIcon name="FileText" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Privacy Policy</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          />
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <SettingsRow
+            icon="ShieldCheck"
+            label="Terms of Service"
+            hint="Opens in your browser"
+            styles={styles}
+            theme={theme}
             onPress={() => openExternalLink('https://planterior.app/terms')}
-          >
-            <AppIcon name="ShieldCheck" size={24} color={theme.colors.text} />
-            <Text style={styles.menuText}>Terms of Service</Text>
-            <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -443,10 +500,14 @@ const createStyles = (theme: any) => StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 56,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
+  },
+  rowPressed: {
+    backgroundColor: theme.colors.borderLight,
   },
   menuText: {
     flex: 1,
@@ -457,10 +518,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   menuItemDisabled: {
     opacity: 0.55,
   },
-  menuValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   menuValueText: {
     fontSize: 14,
     color: theme.colors.textSecondary,
@@ -470,6 +527,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 56,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,

@@ -1,7 +1,11 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { Component, ErrorInfo, ReactNode, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
+
+import { AppButton } from './AppButton';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Theme } from '../contexts/ThemeContext';
 
 interface Props {
   children: ReactNode;
@@ -12,6 +16,51 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
+
+interface FallbackProps {
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  onRestart: () => void;
+}
+
+/**
+ * Functional fallback so the crash screen can use the shared button system and
+ * the active theme. `ErrorBoundary` stays a class because that is the only
+ * component type React lets you use as an error boundary.
+ */
+const ErrorFallback: React.FC<FallbackProps> = ({ error, errorInfo, onRestart }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Something went wrong</Text>
+        <Text style={styles.subtitle}>
+          The app encountered an unexpected error. Please try again.
+        </Text>
+
+        {__DEV__ && error && (
+          <ScrollView style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Error Details:</Text>
+            <Text style={styles.errorText}>{error.toString()}</Text>
+            {errorInfo && <Text style={styles.stackTrace}>{errorInfo.componentStack}</Text>}
+          </ScrollView>
+        )}
+
+        <AppButton
+          variant="primary"
+          size="lg"
+          icon="ArrowClockwise"
+          title="Try Again"
+          onPress={onRestart}
+          accessibilityHint="Reloads the app interface"
+          style={styles.retryButton}
+        />
+      </View>
+    </SafeAreaView>
+  );
+};
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -49,30 +98,11 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <SafeAreaView style={styles.container}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.subtitle}>
-              The app encountered an unexpected error. Please try again.
-            </Text>
-
-            {__DEV__ && this.state.error && (
-              <ScrollView style={styles.errorContainer}>
-                <Text style={styles.errorTitle}>Error Details:</Text>
-                <Text style={styles.errorText}>{this.state.error.toString()}</Text>
-                {this.state.errorInfo && (
-                  <Text style={styles.stackTrace}>
-                    {this.state.errorInfo.componentStack}
-                  </Text>
-                )}
-              </ScrollView>
-            )}
-
-            <TouchableOpacity style={styles.button} onPress={this.handleRestart}>
-              <Text style={styles.buttonText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
+        <ErrorFallback
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onRestart={this.handleRestart}
+        />
       );
     }
 
@@ -80,65 +110,60 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#a0a0a0',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  errorContainer: {
-    maxHeight: 200,
-    width: '100%',
-    backgroundColor: '#2d2d44',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-  },
-  errorTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ff6b6b',
-    marginBottom: 8,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#ff6b6b',
-    fontFamily: 'monospace',
-  },
-  stackTrace: {
-    fontSize: 10,
-    color: '#888888',
-    fontFamily: 'monospace',
-    marginTop: 8,
-  },
-  button: {
-    backgroundColor: '#4a7c59',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 24,
+    },
+    errorContainer: {
+      maxHeight: 200,
+      width: '100%',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 24,
+    },
+    errorTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.destructive,
+      marginBottom: 8,
+    },
+    errorText: {
+      fontSize: 12,
+      color: theme.colors.destructive,
+      fontFamily: 'monospace',
+    },
+    stackTrace: {
+      fontSize: 10,
+      color: theme.colors.textSecondary,
+      fontFamily: 'monospace',
+      marginTop: 8,
+    },
+    retryButton: {
+      minWidth: 200,
+    },
+  });

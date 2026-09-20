@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, Pressable, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
@@ -64,7 +64,7 @@ export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onCho
   const setOptions = (values: Array<{ id: string; name: string }>, currentId: string | undefined, choose: (id: string) => void) => {
     const pages = Math.max(1, Math.ceil(values.length / 3));
     const visible = values.slice(page * 3, page * 3 + 3);
-    return <><View style={styles.optionList}>{visible.map((value) => <TouchableOpacity key={value.id} style={[styles.option, currentId === value.id && styles.optionSelected]} onPress={() => { choose(value.id); setLeaf(null); setPage(0); }}><Text style={[styles.optionTitle, currentId === value.id && styles.optionTitleSelected]}>{value.name}</Text>{currentId === value.id ? <AppIcon name="Check" size={18} color={theme.colors.primary} /> : null}</TouchableOpacity>)}</View>{pages > 1 ? <View style={styles.pages}><TouchableOpacity onPress={() => setPage((value) => Math.max(0, value - 1))}><Text style={[styles.pageButton, page === 0 && styles.disabled]}>Previous</Text></TouchableOpacity><Text style={styles.pageLabel}>{page + 1} of {pages}</Text><TouchableOpacity onPress={() => setPage((value) => Math.min(pages - 1, value + 1))}><Text style={[styles.pageButton, page === pages - 1 && styles.disabled]}>Next</Text></TouchableOpacity></View> : null}</>;
+    return <><View style={styles.optionList}>{visible.map((value) => <Pressable key={value.id} accessibilityRole="radio" accessibilityLabel={value.name} accessibilityState={{ checked: currentId === value.id }} style={({ pressed }) => [styles.option, currentId === value.id && styles.optionSelected, pressed && styles.rowPressed]} onPress={() => { choose(value.id); setLeaf(null); setPage(0); }}><Text style={[styles.optionTitle, currentId === value.id && styles.optionTitleSelected]}>{value.name}</Text>{currentId === value.id ? <AppIcon name="Check" size={18} color={theme.colors.primary} /> : null}</Pressable>)}</View>{pages > 1 ? <View style={styles.pages}><AppButton variant="ghost" size="sm" title="Previous" disabled={page === 0} onPress={() => setPage((value) => Math.max(0, value - 1))} /><Text style={styles.pageLabel}>{page + 1} of {pages}</Text><AppButton variant="ghost" size="sm" title="Next" disabled={page === pages - 1} onPress={() => setPage((value) => Math.min(pages - 1, value + 1))} /></View> : null}</>;
   };
 
   const renderLeaf = () => {
@@ -99,12 +99,12 @@ export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onCho
   return (
     <DesignFlowShell title={title} subtitle={leaf ? 'Choose one setting' : 'Optional changes'} onBack={back} onClose={onClose}
       footer={!group && !leaf ? <AppButton title="Done" size="lg" elevated onPress={onDone} testID="customize-done" /> : undefined}>
-      {!group && !leaf ? <View style={styles.list}>{groups.map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => setGroup(item.id)}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View> : null}
-      {group && !leaf ? <View style={styles.list}>{leaves[group].map((item) => <TouchableOpacity key={item.id} style={styles.row} onPress={() => {
+      {!group && !leaf ? <View style={styles.list}>{groups.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.title} accessibilityHint={item.detail} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={() => setGroup(item.id)}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></Pressable>)}</View> : null}
+      {group && !leaf ? <View style={styles.list}>{leaves[group].map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.title} accessibilityHint={`Current: ${item.detail}`} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={() => {
         if (item.id === 'species') { onChoosePlant(); return; }
         if (item.id === 'placement') { onChooseSpot(); return; }
         setLeaf(item.id);
-      }}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View> : null}
+      }}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.rowDetail}>{item.detail}</Text></View><AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} /></Pressable>)}</View> : null}
       {renderLeaf()}
     </DesignFlowShell>
   );
@@ -113,8 +113,8 @@ export function DesignCustomizeScreen({ draft, updateDraft, onChoosePlant, onCho
 const createStyles = (theme: any) => StyleSheet.create({
   list: { flex: 1, justifyContent: 'center', gap: 12 },
   row: { minHeight: 82, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, padding: 16, flexDirection: 'row', alignItems: 'center' },
-  rowCopy: { flex: 1 }, rowTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' }, rowDetail: { color: theme.colors.textSecondary, marginTop: 5, textTransform: 'capitalize' },
+  rowCopy: { flex: 1 }, rowTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' }, rowDetail: { color: theme.colors.textSecondary, marginTop: 5, textTransform: 'capitalize' }, rowPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   optionList: { flex: 1, justifyContent: 'center', gap: 12 }, option: { minHeight: 72, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, optionSelected: { borderColor: theme.colors.primary, backgroundColor: theme.colors.borderLight }, optionTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '700' }, optionTitleSelected: { color: theme.colors.primary },
-  pages: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 }, pageButton: { color: theme.colors.primary, fontWeight: '700' }, pageLabel: { color: theme.colors.textSecondary }, disabled: { opacity: 0.35 },
+  pages: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 }, pageLabel: { color: theme.colors.textSecondary },
   instructions: { flex: 1, justifyContent: 'center', gap: 14 }, textArea: { minHeight: 150, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 16, textAlignVertical: 'top', fontSize: 16 },
 });

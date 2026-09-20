@@ -229,13 +229,20 @@ AppButton.tsx
   - Variants: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'icon' | 'chip'
   - Sizes: 'sm' (44pt) | 'md' (48pt) | 'lg' (54pt)
   - Props: title, onPress, variant, size, icon, iconPosition, iconColor, iconWeight,
-           selected, overlay, loading, disabled, elevated, fullWidth, hitSlop,
+           selected, overlay, loading, disabled, elevated, fullWidth, hitSlop, badge,
            style, textStyle, accessibilityLabel, accessibilityHint, testID
   - Guarantees: >=44pt touch target, themed label colour (never raw white - use
     theme.colors.onPrimary), scale(0.98) pressed feedback, accessibilityRole
     "button" + accessibilityState {disabled, busy}
   - `overlay` = always-dark treatment for buttons sitting on photos
   - `hitSlop` defaults to 8 on icon/chip variants
+  - `badge` = count bubble anchored to the corner (icon buttons, e.g. the Library
+    filter count). Hidden when 0/null; inverts its colours on `selected`.
+  - Whole-surface taps that are not button-shaped (design grid tiles, plant
+    catalog cards, settings/list rows, radio rows) use `Pressable` with a
+    pressed style, `accessibilityRole` "button"/"radio" and
+    `accessibilityState`. All `TouchableOpacity` CTAs in `src` were migrated on
+    2026-09-19; keep it that way for new UI.
 
 // Overflow / secondary actions
 ActionSheet.tsx

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   TextStyle,
+  View,
   ViewStyle,
 } from 'react-native';
 
@@ -72,6 +73,8 @@ export interface AppButtonProps {
   disabled?: boolean;
   /** Adds the themed drop shadow used by hero CTAs. */
   elevated?: boolean;
+  /** Small count bubble for icon buttons (e.g. active filter count). */
+  badge?: number | string | null;
   /** Defaults to true for labelled variants, false for `icon` / `chip`. */
   fullWidth?: boolean;
   /** Extra slop beyond the built-in 8pt on `icon` / `chip`. */
@@ -104,6 +107,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   loading = false,
   disabled = false,
   elevated = false,
+  badge = null,
   fullWidth,
   hitSlop,
   style,
@@ -233,6 +237,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
 
   const resolvedIconColor = iconColor ?? surface.icon;
   const showIcon = !!icon && !loading;
+  const hasBadge = badge !== null && badge !== undefined && badge !== '' && badge !== 0;
 
   return (
     <Pressable
@@ -292,6 +297,26 @@ export const AppButton: React.FC<AppButtonProps> = ({
           weight={iconWeight}
         />
       ) : null}
+      {hasBadge ? (
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: selected ? theme.colors.surface : theme.colors.primary,
+              borderColor: theme.colors.background,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.badgeLabel,
+              { color: selected ? theme.colors.text : theme.colors.onPrimary },
+            ]}
+          >
+            {badge}
+          </Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 };
@@ -315,5 +340,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flexShrink: 1,
     textAlign: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    minWidth: 19,
+    height: 19,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeLabel: {
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

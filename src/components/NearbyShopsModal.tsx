@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   FlatList,
   Modal,
@@ -18,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { AppIcon } from './AppIcon';
+import { AppButton } from './AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { placesService, NearbyShop } from '../services/placesService';
 import { useToast } from '../contexts/ToastContext';
@@ -45,10 +45,16 @@ function ShopRow({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.shopRow, { borderBottomColor: theme.colors.border }]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.shopRow,
+        { borderBottomColor: theme.colors.border },
+        pressed && styles.shopRowPressed,
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={shop.name}
+      accessibilityHint={`${shop.address}. Opens directions in maps.`}
     >
       <View style={styles.shopIconContainer}>
         <AppIcon name="Storefront" size={22} color={theme.colors.primary} />
@@ -98,7 +104,7 @@ function ShopRow({
         </View>
       </View>
       <AppIcon name="CaretRight" size={18} color={theme.colors.textSecondary} />
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -206,9 +212,13 @@ export const NearbyShopsModal: React.FC<NearbyShopsModalProps> = ({
                   Plant shops for {plantName}
                 </Text>
               </View>
-              <TouchableOpacity onPress={onDismiss} style={styles.closeButton}>
-                <AppIcon name="X" size={22} color={theme.colors.text} />
-              </TouchableOpacity>
+              <AppButton
+                variant="icon"
+                size="md"
+                icon="X"
+                onPress={onDismiss}
+                accessibilityLabel="Close nearby shops"
+              />
             </View>
 
             {!usedLocation && !isLoading && (
@@ -233,12 +243,14 @@ export const NearbyShopsModal: React.FC<NearbyShopsModalProps> = ({
                 <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
                   {error}
                 </Text>
-                <TouchableOpacity
-                  style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+                <AppButton
+                  variant="primary"
+                  size="md"
+                  icon="ArrowClockwise"
+                  title="Try Again"
                   onPress={loadShops}
-                >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
+                  style={styles.retryButton}
+                />
               </View>
             ) : (
               <FlatList
@@ -306,12 +318,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  retryButton: {
+    marginTop: 8,
+  },
+  shopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  shopRowPressed: {
+    opacity: 0.7,
   },
   locationBanner: {
     flexDirection: 'row',
@@ -352,25 +372,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  retryButton: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  shopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
   },
   shopIconContainer: {
     width: 40,

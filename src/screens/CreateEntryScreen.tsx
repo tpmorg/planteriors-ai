@@ -2,12 +2,13 @@ import React from 'react';
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface CreateEntryScreenProps {
@@ -28,14 +29,13 @@ export const CreateEntryScreen: React.FC<CreateEntryScreenProps> = ({
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
-        <TouchableOpacity
+        <AppButton
+          variant="icon"
+          size="md"
+          icon="X"
           onPress={onClose}
-          style={styles.closeButton}
-          accessibilityRole="button"
           accessibilityLabel="Close start flow"
-        >
-          <AppIcon name="X" size={20} color={theme.colors.text} />
-        </TouchableOpacity>
+        />
       </View>
 
       <View style={styles.content}>
@@ -48,10 +48,9 @@ export const CreateEntryScreen: React.FC<CreateEntryScreenProps> = ({
         </Text>
 
         <View style={styles.optionStack}>
-          <TouchableOpacity
-            style={[styles.optionCard, styles.primaryCard]}
+          <Pressable
+            style={({ pressed }) => [styles.optionCard, styles.primaryCard, pressed && styles.optionCardPressed]}
             onPress={onCreateDesign}
-            activeOpacity={0.9}
             accessibilityRole="button"
             accessibilityLabel="Create design"
             accessibilityHint="Capture a room photo and start the AI design flow"
@@ -67,12 +66,11 @@ export const CreateEntryScreen: React.FC<CreateEntryScreenProps> = ({
               </Text>
             </View>
             <AppIcon name="ArrowRight" size={20} color="white" />
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={[styles.optionCard, styles.secondaryCard]}
+          <Pressable
+            style={({ pressed }) => [styles.optionCard, styles.secondaryCard, pressed && styles.optionCardPressed]}
             onPress={onIdentifyPlant}
-            activeOpacity={0.9}
             accessibilityRole="button"
             accessibilityLabel="Identify plant"
             accessibilityHint="Open the plant identification flow"
@@ -88,7 +86,7 @@ export const CreateEntryScreen: React.FC<CreateEntryScreenProps> = ({
               </Text>
             </View>
             <AppIcon name="ArrowRight" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -112,15 +110,9 @@ const createStyles = (theme: any) =>
       width: 44,
       height: 44,
     },
-    closeButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+    optionCardPressed: {
+      opacity: 0.9,
+      transform: [{ scale: 0.99 }],
     },
     content: {
       flex: 1,

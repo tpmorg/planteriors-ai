@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
-import { DesignFlowShell } from '../components/DesignFlowShell';
+import { PlantCatalogCard } from '../components/PlantCatalogCard';
+import { ScrollMoreCue, useScrollOverflow } from '../components/ScrollMoreCue';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
@@ -11,9 +14,8 @@ import { selectPlant, toIndividualPlant } from '../designFlow/designFlow';
 import { databaseService } from '../services/databaseService';
 import type { IndividualPlant, IndividualPlantSelection, PlantSearchResult } from '../types';
 
-const PAGE_SIZE = 3;
-
-export function PlantChooserScreen({ onSelect, onBack, onClose, onIdentify }: {
+export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClose, onIdentify }: {
+  backgroundImageUri?: string;
   onSelect: (selection: IndividualPlantSelection) => void;
   onBack: () => void;
   onClose: () => void;
@@ -25,10 +27,13 @@ export function PlantChooserScreen({ onSelect, onBack, onClose, onIdentify }: {
   const [source, setSource] = useState<'browse' | 'mine'>('browse');
   const [query, setQuery] = useState('');
   const [petSafeOnly, setPetSafeOnly] = useState(false);
-  const [page, setPage] = useState(0);
   const [savedPlants, setSavedPlants] = useState<IndividualPlant[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const listRef = useRef<FlatList<IndividualPlant>>(null);
+  const overflow = useScrollOverflow();
+
+  useEffect(() => { listRef.current?.scrollToOffset({ offset: 0, animated: false }); }, [source, query, petSafeOnly]);
 
   const loadSaved = useCallback(async () => {
     setLoadingSaved(true);
@@ -52,7 +57,6 @@ export function PlantChooserScreen({ onSelect, onBack, onClose, onIdentify }: {
   }, [showToast]);
 
   useEffect(() => { if (source === 'mine') void loadSaved(); }, [loadSaved, source]);
-  useEffect(() => { setPage(0); }, [source, query, petSafeOnly]);
 
   useSpeechRecognitionEvent('start', () => setVoiceBusy(true));
   useSpeechRecognitionEvent('end', () => setVoiceBusy(false));
@@ -91,50 +95,98 @@ export function PlantChooserScreen({ onSelect, onBack, onClose, onIdentify }: {
       (!normalized || plant.name.toLowerCase().includes(normalized) || plant.scientificName.toLowerCase().includes(normalized))
     );
   }, [petSafeOnly, query, savedPlants, source]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const visible = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   return (
-    <DesignFlowShell title="Choose a plant" subtitle={`${filtered.length} ${filtered.length === 1 ? 'plant' : 'plants'}`} onBack={onBack} onClose={onClose}>
-      <View style={styles.sourceTabs}>
-        {(['browse', 'mine'] as const).map((value) => (
-          <TouchableOpacity key={value} style={[styles.sourceTab, source === value && styles.sourceTabActive]} onPress={() => setSource(value)}>
-            <Text style={[styles.sourceText, source === value && styles.sourceTextActive]}>{value === 'browse' ? 'Browse' : 'My plants'}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}><AppIcon name="MagnifyingGlass" size={18} color={theme.colors.textSecondary} /><TextInput value={query} onChangeText={setQuery} placeholder="Search plants" placeholderTextColor={theme.colors.textSecondary} style={styles.input} /><TouchableOpacity onPress={startVoiceSearch} accessibilityLabel="Search by voice"><AppIcon name="Microphone" size={18} color={voiceBusy ? theme.colors.primary : theme.colors.textSecondary} /></TouchableOpacity></View>
-      </View>
-      <View style={styles.filterRow}><View><Text style={styles.filterTitle}>Pet-safe only</Text><Text style={styles.filterNote}>Catalog information, not a guarantee</Text></View><Switch value={petSafeOnly} onValueChange={setPetSafeOnly} /></View>
-      <View style={styles.results}>
-        {loadingSaved ? <ActivityIndicator color={theme.colors.primary} /> : visible.map((plant) => (
-          <TouchableOpacity key={plant.id} style={styles.plantCard} onPress={() => onSelect(selectPlant(plant))} accessibilityRole="button">
-            {plant.imageUrl ? <Image source={plant.imageUrl} style={styles.plantImage as any} /> : <View style={styles.plantIcon}><AppIcon name={plant.icon || 'Leaf'} size={28} color={theme.colors.primary} /></View>}
-            <View style={styles.plantCopy}><Text style={styles.plantName}>{plant.name}</Text><Text style={styles.scientific} numberOfLines={1}>{plant.scientificName}</Text><Text style={styles.meta}>{plant.availableSizes.join(' • ')}{plant.petSafe ? ' • Pet safe' : ''}</Text></View>
-            <AppIcon name="ArrowRight" size={18} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-        ))}
-        {!loadingSaved && filtered.length === 0 ? (
-          <View style={styles.empty}><Text style={styles.emptyTitle}>{source === 'mine' ? 'No saved plants yet' : 'No matching plants'}</Text><Text style={styles.emptyText}>{source === 'mine' ? 'Identify a plant or browse the catalog.' : 'Edit your search or clear the pet-safe filter.'}</Text><View style={styles.emptyActions}><TouchableOpacity style={styles.emptyButton} onPress={() => { setSource('browse'); setQuery(''); }}><Text style={styles.emptyButtonText}>Browse plants</Text></TouchableOpacity>{source === 'mine' ? <TouchableOpacity style={styles.emptyButton} onPress={onIdentify}><Text style={styles.emptyButtonText}>Identify a plant</Text></TouchableOpacity> : null}</View></View>
-        ) : null}
-      </View>
-      {filtered.length > PAGE_SIZE ? <View style={styles.pagination}><TouchableOpacity style={styles.pageButton} onPress={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0}><Text style={[styles.pageText, page === 0 && styles.disabled]}>Previous</Text></TouchableOpacity><Text style={styles.pageCount}>{page + 1} of {pageCount}</Text><TouchableOpacity style={styles.pageButton} onPress={() => setPage((value) => Math.min(pageCount - 1, value + 1))} disabled={page >= pageCount - 1}><Text style={[styles.pageText, page >= pageCount - 1 && styles.disabled]}>Next</Text></TouchableOpacity></View> : null}
-    </DesignFlowShell>
+    <View style={styles.container}>
+      {backgroundImageUri ? <Image source={{ uri: backgroundImageUri }} style={styles.roomImage} resizeMode="cover" /> : null}
+      <View style={styles.scrim} />
+      <SafeAreaView edges={['top', 'right', 'left']} style={styles.safeArea}>
+        <View style={styles.sheet}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
+            <AppButton variant="icon" icon="ArrowLeft" onPress={onBack} accessibilityLabel="Back" />
+            <View style={styles.heading}>
+              <Text style={styles.title}>Add a plant</Text>
+              <Text style={styles.subtitle}>{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</Text>
+            </View>
+            <AppButton variant="icon" icon="X" onPress={onClose} accessibilityLabel="Close" />
+          </View>
+          <View style={styles.controls}>
+            <View style={styles.sourceTabs}>
+              {(['browse', 'mine'] as const).map((value) => (
+                <AppButton
+                  key={value}
+                  variant="chip"
+                  size="sm"
+                  selected={source === value}
+                  title={value === 'browse' ? 'Browse' : 'My plants'}
+                  textStyle={styles.sourceText}
+                  onPress={() => setSource(value)}
+                  style={styles.sourceTab}
+                />
+              ))}
+            </View>
+            <View style={styles.searchRow}>
+              <View style={styles.searchBox}><AppIcon name="MagnifyingGlass" size={17} color={theme.colors.textSecondary} /><TextInput value={query} onChangeText={setQuery} placeholder="Search plants" placeholderTextColor={theme.colors.textSecondary} style={styles.input} /><AppButton variant="icon" size="sm" icon="Microphone" iconColor={voiceBusy ? theme.colors.primary : theme.colors.textSecondary} onPress={startVoiceSearch} accessibilityLabel="Search by voice" /></View>
+            </View>
+            <View style={styles.filterRow}><View><Text style={styles.filterTitle}>Pet-safe only</Text><Text style={styles.filterNote}>Catalog guidance, not a guarantee</Text></View><Switch value={petSafeOnly} onValueChange={setPetSafeOnly} /></View>
+          </View>
+          <FlatList
+            ref={listRef}
+            onLayout={overflow.onLayout}
+            onContentSizeChange={overflow.onContentSizeChange}
+            onScroll={overflow.onScroll}
+            scrollEventThrottle={32}
+            keyboardDismissMode="on-drag"
+            data={loadingSaved ? [] : filtered}
+            keyExtractor={(plant) => plant.id}
+            style={styles.results}
+            contentContainerStyle={[styles.plantGrid, (loadingSaved || filtered.length === 0) && styles.emptyResults]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+            renderItem={({ item: plant }) => (
+              <PlantCatalogCard
+                plant={plant}
+                imageSource={plant.imageUrl}
+                onPress={() => onSelect(selectPlant(plant))}
+                accessibilityLabel={`Choose ${plant.name}`}
+                metadata={[plant.availableSizes.join(' • '), ...(plant.petSafe ? ['Pet safe'] : [])]}
+              />
+            )}
+            ListEmptyComponent={loadingSaved ? (
+              <ActivityIndicator color={theme.colors.primary} />
+            ) : (
+              <View style={styles.empty}><Text style={styles.emptyTitle}>{source === 'mine' ? 'No saved plants yet' : 'No matching plants'}</Text><Text style={styles.emptyText}>{source === 'mine' ? 'Identify a plant or browse the catalog.' : 'Edit your search or clear the pet-safe filter.'}</Text><View style={styles.emptyActions}><AppButton variant="secondary" size="sm" title="Browse plants" onPress={() => { setSource('browse'); setQuery(''); }} />{source === 'mine' ? <AppButton variant="primary" size="sm" title="Identify a plant" onPress={onIdentify} /> : null}</View></View>
+            )}
+          />
+          <ScrollMoreCue visible={overflow.hasMoreBelow} onPress={() => listRef.current?.scrollToOffset({ offset: overflow.nextOffset(), animated: true })} />
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  sourceTabs: { flexDirection: 'row', padding: 4, borderRadius: 14, backgroundColor: theme.colors.borderLight, marginTop: 8 },
-  sourceTab: { flex: 1, minHeight: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sourceTabActive: { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
-  sourceText: { color: theme.colors.textSecondary, fontWeight: '700' }, sourceTextActive: { color: theme.colors.primary },
-  searchRow: { marginTop: 12 }, searchBox: { height: 46, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 }, input: { flex: 1, color: theme.colors.text, fontSize: 15 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 }, filterTitle: { color: theme.colors.text, fontWeight: '700' }, filterNote: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
-  results: { flex: 1, gap: 10, justifyContent: 'center' },
-  plantCard: { minHeight: 94, borderRadius: 17, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', padding: 12 },
-  plantImage: { width: 66, height: 66, borderRadius: 13 }, plantIcon: { width: 66, height: 66, borderRadius: 13, backgroundColor: theme.colors.borderLight, alignItems: 'center', justifyContent: 'center' },
-  plantCopy: { flex: 1, marginHorizontal: 12 }, plantName: { color: theme.colors.text, fontSize: 16, fontWeight: '800' }, scientific: { color: theme.colors.textSecondary, fontSize: 12, fontStyle: 'italic', marginTop: 2 }, meta: { color: theme.colors.primary, fontSize: 11, marginTop: 7, textTransform: 'capitalize' },
-  empty: { alignItems: 'center', padding: 24 }, emptyTitle: { color: theme.colors.text, fontSize: 18, fontWeight: '800' }, emptyText: { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 7, lineHeight: 19 }, emptyActions: { flexDirection: 'row', gap: 10, marginTop: 16 }, emptyButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 13, borderWidth: 1, borderColor: theme.colors.border }, emptyButtonText: { color: theme.colors.primary, fontWeight: '700' },
-  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }, pageButton: { minWidth: 74, padding: 10 }, pageText: { color: theme.colors.primary, fontWeight: '700', textAlign: 'center' }, disabled: { opacity: 0.35 }, pageCount: { color: theme.colors.textSecondary, fontSize: 13 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  roomImage: { ...StyleSheet.absoluteFillObject },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.colors.scrim },
+  safeArea: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { height: '91%', overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: theme.colors.background, borderWidth: 1, borderBottomWidth: 0, borderColor: theme.colors.border },
+  handle: { width: 42, height: 5, borderRadius: 999, alignSelf: 'center', marginTop: 9, backgroundColor: theme.colors.border },
+  header: { minHeight: 62, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heading: { flex: 1, alignItems: 'center' },
+  title: { color: theme.colors.text, fontSize: 19, fontWeight: '800' },
+  subtitle: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 1 },
+  controls: { paddingHorizontal: 16 },
+  sourceTabs: { flexDirection: 'row', padding: 3, borderRadius: 13, backgroundColor: theme.colors.borderLight },
+  sourceTab: { flex: 1, borderRadius: 11 },
+  sourceText: { fontSize: 13 },
+  searchRow: { marginTop: 9 }, searchBox: { height: 44, borderRadius: 13, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingLeft: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }, input: { flex: 1, color: theme.colors.text, fontSize: 14 },
+  filterRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, filterTitle: { color: theme.colors.text, fontSize: 13, fontWeight: '700' }, filterNote: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 1 },
+  results: { flex: 1, paddingHorizontal: 16 },
+  plantGrid: { paddingTop: 4, paddingBottom: 36 },
+  listSeparator: { height: 10 },
+  emptyResults: { flexGrow: 1, justifyContent: 'center' },
+  empty: { alignItems: 'center', padding: 24 }, emptyTitle: { color: theme.colors.text, fontSize: 18, fontWeight: '800' }, emptyText: { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 7, lineHeight: 19 }, emptyActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

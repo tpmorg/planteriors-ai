@@ -6,11 +6,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
-  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
+import { AppButton } from '../components/AppButton';
 import { PlantSearchResult } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { getPlantById as getSeedPlantById } from '../data/plantDatabase';
@@ -55,19 +54,14 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
             </Text>
           )}
 
-          <Pressable
+          <AppButton
+            variant="icon"
+            size="md"
+            icon="ArrowLeft"
             onPress={onBack}
-            style={[
-              styles.backButton,
-              {
-                top: backButtonTop,
-                backgroundColor: theme.isDark ? 'rgba(12, 15, 12, 0.72)' : 'rgba(255, 255, 255, 0.88)',
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,17,17,0.08)',
-              },
-            ]}
-          >
-            <AppIcon name="ArrowLeft" size={22} color={theme.colors.text} />
-          </Pressable>
+            accessibilityLabel="Back"
+            style={[styles.backButton, { top: backButtonTop }]}
+          />
         </View>
 
         <View style={styles.heroContent}>
@@ -91,14 +85,15 @@ export const PlantDetailScreen: React.FC<PlantDetailScreenProps> = ({
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.placeButton, { backgroundColor: theme.colors.primary }]}
+          <AppButton
+            variant="primary"
+            size="md"
+            icon="Armchair"
+            title="Place in My Room"
             onPress={onPlaceInRoom}
-            activeOpacity={0.9}
-          >
-            <AppIcon name="Armchair" size={18} color="#ffffff" />
-            <Text style={styles.placeButtonText}>Place in My Room</Text>
-          </TouchableOpacity>
+            elevated
+            style={styles.placeButton}
+          />
         </View>
 
         {/* Description */}
@@ -342,12 +337,6 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     gap: 16,
@@ -397,18 +386,7 @@ const styles = StyleSheet.create({
   },
   placeButton: {
     alignSelf: 'flex-start',
-    minHeight: 44,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     marginTop: 2,
-  },
-  placeButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
   },
   section: {
     marginHorizontal: 16,
