@@ -17,7 +17,7 @@ export type RootStackParamList = {
   DesignFlow: NavigatorScreenParams<DesignFlowStackParamList> | undefined;
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   PlantDetail: { plant: PlantSearchResult };
-  Subscription: undefined;
+  Subscription: { initialProductKind?: 'monthly' | 'room_pack' } | undefined;
   PlantIdentify: { capturedImageUri?: string; capturedImageAt?: number } | undefined;
   PlantCamera: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;

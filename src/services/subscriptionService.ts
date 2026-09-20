@@ -709,14 +709,34 @@ class SubscriptionService {
   }
 
   private isRoomPack(pkg: PurchasesPackage): boolean {
-    const packageId = pkg.identifier.toLowerCase();
-    const productId = pkg.product.identifier.toLowerCase();
-    return packageId.includes('room_pack') || productId.includes('roompack') || productId.includes('room_pack');
+    return this.isRoomPackProductId(pkg.identifier) || this.isRoomPackProductId(pkg.product.identifier);
+  }
+
+  private isRoomPackProductId(productId: string): boolean {
+    const normalized = productId.toLowerCase();
+    return normalized.includes('roompack') || normalized.includes('room_pack') || normalized.includes('room-pack');
   }
 
   private mapCustomerInfoToStatus(customerInfo: CustomerInfo): SubscriptionStatus {
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
-    const hasPurchased = customerInfo.allPurchasedProductIdentifiers.length > 0;
+    const purchasedProductIds = customerInfo.allPurchasedProductIdentifiers || [];
+    const roomPackTransactions = (customerInfo.nonSubscriptionTransactions || []).filter((transaction) =>
+      this.isRoomPackProductId(transaction.productIdentifier)
+    );
+    const hasPurchased = purchasedProductIds.length > 0;
+    const hasRoomPackPurchase = roomPackTransactions.length > 0
+      || purchasedProductIds.some((productId) => this.isRoomPackProductId(productId));
+    const latestRoomPackPurchaseDate = roomPackTransactions.reduce<number | undefined>((latest, transaction) => {
+      const purchasedAt = new Date(transaction.purchaseDate).getTime();
+      if (!Number.isFinite(purchasedAt)) return latest;
+      return latest === undefined ? purchasedAt : Math.max(latest, purchasedAt);
+    }, undefined);
+    const purchaseHistory = {
+      hasPurchased,
+      hasRoomPackPurchase,
+      roomPackPurchaseCount: roomPackTransactions.length || (hasRoomPackPurchase ? 1 : 0),
+      latestRoomPackPurchaseDate,
+    };
 
     if (!entitlement) {
       this.addRevenueCatBreadcrumb('RevenueCat expected entitlement inactive', {
@@ -724,7 +744,7 @@ class SubscriptionService {
         activeEntitlementIds: Object.keys(customerInfo.entitlements.active || {}),
         allEntitlementIds: Object.keys(customerInfo.entitlements.all || {}),
       }, 'warning');
-      return { ...this.defaultStatus(), isVerified: true, hasPurchased };
+      return { ...this.defaultStatus(), isVerified: true, ...purchaseHistory };
     }
 
     const isAnnual = entitlement.productIdentifier?.includes('annual');
@@ -732,7 +752,7 @@ class SubscriptionService {
     return {
       isActive: true,
       isVerified: true,
-      hasPurchased: true,
+      ...purchaseHistory,
       type: isAnnual ? 'annual' : 'monthly',
       expiryDate: entitlement.expirationDate
         ? new Date(entitlement.expirationDate).getTime()
@@ -751,6 +771,8 @@ class SubscriptionService {
       isActive: false,
       isVerified: false,
       hasPurchased: false,
+      hasRoomPackPurchase: false,
+      roomPackPurchaseCount: 0,
       type: null,
       expiryDate: null,
       isMock: false,

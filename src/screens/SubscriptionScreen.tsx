@@ -13,16 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
-import { useNavigation } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { useNetworkGuard } from '../contexts/NetworkContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { subscriptionService } from '../services/subscriptionService';
 import { SubscriptionProduct } from '../types';
+import type { RootStackScreenProps } from '../types/navigation';
 
-export const SubscriptionScreen: React.FC = () => {
-  const navigation = useNavigation();
+export const SubscriptionScreen: React.FC<RootStackScreenProps<'Subscription'>> = ({ navigation, route }) => {
   const { theme } = useTheme();
   const requireNetwork = useNetworkGuard();
   const { purchaseSubscription, restorePurchases, subscription } = useSubscription();
@@ -200,9 +199,10 @@ export const SubscriptionScreen: React.FC = () => {
       return;
     }
 
-    // The monthly plan is the primary recurring option.
+    // Respect the product the user selected before opening this screen.
     if (availableProducts.length > 0) {
       const defaultProductId =
+        availableProducts.find((product) => product.kind === route.params?.initialProductKind)?.id ||
         availableProducts.find((product) => product.kind === 'monthly')?.id ||
         availableProducts[0].id;
       setSelectedProductId(defaultProductId);

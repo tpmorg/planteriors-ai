@@ -651,8 +651,11 @@ function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
     navigation.getParent()?.navigate('DesignDetail', { design, designs, initialIndex });
   };
 
-  const handleUpgradePress = () => {
-    navigation.getParent()?.navigate('Subscription');
+  const handleUpgradePress = (initialProductKind?: 'monthly' | 'room_pack') => {
+    navigation.getParent()?.navigate(
+      'Subscription',
+      initialProductKind ? { initialProductKind } : undefined
+    );
   };
 
   return (

@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   BackHandler,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -32,7 +33,6 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   const [facing, setFacing] = useState<CameraType>('back');
   const [showOptions, setShowOptions] = useState(true);
   const [showRecent, setShowRecent] = useState(false);
-  const [recentPage, setRecentPage] = useState(0);
   const [isSystemCropping, setIsSystemCropping] = useState(false);
   const [unavailableRecent, setUnavailableRecent] = useState<Set<string>>(() => new Set());
   const cameraRef = useRef<CameraView>(null);
@@ -142,8 +142,6 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
   }
 
   if (showRecent) {
-    const pageCount = Math.max(1, Math.ceil(recentSourceImages.length / 3));
-    const visibleRecent = recentSourceImages.slice(recentPage * 3, recentPage * 3 + 3);
     return (
       <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
         <View style={styles.header}>
@@ -167,8 +165,12 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
         </View>
         <View style={styles.recentPicker}>
           <Text style={styles.optionsTitle}>Choose a recent room</Text>
-          <View style={styles.recentPickerGrid}>
-            {visibleRecent.map((uri, index) => {
+          <ScrollView
+            style={styles.recentPickerScroll}
+            contentContainerStyle={styles.recentPickerGrid}
+            showsVerticalScrollIndicator={false}
+          >
+            {recentSourceImages.map((uri, index) => {
               const isUnavailable = unavailableRecent.has(uri);
               return (
                 <Pressable
@@ -177,35 +179,21 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({
                   onPress={() => useRecentImage(uri)}
                   disabled={isUnavailable}
                   accessibilityRole="button"
-                  accessibilityLabel={`Recent room photo ${recentPage * 3 + index + 1}`}
+                  accessibilityLabel={`Recent room photo ${index + 1}`}
                   accessibilityHint="Uses this photo for your design"
                   accessibilityState={{ disabled: isUnavailable }}
                 >
-                  <Image source={{ uri }} style={styles.recentPickerImage} onError={() => setUnavailableRecent((current) => new Set(current).add(uri))} />
+                  <Image
+                    source={{ uri }}
+                    style={styles.recentPickerImage}
+                    resizeMode="cover"
+                    onError={() => setUnavailableRecent((current) => new Set(current).add(uri))}
+                  />
                   {isUnavailable ? <View style={styles.unavailableOverlay}><Text style={styles.unavailableText}>Photo unavailable</Text></View> : null}
                 </Pressable>
               );
             })}
-          </View>
-          {pageCount > 1 ? <View style={styles.recentPagination}>
-            <AppButton
-              variant="ghost"
-              size="sm"
-              overlay
-              title="Previous"
-              disabled={recentPage === 0}
-              onPress={() => setRecentPage((value) => Math.max(0, value - 1))}
-            />
-            <Text style={styles.recentPageLabel}>{recentPage + 1} of {pageCount}</Text>
-            <AppButton
-              variant="ghost"
-              size="sm"
-              overlay
-              title="Next"
-              disabled={recentPage === pageCount - 1}
-              onPress={() => setRecentPage((value) => Math.min(pageCount - 1, value + 1))}
-            />
-          </View> : null}
+          </ScrollView>
         </View>
       </SafeAreaView>
     );
@@ -540,13 +528,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  recentPickerGrid: {
+  recentPickerScroll: {
     flex: 1,
-    justifyContent: 'center',
-    gap: 14,
+  },
+  recentPickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    columnGap: 12,
+    rowGap: 16,
+    paddingBottom: 20,
   },
   recentPickerButton: {
-    height: 150,
+    width: '48%',
+    aspectRatio: 1,
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
@@ -556,11 +551,4 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  recentPagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  recentPageLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 13 },
 });

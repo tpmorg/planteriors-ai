@@ -383,13 +383,6 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
             />
           </View>
 
-          {/* Compact info overlay at bottom */}
-          <View style={styles.resultOverlay}>
-            <Text style={styles.resultTitle}>Design ready</Text>
-            <Text style={styles.resultSubtitle}>{requestPlantSummary}</Text>
-            {error ? <Text style={styles.previousResultError}>The new version failed. Your previous result is still here.</Text> : null}
-          </View>
-
           {/* Action buttons overlaid at bottom */}
           <View style={styles.resultActionsOverlay}>
             <AppButton
@@ -723,36 +716,6 @@ const createStyles = (theme: any, isTablet: boolean) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "rgba(0,0,0,0.22)",
-  },
-  resultOverlay: {
-    position: "absolute",
-    bottom: 146,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(0,0,0,0.72)",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-  },
-  resultTitle: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  resultSubtitle: {
-    color: "white",
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.95,
-  },
-  previousResultError: {
-    color: '#fecaca',
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 6,
   },
   identificationBlock: {
     marginTop: 12,

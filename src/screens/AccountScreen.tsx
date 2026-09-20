@@ -17,11 +17,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { useDebugPreferences } from '../contexts/DebugPreferencesContext';
 import { firestoreSyncService } from '../services/firestoreSyncService';
 
 interface AccountScreenProps {
-  onUpgradePress?: () => void;
+  onUpgradePress?: (initialProductKind?: 'monthly' | 'room_pack') => void;
   presentation?: 'full' | 'sheet';
   onClose?: () => void;
 }
@@ -38,14 +37,12 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const {
     subscription,
     freeGenerationsRemaining,
-    usageStats,
     restorePurchases,
-    resetUsageForTesting,
   } = useSubscription();
-  const { suppressFreePlanWarnings } = useDebugPreferences();
   const styles = createStyles(theme);
-  const showPaidLayout = subscription?.isActive || suppressFreePlanWarnings;
   const hasCloudSyncAccess = subscription?.isActive === true;
+  const hasRoomPack = subscription?.hasRoomPackPurchase === true;
+  const roomPackPurchaseCount = subscription?.roomPackPurchaseCount || 0;
   const isSheetPresentation = presentation === 'sheet';
 
   const [isRestoring, setRestoring] = React.useState(false);
@@ -55,9 +52,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     signOut();
   };
 
-  const handleUpgrade = () => {
+  const handleUpgrade = (initialProductKind: 'monthly' | 'room_pack' = 'monthly') => {
     if (onUpgradePress) {
-      onUpgradePress();
+      onUpgradePress(initialProductKind);
     }
   };
 
@@ -139,7 +136,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         'Cloud Backup',
         'Your designs are saved on this device. Cloud backup and restore are included with the monthly plan.',
         [
-          { text: 'View Monthly Plan', onPress: handleUpgrade },
+          { text: 'View Monthly Plan', onPress: () => handleUpgrade('monthly') },
           { text: 'Not Now', style: 'cancel' },
         ]
       );
@@ -209,22 +206,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       },
       { text: 'Cancel', style: 'cancel' },
     ]);
-  };
-
-  const handleResetUsage = () => {
-    if (__DEV__) {
-      Alert.alert('Reset Usage', 'Reset your free generation count for testing?', [
-        {
-          text: 'Reset',
-          onPress: async () => {
-            await resetUsageForTesting();
-            Alert.alert('Success', 'Usage has been reset');
-          },
-          style: 'destructive',
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
   };
 
   const openExternalLink = async (url: string) => {
@@ -310,106 +291,129 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           </View>
         </View>
 
-        {/* Subscription Status Card */}
+        {/* Current credit balance and paid purchases */}
         <View style={styles.subscriptionSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Subscriptions</Text>
+            <Text style={styles.sectionTitle}>Your design credits</Text>
+            <Text style={styles.sectionDescription}>Ready to use on new plant designs</Text>
           </View>
 
-          {showPaidLayout ? (
-            <View style={styles.subscriptionCard}>
-              <View style={styles.premiumBadge}>
-                <AppIcon name="CheckCircle" size={20} color={theme.colors.primary} />
-                <Text style={styles.premiumBadgeText}>
-                  {subscription?.isActive ? 'Premium Member' : 'Premium Preview'}
-                </Text>
-              </View>
-              <Text style={styles.subscriptionType}>
-                {subscription?.isActive
-                  ? (subscription.type === 'annual' ? 'Legacy Annual Plan' : 'Monthly Plan — 30 designs')
-                  : 'Debug Layout Preview'}
+          <View style={styles.creditBalanceCard}>
+            <View style={styles.creditBalanceIcon}>
+              <AppIcon name="Leaf" size={24} color={theme.colors.primary} weight="fill" />
+            </View>
+            <View style={styles.creditBalanceCopy}>
+              <Text style={styles.creditBalanceValue}>{freeGenerationsRemaining}</Text>
+              <Text style={styles.creditBalanceLabel}>
+                {freeGenerationsRemaining === 1 ? 'design credit available' : 'design credits available'}
               </Text>
-              {subscription?.isActive ? (
-                <Text style={styles.expiryText}>
-                  {freeGenerationsRemaining} design credits available
-                </Text>
-              ) : null}
-              {subscription?.isActive && subscription.expiryDate && (
-                <Text style={styles.expiryText}>
-                  Renews: {formatDate(subscription.expiryDate)}
-                </Text>
-              )}
-              {subscription?.isMock && __DEV__ && (
-                <View style={styles.mockBadge}>
-                  <Text style={styles.mockBadgeText}>MOCK SUBSCRIPTION</Text>
+            </View>
+          </View>
+
+          <View style={styles.ownershipCard}>
+            <Text style={styles.ownershipHeading}>Your purchases</Text>
+
+            {subscription?.isActive ? (
+              <View style={styles.ownershipItem} testID="account-active-monthly-plan">
+                <View style={styles.ownershipIcon}>
+                  <AppIcon name="CheckCircle" size={21} color={theme.colors.primary} weight="fill" />
                 </View>
-              )}
-              {subscription?.isActive ? (
+                <View style={styles.ownershipCopy}>
+                  <Text style={styles.ownershipTitle}>
+                    {subscription.type === 'annual' ? 'Legacy annual plan' : 'Monthly plan'}
+                  </Text>
+                  <Text style={styles.ownershipDescription}>
+                    {subscription.expiryDate
+                      ? `Active · Renews ${formatDate(subscription.expiryDate)}`
+                      : 'Active · 30 new credits each billing cycle'}
+                  </Text>
+                </View>
+                <AppButton
+                  variant="ghost"
+                  size="sm"
+                  title="Manage"
+                  onPress={handleManageSubscription}
+                  testID="account-manage"
+                />
+              </View>
+            ) : null}
+
+            {hasRoomPack ? (
+              <View style={styles.ownershipItem} testID="account-owned-room-pack">
+                <View style={styles.ownershipIcon}>
+                  <AppIcon name="CheckCircle" size={21} color={theme.colors.primary} weight="fill" />
+                </View>
+                <View style={styles.ownershipCopy}>
+                  <Text style={styles.ownershipTitle}>
+                    {roomPackPurchaseCount > 1 ? `${roomPackPurchaseCount} Room Packs purchased` : 'Room Pack purchased'}
+                  </Text>
+                  <Text style={styles.ownershipDescription}>
+                    One-time credits never expire
+                    {subscription?.latestRoomPackPurchaseDate
+                      ? ` · Last purchased ${formatDate(subscription.latestRoomPackPurchaseDate)}`
+                      : ''}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {!subscription?.isActive && !hasRoomPack ? (
+              <Text style={styles.noPurchasesText}>No paid plan or credit pack yet.</Text>
+            ) : null}
+
+            {subscription?.isMock && __DEV__ ? (
+              <View style={styles.mockBadge}>
+                <Text style={styles.mockBadgeText}>MOCK SUBSCRIPTION</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Optional products are intentionally separate from owned products. */}
+        <View style={styles.purchaseSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Get more credits</Text>
+            <Text style={styles.sectionDescription}>Choose the option that fits how you design</Text>
+          </View>
+
+          <View style={styles.purchaseOptions}>
+            {!subscription?.isActive ? (
+              <View style={styles.purchaseOption}>
+                <View style={styles.purchaseOptionHeader}>
+                  <AppIcon name="CalendarCheck" size={22} color={theme.colors.primary} />
+                  <View style={styles.purchaseOptionCopy}>
+                    <Text style={styles.purchaseOptionTitle}>Monthly plan</Text>
+                    <Text style={styles.purchaseOptionDescription}>30 credits every month, plus cloud backup</Text>
+                  </View>
+                </View>
                 <AppButton
                   variant="secondary"
                   size="sm"
-                  title="Manage Subscription"
-                  onPress={handleManageSubscription}
-                  style={styles.manageButton}
-                  testID="account-manage"
+                  title="View monthly plan"
+                  onPress={() => handleUpgrade('monthly')}
+                  testID="account-monthly-plan"
                 />
-              ) : (
-                <Text style={styles.expiryText}>
-                  Free-plan warnings are hidden in debug mode.
-                </Text>
-              )}
-            </View>
-          ) : (
-            <View style={styles.subscriptionCard}>
-              <Text style={styles.freePlanText}>Free Plan</Text>
-              <Text style={styles.freePlanDetails}>
-                {freeGenerationsRemaining} design credits available
-              </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.purchaseOption}>
+              <View style={styles.purchaseOptionHeader}>
+                <AppIcon name="Receipt" size={22} color={theme.colors.primary} />
+                <View style={styles.purchaseOptionCopy}>
+                  <Text style={styles.purchaseOptionTitle}>Room Pack</Text>
+                  <Text style={styles.purchaseOptionDescription}>20 one-time credits that never expire</Text>
+                </View>
+              </View>
               <AppButton
                 variant="primary"
                 size="sm"
-                title={'See Plans & Credits'}
-                onPress={handleUpgrade}
-                style={styles.upgradeButton}
-                testID="account-upgrade"
+                title={hasRoomPack ? 'Buy another Room Pack' : 'Buy Room Pack'}
+                onPress={() => handleUpgrade('room_pack')}
+                testID="account-room-pack"
               />
             </View>
-          )}
-        </View>
-
-        {/* Usage Statistics Card */}
-        {usageStats && (
-          <View style={styles.usageSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Usage Statistics</Text>
-            </View>
-            <View style={styles.usageCard}>
-              <View style={styles.usageStat}>
-                <Text style={styles.usageStatLabel}>Total Generations</Text>
-                <Text style={styles.usageStatValue}>{usageStats.totalGenerations}</Text>
-              </View>
-              <View style={styles.usageStat}>
-                <Text style={styles.usageStatLabel}>Free Used</Text>
-                <Text style={styles.usageStatValue}>{usageStats.freeUsed}</Text>
-              </View>
-              <View style={styles.usageStat}>
-                <Text style={styles.usageStatLabel}>Paid Used</Text>
-                <Text style={styles.usageStatValue}>{usageStats.paidUsed}</Text>
-              </View>
-              {__DEV__ && (
-                <AppButton
-                  variant="chip"
-                  size="sm"
-                  title="Reset Usage (Dev)"
-                  onPress={handleResetUsage}
-                  style={styles.resetButton}
-                  textStyle={styles.resetButtonText}
-                  testID="account-reset-usage"
-                />
-              )}
-            </View>
           </View>
-        )}
+        </View>
 
         <View style={styles.syncSection}>
           <View style={styles.sectionHeader}>
@@ -656,34 +660,133 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.text,
     letterSpacing: 0.2,
   },
-  subscriptionCard: {
+  sectionDescription: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  creditBalanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  premiumBadge: {
+  creditBalanceIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  creditBalanceCopy: {
+    flex: 1,
+  },
+  creditBalanceValue: {
+    color: theme.colors.text,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '800',
+  },
+  creditBalanceLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    marginTop: 1,
+  },
+  ownershipCard: {
+    marginTop: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    padding: 16,
+    gap: 14,
+  },
+  ownershipHeading: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
+  ownershipItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 10,
   },
-  premiumBadgeText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
+  ownershipIcon: {
+    alignSelf: 'flex-start',
+    paddingTop: 1,
   },
-  subscriptionType: {
-    fontSize: 15,
-    fontWeight: '600',
+  ownershipCopy: {
+    flex: 1,
+  },
+  ownershipTitle: {
     color: theme.colors.text,
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '700',
   },
-  expiryText: {
-    fontSize: 14,
+  ownershipDescription: {
     color: theme.colors.textSecondary,
-    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  noPurchasesText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  purchaseSection: {
+    backgroundColor: theme.colors.surface,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: theme.isDark ? 0.22 : 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  purchaseOptions: {
+    gap: 12,
+  },
+  purchaseOption: {
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  purchaseOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  purchaseOptionCopy: {
+    flex: 1,
+  },
+  purchaseOptionTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  purchaseOptionDescription: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
   },
   mockBadge: {
     backgroundColor: '#fef3c7',
@@ -697,23 +800,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     color: '#92400e',
-  },
-  manageButton: {
-    borderColor: theme.colors.border,
-  },
-  freePlanText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: 4,
-  },
-  freePlanDetails: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
-  },
-  upgradeButton: {
-    marginTop: 4,
   },
   syncSection: {
     backgroundColor: theme.colors.surface,
@@ -744,53 +830,5 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   syncButton: {
     marginTop: 2,
-  },
-  // Usage Section Styles
-  usageSection: {
-    backgroundColor: theme.colors.surface,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: theme.isDark ? 0.22 : 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  usageCard: {
-    backgroundColor: theme.isDark ? theme.colors.card : theme.colors.borderLight,
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  usageStat: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  usageStatLabel: {
-    fontSize: 15,
-    color: theme.colors.text,
-  },
-  usageStatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-  },
-  resetButton: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fcd34d',
-    marginTop: 8,
-    alignSelf: 'center',
-  },
-  resetButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#92400e',
   },
 });

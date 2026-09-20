@@ -36,7 +36,7 @@ interface GalleryScreenProps {
   onNewDesign: () => void;
   onIdentifyPlant: () => void;
   onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
-  onUpgradePress?: () => void;
+  onUpgradePress?: (initialProductKind?: 'monthly' | 'room_pack') => void;
 }
 
 interface DesignCardProps {
@@ -352,14 +352,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     });
   }, [accountSheetProgress]);
 
-  const openPurchaseOptionsFromAccount = useCallback(() => {
+  const openPurchaseOptionsFromAccount = useCallback((initialProductKind?: 'monthly' | 'room_pack') => {
     Animated.timing(accountSheetProgress, {
       toValue: 0,
       duration: 220,
       useNativeDriver: true,
     }).start(() => {
       setIsAccountSheetMounted(false);
-      onUpgradePress?.();
+      onUpgradePress?.(initialProductKind);
     });
   }, [accountSheetProgress, onUpgradePress]);
 

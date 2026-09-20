@@ -417,6 +417,9 @@ export interface SubscriptionStatus {
   isActive: boolean;
   isVerified?: boolean;
   hasPurchased?: boolean;
+  hasRoomPackPurchase?: boolean;
+  roomPackPurchaseCount?: number;
+  latestRoomPackPurchaseDate?: number;
   type: 'monthly' | 'annual' | null;
   expiryDate: number | null;
   isMock: boolean;
