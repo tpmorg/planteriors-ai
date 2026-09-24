@@ -58,4 +58,26 @@ function makeCardCrop(source, dest, size = 104) {
   return dest;
 }
 
-module.exports = { getDimensions, makeThumbnail, makeCardCrop, hashFile, looksLikeJpeg };
+/** Parse and bounds-check an `x,y,width,height` pixel box against the image it will crop. */
+function parseBox(value, dimensions) {
+  const parts = String(value).split(',').map((part) => Number(part.trim()));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0)) {
+    throw new Error('--box must be x,y,width,height in whole pixels');
+  }
+  const [x, y, width, height] = parts;
+  if (!width || !height || x + width > dimensions.width || y + height > dimensions.height) {
+    throw new Error(`--box ${value} falls outside the ${dimensions.width}x${dimensions.height} image`);
+  }
+  return { x, y, width, height };
+}
+
+/** Crop an exact pixel box. Core Graphics reads raw pixels, so EXIF-rotated sources are refused. */
+function cropImage(source, dest, box) {
+  const orientation = execFileSync('sips', ['-g', 'orientation', source], { encoding: 'utf-8' }).match(/orientation:\s*(\d+)/)?.[1];
+  if (orientation && orientation !== '1') throw new Error(`${source} has EXIF orientation ${orientation}; crop coordinates would not match what is shown`);
+  execFileSync('osascript', ['-l', 'JavaScript', require('path').join(__dirname, 'crop.jxa.js'),
+    source, dest, String(box.x), String(box.y), String(box.width), String(box.height)], { stdio: ['ignore', 'ignore', 'pipe'] });
+  return dest;
+}
+
+module.exports = { getDimensions, makeThumbnail, makeCardCrop, parseBox, cropImage, hashFile, looksLikeJpeg };

@@ -43,3 +43,11 @@ test('shortlist dedupes candidates from any provider', () => {
   const result = diversify([[{ sourceId: 'wm-1' }, { sourceId: 'wm-2' }], [{ sourceId: 'wm-1' }]], 3);
   assert.deepEqual(result.map((item) => item.sourceId), ['wm-1', 'wm-2']);
 });
+test('an owner pick skips the quality bar but never identity or hard fails', () => {
+  const { validateOwnerPick } = require('../lib/review');
+  const plainButRight = review(3); plainButRight.scores.speciesConfidence = 5;
+  assert.doesNotThrow(() => validateOwnerPick(plainButRight));
+  const unsure = review(4); unsure.scores.speciesConfidence = 3;
+  assert.throws(() => validateOwnerPick(unsure));
+  assert.throws(() => validateOwnerPick({ ...review(5), hardFails: ['text-overlay'] }));
+});

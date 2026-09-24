@@ -67,4 +67,12 @@ function diversify(groups, limit) {
   return selected;
 }
 
-module.exports = { RUBRIC_VERSION, validateReview, verdictFor, validateWinner, positiveInteger, diversify };
+// The owner may accept a correct plant below the quality bar. Identity and hard fails still apply.
+function validateOwnerPick(candidate) {
+  validateReview(candidate);
+  if (candidate.hardFails.length || candidate.scores.speciesConfidence < 4) {
+    throw new Error('An owner pick still needs the right plant (species confidence >= 4) and no hard fails');
+  }
+}
+
+module.exports = { RUBRIC_VERSION, validateReview, verdictFor, validateWinner, validateOwnerPick, positiveInteger, diversify };

@@ -434,5 +434,146 @@
     "pageUrl": "https://commons.wikimedia.org/wiki/File:Monstera_adansonii_-_Micka%C3%ABl_Schauli_-_3.jpg",
     "query": "incategory:\"Monstera adansonii\" filetype:bitmap",
     "appliedAt": "2026-09-24T02:11:05.943Z"
+  },
+  "dieffenbachia.jpg": {
+    "plantId": "dieffenbachia",
+    "source": "unsplash",
+    "unsplashId": "vYDDuhoV1NQ",
+    "photographer": "ANKUR MADAN",
+    "photographerUrl": "https://unsplash.com/@ank_2809",
+    "pageUrl": "https://unsplash.com/photos/a-green-plant-in-a-white-vase-on-a-table-vYDDuhoV1NQ",
+    "query": "Dieffenbachia",
+    "appliedAt": "2026-09-24T03:06:27.365Z"
+  },
+  "african-violet.jpg": {
+    "plantId": "african-violet",
+    "source": "wikimedia-commons",
+    "title": "African Violet Blooms.jpg",
+    "author": "Sluglife6826",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "attributionRequired": false,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:African_Violet_Blooms.jpg",
+    "query": "\"Saintpaulia\" filetype:bitmap",
+    "appliedAt": "2026-09-24T03:06:27.423Z"
+  },
+  "begonia-rex.jpg": {
+    "plantId": "begonia-rex",
+    "source": "wikimedia-commons",
+    "title": "蛤蟆秋海棠 Begonia rex Beau Rogue -香港花展 Hong Kong Flower Show- (17040893142).jpg",
+    "author": "阿橋 HQ",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "attributionRequired": true,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:%E8%9B%A4%E8%9F%86%E7%A7%8B%E6%B5%B7%E6%A3%A0_Begonia_rex_Beau_Rogue_-%E9%A6%99%E6%B8%AF%E8%8A%B1%E5%B1%95_Hong_Kong_Flower_Show-_(17040893142).jpg",
+    "query": "\"Begonia rex\" filetype:bitmap",
+    "appliedAt": "2026-09-24T03:06:27.453Z"
+  },
+  "gasteria-bicolor.jpg": {
+    "plantId": "gasteria-bicolor",
+    "source": "wikimedia-commons",
+    "title": "Juvenile gasteria bicolor var bicolor.jpg",
+    "author": "S Molteno",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attributionRequired": true,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Juvenile_gasteria_bicolor_var_bicolor.jpg",
+    "query": "\"Gasteria bicolor\" filetype:bitmap",
+    "modified": "Cropped to 970x779 from the original",
+    "appliedAt": "2026-09-24T03:42:39.327Z"
+  },
+  "jasminum-polyanthum.jpg": {
+    "plantId": "jasminum-polyanthum",
+    "source": "unsplash",
+    "unsplashId": "qGhYl8-ktz8",
+    "photographer": "David Brooke Martin",
+    "photographerUrl": "https://unsplash.com/@dbmartin00",
+    "pageUrl": "https://unsplash.com/photos/white-flowers-qGhYl8-ktz8",
+    "query": "Pink Jasmine isolated",
+    "modified": "Cropped to 520x800 from the original",
+    "appliedAt": "2026-09-24T03:42:39.714Z"
+  },
+  "senecio-radicans.jpg": {
+    "plantId": "senecio-radicans",
+    "source": "wikimedia-commons",
+    "title": "String of Bananas3.JPG",
+    "author": "KaitM42",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "attributionRequired": true,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:String_of_Bananas3.JPG",
+    "query": "\"String of Bananas\" filetype:bitmap",
+    "modified": "Cropped to 710x710 from the original",
+    "appliedAt": "2026-09-24T03:42:39.760Z"
+  },
+  "aloe-vera.jpg": {
+    "plantId": "aloe-vera",
+    "source": "unsplash",
+    "unsplashId": "nkdEbc7gpSE",
+    "photographer": "Sabrina Rizzo",
+    "photographerUrl": "https://unsplash.com/@sabrinarizzo",
+    "pageUrl": "https://unsplash.com/photos/a-plant-in-a-pot-nkdEbc7gpSE",
+    "query": "Aloe Vera potted plant",
+    "appliedAt": "2026-09-24T03:42:40.089Z"
+  },
+  "rubber-plant.jpg": {
+    "plantId": "rubber-plant",
+    "source": "unsplash",
+    "unsplashId": "Dze_6fnPIKk",
+    "photographer": "Elle Lumière",
+    "photographerUrl": "https://unsplash.com/@elle_future",
+    "pageUrl": "https://unsplash.com/photos/green-leaves-in-white-background-Dze_6fnPIKk",
+    "query": "Ficus elastica",
+    "appliedAt": "2026-09-24T03:42:40.347Z"
+  },
+  "chinese-evergreen.jpg": {
+    "plantId": "chinese-evergreen",
+    "source": "unsplash",
+    "unsplashId": "r1DT7rvE5v4",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-green-plant-in-a-white-pot-on-a-table-r1DT7rvE5v4",
+    "query": "Chinese Evergreen potted plant",
+    "appliedAt": "2026-09-24T03:42:40.563Z"
+  },
+  "areca-palm.jpg": {
+    "plantId": "areca-palm",
+    "source": "unsplash",
+    "unsplashId": "N6VosD2RpUw",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-plant-in-a-white-pot-on-a-table-N6VosD2RpUw",
+    "query": "Areca Palm potted plant",
+    "appliedAt": "2026-09-24T03:42:40.729Z"
+  },
+  "ponytail-palm.jpg": {
+    "plantId": "ponytail-palm",
+    "source": "unsplash",
+    "unsplashId": "u0UsZF0jTkg",
+    "photographer": "Benjamin Voros",
+    "photographerUrl": "https://unsplash.com/@vorosbenisop",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-table-u0UsZF0jTkg",
+    "query": "Ponytail Palm potted plant",
+    "appliedAt": "2026-09-24T03:42:40.932Z"
+  },
+  "air-plant.jpg": {
+    "plantId": "air-plant",
+    "source": "unsplash",
+    "unsplashId": "gRWjmdIoFLs",
+    "photographer": "Sabrina Rizzo",
+    "photographerUrl": "https://unsplash.com/@sabrinarizzo",
+    "pageUrl": "https://unsplash.com/photos/a-glass-from-a-string-gRWjmdIoFLs",
+    "query": "Tillandsia",
+    "appliedAt": "2026-09-24T03:42:41.207Z"
+  },
+  "bird-of-paradise.jpg": {
+    "plantId": "bird-of-paradise",
+    "source": "unsplash",
+    "unsplashId": "zsvoXuyWCD8",
+    "photographer": "Pascal Bullan",
+    "photographerUrl": "https://unsplash.com/@jetztabertempo",
+    "pageUrl": "https://unsplash.com/photos/a-plant-with-orange-flowers-in-a-greenhouse-zsvoXuyWCD8",
+    "query": "bird of paradise plant in pot",
+    "appliedAt": "2026-09-24T04:01:44.072Z"
   }
 }

@@ -10,9 +10,11 @@
  *   node scripts/plantImageAgent queue [--batch 10] [--all]
  *   node scripts/plantImageAgent record verdicts <file.json>
  *   node scripts/plantImageAgent source [--ids a,b] [--limit 20] [--per-plant 4]
+ *   node scripts/plantImageAgent source --ids a --query "bird of paradise plant in pot"   (one targeted search, appended)
+ *   node scripts/plantImageAgent crop --id <plant> --from c14 --box x,y,width,height
  *   node scripts/plantImageAgent record decisions <file.json>
  *   node scripts/plantImageAgent sheet
- *   node scripts/plantImageAgent apply --confirm
+ *   node scripts/plantImageAgent apply --confirm [--ids a,b]
  *   node scripts/plantImageAgent status
  */
 
@@ -20,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const { PROJECT_ROOT } = require('./lib/env');
 const { CATALOG_FILE, ASSETS_DIR, parseCatalog, setPlantAsset } = require('./lib/catalog');
-const { getDimensions, makeThumbnail, makeCardCrop, hashFile, looksLikeJpeg } = require('./lib/image');
+const { getDimensions, makeThumbnail, makeCardCrop, parseBox, cropImage, hashFile, looksLikeJpeg } = require('./lib/image');
 const { PATHS, ensureDir, readJson, writeJson } = require('./lib/state');
 const unsplash = require('./lib/unsplash');
 const wikimedia = require('./lib/wikimedia');
@@ -33,7 +35,7 @@ const candidateSource = (candidate) => candidate.source || 'unsplash';
 const candidateKey = (candidate) => candidate.sourceId || candidate.unsplashId;
 // Legacy manifests marked interrupted Unsplash runs with `partial: true`.
 const partialOf = (entry) => (entry?.partial === true ? 'unsplash' : entry?.partial || null);
-const { RUBRIC_VERSION, verdictFor, validateWinner, positiveInteger, diversify } = require('./lib/review');
+const { RUBRIC_VERSION, verdictFor, validateWinner, validateOwnerPick, positiveInteger, diversify } = require('./lib/review');
 
 const LIMITS = {
   minShortEdge: 312, // 104pt compact card at 3x; larger hero use is reviewed separately.
@@ -237,7 +239,8 @@ function commandRecord(args) {
         if (!candidate || !payload.candidateHash || payload.candidateHash !== hashFile(path.join(PROJECT_ROOT, candidate.file))) throw new Error(`${id}: missing/stale candidateHash or winner`);
         const current = verdicts[id];
         if (current?.rubricVersion !== RUBRIC_VERSION || current.reviewedHash !== currentHash) throw new Error(`${id}: review current image first`);
-        validateWinner(current, payload.review);
+        if (payload.override === 'owner') validateOwnerPick(payload.review);
+        else validateWinner(current, payload.review);
       }
     }
     const { appliedAt, ...reviewed } = payload;
@@ -283,8 +286,10 @@ async function commandSource(args) {
 
   const manifestPath = path.join(PATHS.workspace, 'candidates.json');
   const manifest = readJson(manifestPath, {});
-  // Each provider fills its own share of a plant's candidates; the other provider's are kept.
-  targets = targets.filter((plant) => {
+  // A targeted --query adds to whatever a plant already has; otherwise each provider fills its
+  // own share of a plant's candidates and the other provider's are kept.
+  if (args.query && !args.ids) throw new Error('--query needs --ids so it only searches the plants you mean');
+  if (!args.query) targets = targets.filter((plant) => {
     const existing = manifest[plant.id];
     if (args.refresh || partialOf(existing) === providerName) return true;
     return providerName === 'unsplash'
@@ -302,7 +307,7 @@ async function commandSource(args) {
 
   for (const [index, plant] of targets.entries()) {
     process.stdout.write(`[${index + 1}/${targets.length}] ${plant.id} `);
-    const kept = (manifest[plant.id]?.candidates || []).filter((candidate) => candidateSource(candidate) !== providerName);
+    const kept = (manifest[plant.id]?.candidates || []).filter((candidate) => args.query || candidateSource(candidate) !== providerName);
     const keptKeys = new Set(kept.map(candidateKey));
     let nextSlot = Math.max(0, ...kept.map((candidate) => candidate.slot)) + 1;
     const collected = [];
@@ -310,8 +315,8 @@ async function commandSource(args) {
     const finish = () => [...kept, ...collected].sort((a, b) => a.slot - b.slot);
 
     try {
-      for (const query of provider.queries(plant)) {
-        const results = await provider.search(query);
+      for (const query of args.query ? [String(args.query)] : provider.queries(plant)) {
+        const results = args.query && providerName === 'unsplash' ? await unsplash.searchPhotos(query, 30) : await provider.search(query);
         groups.push(results.filter((photo) => Math.min(photo.width, photo.height) >= LIMITS.minShortEdge && !keptKeys.has(candidateKey(photo))));
         await unsplash.sleep(provider.pause);
       }
@@ -368,6 +373,56 @@ async function commandSource(args) {
   console.log(`\nCandidates: ${rel(PATHS.candidates)}/`);
   if (remaining !== null) console.log(`Unsplash requests remaining this hour: ${remaining}`);
   console.log('Next: /plant-images choose  (ranks candidates against RUBRIC.md)');
+}
+
+/* ----------------------------------------------------------------- crop -- */
+
+/**
+ * Derive a new candidate by cropping an existing one, e.g. to remove a plant label or to
+ * re-centre a subject. It keeps the parent's source and license and records the crop, so
+ * the credits can state the modification that CC BY-SA requires.
+ */
+function commandCrop(args) {
+  if (!args.id || !args.from || !args.box) throw new Error('Usage: crop --id <plant> --from c14 --box x,y,width,height');
+  const manifestPath = path.join(PATHS.workspace, 'candidates.json');
+  const manifest = readJson(manifestPath, {});
+  const candidates = manifest[args.id]?.candidates;
+  const parent = candidates?.find((candidate) => `c${candidate.slot}` === args.from);
+  if (!parent) throw new Error(`${args.id}: no candidate ${args.from}`);
+
+  const parentFile = path.join(PROJECT_ROOT, parent.file);
+  if (hashFile(parentFile) !== parent.hash) throw new Error(`${args.id} ${args.from}: file changed since sourcing`);
+  const box = parseBox(args.box, getDimensions(parentFile));
+  const key = `${candidateKey(parent)}-crop-${box.x}-${box.y}-${box.width}-${box.height}`;
+  if (candidates.some((candidate) => candidate.sourceId === key)) throw new Error(`${args.id}: that crop already exists`);
+
+  const dir = path.dirname(parentFile);
+  const file = cropImage(parentFile, path.join(dir, `${key}.jpg`), box);
+  const dimensions = getDimensions(file);
+  if (!dimensions || dimensions.width !== box.width || dimensions.height !== box.height) {
+    throw new Error(`${args.id}: crop produced ${dimensions?.width}x${dimensions?.height}, expected ${box.width}x${box.height}`);
+  }
+  const thumb = makeThumbnail(file, path.join(dir, `${key}.thumb.jpg`));
+  const cardCrop = makeCardCrop(file, path.join(dir, `${key}.card.jpg`));
+  const slot = Math.max(...candidates.map((candidate) => candidate.slot)) + 1;
+
+  candidates.push({
+    ...parent,
+    sourceId: key,
+    slot,
+    derivedFrom: args.from,
+    crop: box,
+    description: `Cropped from ${args.from}. ${parent.description || ''}`.trim(),
+    hash: hashFile(file),
+    file: rel(file),
+    thumb: rel(thumb),
+    cardCrop: rel(cardCrop),
+    kb: Math.round(fs.statSync(file).size / 1024),
+    width: dimensions.width,
+    height: dimensions.height,
+  });
+  writeJson(manifestPath, manifest);
+  console.log(`${args.id}: c${slot} = ${args.from} cropped to ${box.width}x${box.height} at (${box.x},${box.y})`);
 }
 
 /* ---------------------------------------------------------------- sheet -- */
@@ -454,7 +509,7 @@ function commandSheet(args = {}) {
     const hiddenAlternates = pick ? candidates.length - 1 : 0;
 
     const pickScores = pick && decision.review?.scores ? Object.values(decision.review.scores) : null;
-    const pickLine = pick ? `<p class="pick">Pick <b>c${pick.slot}</b> &middot; ${candidateSource(pick) === 'wikimedia'
+    const pickLine = pick ? `<p class="pick">${decision.override === 'owner' ? '<b>Owner pick</b> &middot; ' : ''}Pick <b>c${pick.slot}</b> &middot; ${candidateSource(pick) === 'wikimedia'
       ? `Wikimedia Commons &middot; ${escapeHtml(pick.license)}` : 'Unsplash'} &middot; ${escapeHtml(pick.photographer)}${pickScores
       ? ` &middot; avg ${(pickScores.reduce((sum, value) => sum + value, 0) / pickScores.length).toFixed(1)}, lowest ${Math.min(...pickScores)}` : ''}${/unknown author/i.test(pick.photographer || '')
       ? ' <span class="warn">Author unknown: attribution cannot be confirmed</span>' : ''}</p>` : '';
@@ -641,7 +696,8 @@ function normalizeForBundle(source, staged) {
 async function commandApply(args) {
   const decisions = readJson(PATHS.decisions, {});
   const manifest = readJson(path.join(PATHS.workspace, 'candidates.json'), {});
-  const pending = Object.entries(decisions).filter(([, decision]) => decision.winner && decision.winner !== 'keep' && !decision.appliedAt);
+  const only = args.ids ? new Set(String(args.ids).split(',').map((id) => id.trim())) : null;
+  const pending = Object.entries(decisions).filter(([id, decision]) => decision.winner && decision.winner !== 'keep' && !decision.appliedAt && (!only || only.has(id)));
   const catalog = parseCatalog();
   const verdicts = readJson(PATHS.verdicts, {});
 
@@ -653,7 +709,8 @@ async function commandApply(args) {
     const candidate = manifest[id]?.candidates.find((item) => `c${item.slot}` === decision.winner);
     if (decision.rubricVersion !== RUBRIC_VERSION || decision.reviewedHash !== currentHash || !candidate || !decision.candidateHash || decision.candidateHash !== hashFile(path.join(PROJECT_ROOT, candidate.file))) throw new Error(`${id}: stale or legacy decision; review and record again before apply`);
     if (verdicts[id]?.rubricVersion !== RUBRIC_VERSION || verdicts[id]?.reviewedHash !== currentHash) throw new Error(`${id}: current review is stale`);
-    validateWinner(verdicts[id], decision.review);
+    if (decision.override === 'owner') validateOwnerPick(decision.review);
+    else validateWinner(verdicts[id], decision.review);
   }
 
   if (!pending.length) {
@@ -716,6 +773,7 @@ async function commandApply(args) {
         attributionRequired: candidate.attributionRequired,
         pageUrl: candidate.pageUrl,
         query: candidate.query,
+        ...(candidate.crop ? { modified: `Cropped to ${candidate.crop.width}x${candidate.crop.height} from the original` } : {}),
         appliedAt: new Date().toISOString(),
       }
       : {
@@ -726,6 +784,7 @@ async function commandApply(args) {
         photographerUrl: candidate.photographerUrl,
         pageUrl: candidate.pageUrl,
         query: candidate.query,
+        ...(candidate.crop ? { modified: `Cropped to ${candidate.crop.width}x${candidate.crop.height} from the original` } : {}),
         appliedAt: new Date().toISOString(),
       };
     decisions[id] = { ...decision, appliedAt: new Date().toISOString() };
@@ -776,6 +835,7 @@ const COMMANDS = {
   queue: commandQueue,
   record: commandRecord,
   source: commandSource,
+  crop: commandCrop,
   sheet: commandSheet,
   apply: commandApply,
   status: commandStatus,
