@@ -575,5 +575,220 @@
     "pageUrl": "https://unsplash.com/photos/a-plant-with-orange-flowers-in-a-greenhouse-zsvoXuyWCD8",
     "query": "bird of paradise plant in pot",
     "appliedAt": "2026-09-24T04:01:44.072Z"
+  },
+  "syngonium-podophyllum.jpg": {
+    "plantId": "syngonium-podophyllum",
+    "source": "wikimedia-commons",
+    "title": "Starr 080117-1518 Syngonium podophyllum.jpg",
+    "author": "Forest & Kim Starr",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "attributionRequired": true,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Starr_080117-1518_Syngonium_podophyllum.jpg",
+    "query": "incategory:\"Syngonium podophyllum\" filetype:bitmap",
+    "modified": "Cropped to 1040x1460 from the original",
+    "appliedAt": "2026-09-24T16:55:02.105Z"
+  },
+  "monstera-deliciosa.jpg": {
+    "plantId": "monstera-deliciosa",
+    "source": "unsplash",
+    "unsplashId": "TSKYvXf1d4M",
+    "photographer": "Febri Adiawarja",
+    "photographerUrl": "https://unsplash.com/@adiawarja",
+    "pageUrl": "https://unsplash.com/photos/monstera-plant-in-a-terracotta-pot-against-orange-wall-TSKYvXf1d4M",
+    "query": "Monstera Deliciosa plant in pot",
+    "appliedAt": "2026-09-24T16:55:02.678Z"
+  },
+  "fiddle-leaf-fig.jpg": {
+    "plantId": "fiddle-leaf-fig",
+    "source": "unsplash",
+    "unsplashId": "jJ16cPg9nLw",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-with-green-leaves-in-it-jJ16cPg9nLw",
+    "query": "Fiddle Leaf Fig plant in pot",
+    "appliedAt": "2026-09-24T16:55:02.949Z"
+  },
+  "pothos-golden.jpg": {
+    "plantId": "pothos-golden",
+    "source": "unsplash",
+    "unsplashId": "pb4edNGPApc",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-stool-pb4edNGPApc",
+    "query": "Golden Pothos plant in pot",
+    "appliedAt": "2026-09-24T16:55:03.167Z"
+  },
+  "calathea-medallion.jpg": {
+    "plantId": "calathea-medallion",
+    "source": "unsplash",
+    "unsplashId": "wq6iKICf2F4",
+    "photographer": "Sixteen Miles Out",
+    "photographerUrl": "https://unsplash.com/@sixteenmilesout",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-table-wq6iKICf2F4",
+    "query": "Calathea Medallion plant in pot",
+    "appliedAt": "2026-09-24T16:55:03.329Z"
+  },
+  "haworthia.jpg": {
+    "plantId": "haworthia",
+    "source": "unsplash",
+    "unsplashId": "GAfumbRLKfc",
+    "photographer": "Daniela Paola Alchapar",
+    "photographerUrl": "https://unsplash.com/@paoalchapar",
+    "pageUrl": "https://unsplash.com/photos/a-small-potted-plant-sitting-on-a-table-GAfumbRLKfc",
+    "query": "Haworthia plant in pot",
+    "appliedAt": "2026-09-24T16:55:03.503Z"
+  },
+  "string-of-hearts.jpg": {
+    "plantId": "string-of-hearts",
+    "source": "unsplash",
+    "unsplashId": "DQ8FjDNZsHw",
+    "photographer": "Rebecca Matthews",
+    "photographerUrl": "https://unsplash.com/@rebeccamatthews",
+    "pageUrl": "https://unsplash.com/photos/string-of-hearts-plant-cascading-from-a-white-pot-DQ8FjDNZsHw",
+    "query": "String of Hearts plant in pot",
+    "appliedAt": "2026-09-24T16:55:03.776Z"
+  },
+  "birds-nest-fern.jpg": {
+    "plantId": "birds-nest-fern",
+    "source": "unsplash",
+    "unsplashId": "iBAr9othZRw",
+    "photographer": "SUN STUDIO CREATIVE",
+    "photographerUrl": "https://unsplash.com/@sun_studio_creative",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-stool-iBAr9othZRw",
+    "query": "birds nest fern plant in pot",
+    "appliedAt": "2026-09-24T16:55:04.036Z"
+  },
+  "spider-plant.jpg": {
+    "plantId": "spider-plant",
+    "source": "unsplash",
+    "unsplashId": "X9DdJFM1NbQ",
+    "photographer": "Mathias Reding",
+    "photographerUrl": "https://unsplash.com/@matreding",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-table-X9DdJFM1NbQ",
+    "query": "Spider plant in pot",
+    "appliedAt": "2026-09-24T16:55:04.299Z"
+  },
+  "scindapsus-pictus.jpg": {
+    "plantId": "scindapsus-pictus",
+    "source": "unsplash",
+    "unsplashId": "hOZI_a2-QAE",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-block-hOZI_a2-QAE",
+    "query": "Satin Pothos plant in pot",
+    "appliedAt": "2026-09-24T16:55:04.498Z"
+  },
+  "sinningia-speciosa.jpg": {
+    "plantId": "sinningia-speciosa",
+    "source": "wikimedia-commons",
+    "title": "Gloxinia - (Sinningia speciosa).jpg",
+    "author": "Mister rf",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attributionRequired": true,
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Gloxinia_-_(Sinningia_speciosa).jpg",
+    "query": "incategory:\"Sinningia speciosa\" filetype:bitmap",
+    "appliedAt": "2026-09-24T16:55:04.725Z"
+  },
+  "lucky-bamboo.jpg": {
+    "plantId": "lucky-bamboo",
+    "source": "unsplash",
+    "unsplashId": "wKhqeFZI4v0",
+    "photographer": "SJ 📸",
+    "photographerUrl": "https://unsplash.com/@uxsj_ph",
+    "pageUrl": "https://unsplash.com/photos/a-bamboo-plant-in-a-pot-on-a-wooden-floor-wKhqeFZI4v0",
+    "query": "lucky bamboo",
+    "appliedAt": "2026-09-24T16:55:04.884Z"
+  },
+  "string-of-pearls.jpg": {
+    "plantId": "string-of-pearls",
+    "source": "unsplash",
+    "unsplashId": "kVuW2Y40q1c",
+    "photographer": "Sam Galli",
+    "photographerUrl": "https://unsplash.com/@samgalli1",
+    "pageUrl": "https://unsplash.com/photos/string-of-pearls-succulent-plant-in-a-white-pot-kVuW2Y40q1c",
+    "query": "string of pearls succulent",
+    "appliedAt": "2026-09-24T16:55:05.138Z"
+  },
+  "parlor-palm.jpg": {
+    "plantId": "parlor-palm",
+    "source": "unsplash",
+    "unsplashId": "Uii3CSyuItI",
+    "photographer": "Natalie Kinnear",
+    "photographerUrl": "https://unsplash.com/@nataliekinnear",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-table-Uii3CSyuItI",
+    "query": "parlor palm",
+    "appliedAt": "2026-09-24T16:55:05.370Z"
+  },
+  "kalanchoe.jpg": {
+    "plantId": "kalanchoe",
+    "source": "unsplash",
+    "unsplashId": "fDAUrBswpgM",
+    "photographer": "Mirella Callage",
+    "photographerUrl": "https://unsplash.com/@mcallage",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-with-red-flowers-and-green-leaves-fDAUrBswpgM",
+    "query": "kalanchoe flowers",
+    "appliedAt": "2026-09-24T16:55:05.645Z"
+  },
+  "schefflera-arboricola.jpg": {
+    "plantId": "schefflera-arboricola",
+    "source": "unsplash",
+    "unsplashId": "QRjCIDTRrHI",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-table-QRjCIDTRrHI",
+    "query": "schefflera",
+    "appliedAt": "2026-09-24T16:55:05.844Z"
+  },
+  "caladium.jpg": {
+    "plantId": "caladium",
+    "source": "unsplash",
+    "unsplashId": "oQPhVYCqgcg",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-table-oQPhVYCqgcg",
+    "query": "caladium",
+    "appliedAt": "2026-09-24T16:55:06.029Z"
+  },
+  "calathea-makoyana.jpg": {
+    "plantId": "calathea-makoyana",
+    "source": "unsplash",
+    "unsplashId": "iOx9-YjxEuI",
+    "photographer": "feey",
+    "photographerUrl": "https://unsplash.com/@feeypflanzen",
+    "pageUrl": "https://unsplash.com/photos/a-houseplant-in-a-white-pot-on-a-wooden-stand-iOx9-YjxEuI",
+    "query": "calathea makoyana",
+    "appliedAt": "2026-09-24T16:55:06.257Z"
+  },
+  "sedum-morganianum.jpg": {
+    "plantId": "sedum-morganianum",
+    "source": "unsplash",
+    "unsplashId": "cOPQMTpCeOA",
+    "photographer": "Emanuel Haas",
+    "photographerUrl": "https://unsplash.com/@dermanuskript",
+    "pageUrl": "https://unsplash.com/photos/donkeys-tail-succulent-plant-cascading-from-pot-cOPQMTpCeOA",
+    "query": "burros tail",
+    "appliedAt": "2026-09-24T16:55:06.543Z"
+  },
+  "alocasia-amazonica.jpg": {
+    "plantId": "alocasia-amazonica",
+    "source": "unsplash",
+    "unsplashId": "1f6vwOpB3w0",
+    "photographer": "Büşra İnce",
+    "photographerUrl": "https://unsplash.com/@muverrihhanim",
+    "pageUrl": "https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-stool-1f6vwOpB3w0",
+    "query": "Calathea Medallion plant in pot",
+    "appliedAt": "2026-09-24T16:55:06.802Z"
+  },
+  "dracaena-fragrans.jpg": {
+    "plantId": "dracaena-fragrans",
+    "source": "unsplash",
+    "unsplashId": "nW5F0MYSBQ8",
+    "photographer": "Kevin Gonzalez",
+    "photographerUrl": "https://unsplash.com/@typegon",
+    "pageUrl": "https://unsplash.com/photos/green-plant-on-brown-clay-pot-nW5F0MYSBQ8",
+    "query": "Corn plant in pot",
+    "appliedAt": "2026-09-24T16:55:06.957Z"
   }
 }

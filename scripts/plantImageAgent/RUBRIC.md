@@ -13,7 +13,7 @@ card and full-bleed with a dark overlay in the hero card.
 
 **The image must help someone recognize and choose this plant at card size.**
 
-A single dominant specimen is preferred. A pot, wall, floor, or small amount of room
+The plant must be photographed indoors, as it would live in a home. A single dominant specimen is preferred. A pot, wall, floor, or small amount of room
 context is acceptable when the plant remains the unmistakable subject. Do not call a
 photo a room-scene merely because a skirting board or wall outlet is visible. Background
 distractions lower subjectIsolation; only a competing scene is a hard fail.
@@ -28,7 +28,8 @@ uncertainty; do not confidently identify a cultivar from a generic green silhoue
 | Code | Fails when |
 |---|---|
 | `wrong-species` | Not the species named in `scientificName`, or a different cultivar with a visibly different leaf |
-| `room-scene` | An interior/exterior scene; the plant is set dressing rather than the subject |
+| `outdoor` | Shot outdoors: garden, patio, balcony, street, park, wild habitat, or a plant mounted on a tree. Planterior is an interior-plants app; the plant must be indoors (home interior or studio backdrop). Greenhouses, nurseries and garden centres also fail. |
+| `room-scene` | An interior scene where the plant is set dressing rather than the subject |
 | `collection` | More than one plant reads as a subject — shop shelf, nursery row, grouped arrangement |
 | `not-whole-plant` | Extreme macro of a single leaf, flower, or root with no sense of the plant's form |
 | `human-present` | A person or hands obscure the specimen or remain a competing subject in the card crop |
