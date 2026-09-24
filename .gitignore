@@ -56,3 +56,6 @@ credentials.json
 # generated native folders
 /ios
 /android
+
+# Plant image agent workspace (regenerable)
+.plant-image-agent/
