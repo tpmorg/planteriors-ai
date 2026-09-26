@@ -15,11 +15,32 @@ const getEnv = (key, fallback = '') => {
   return value;
 };
 
+const googleServices = require('./google-services.json');
+const firebaseWebClientId = googleServices.client
+  .flatMap((client) => client.oauth_client || [])
+  .find((client) => client.client_type === 3)?.client_id || '';
+
+const getGoogleClientId = () => {
+  const configuredClientId = getEnv('GOOGLE_CLIENT_ID', firebaseWebClientId);
+
+  if (
+    configuredClientId &&
+    firebaseWebClientId &&
+    configuredClientId !== firebaseWebClientId
+  ) {
+    throw new Error(
+      'GOOGLE_CLIENT_ID does not match the Web OAuth client in google-services.json.'
+    );
+  }
+
+  return configuredClientId;
+};
+
 module.exports = ({ config }) => ({
   ...config,
   extra: {
     ...config.extra,
-    googleClientId: getEnv('GOOGLE_CLIENT_ID'),
+    googleClientId: getGoogleClientId(),
     googleClientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
     aiApiUrl: getEnv('AI_API_URL', 'https://www.planterior.app'),
     aiApiTimeout: parseInt(process.env.AI_API_TIMEOUT || '310000', 10),

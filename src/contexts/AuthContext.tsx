@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Alert, Platform } from 'react-native';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -101,6 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signInWithGoogle = async () => {
+    let phase = 'play_services_check';
+
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       console.log('Starting native Google Sign-In...');
@@ -115,8 +122,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await GoogleSignin.hasPlayServices();
 
       // Sign in with Google
+      phase = 'account_selection';
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In successful:', userInfo);
+
+      if (isCancelledResponse(userInfo)) {
+        console.log('User cancelled Google Sign-In');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
 
       // Get the ID token for Firebase
       const idToken = userInfo.data?.idToken;
@@ -125,20 +138,55 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Signing in to Firebase with Google ID token...');
+      phase = 'firebase_credential';
       await FirebaseAuthService.signInWithGoogleIdToken(idToken);
       reportNetworkSuccess('google_sign_in');
       // onAuthStateChanged will update authState automatically
-    } catch (error: any) {
-      console.error('Error signing in with Google:', error);
+    } catch (error: unknown) {
+      const code = isErrorWithCode(error) ? String(error.code) : 'unknown';
+      const isCancellation = code === statusCodes.SIGN_IN_CANCELLED;
+
+      if (isCancellation) {
+        console.log('User cancelled Google Sign-In');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      const capturedError = error instanceof Error
+        ? error
+        : new Error('Unknown Google Sign-In failure');
+
+      console.error('Google Sign-In failed', { phase, code });
       reportNetworkIssue('google_sign_in', error);
 
-      // Handle specific error cases
-      if (error.code === 'SIGN_IN_CANCELLED') {
-        console.log('User cancelled the sign-in');
-      } else if (error.code === 'IN_PROGRESS') {
-        console.log('Sign-in already in progress');
-      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
-        console.error('Google Play Services not available');
+      Sentry.withScope((scope) => {
+        scope.setLevel('error');
+        scope.setTag('auth_provider', 'google');
+        scope.setTag('auth_phase', phase);
+        scope.setTag('google_sign_in_code', code);
+        scope.setContext('google_sign_in', {
+          phase,
+          code,
+          platform: Platform.OS,
+        });
+        Sentry.captureException(capturedError);
+      });
+
+      if (code === statusCodes.IN_PROGRESS) {
+        Alert.alert(
+          'Sign-In Already Open',
+          'A Google sign-in is already in progress. Please wait a moment and try again.'
+        );
+      } else if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          'Google Sign-In Unavailable',
+          'Google Play Services is unavailable or out of date on this device.'
+        );
+      } else {
+        Alert.alert(
+          'Unable to Sign In',
+          'Google sign-in could not be completed. Please try again.'
+        );
       }
 
       setAuthState(prev => ({ ...prev, isLoading: false }));
