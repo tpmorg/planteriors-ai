@@ -149,6 +149,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         return (
           <Pressable
             key={route.key}
+            testID={`main-tab-${route.name.toLowerCase()}`}
             onPress={onPress}
             accessibilityRole="tab"
             accessibilityLabel={typeof label === 'string' ? label : route.name}

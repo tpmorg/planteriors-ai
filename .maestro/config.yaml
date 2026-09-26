@@ -1,0 +1,4 @@
+appId: com.bcs.planterior
+flows:
+  - flows/**/*.yaml
+testOutputDir: artifacts/maestro

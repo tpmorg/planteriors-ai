@@ -14,6 +14,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
+    "e2e:maestro": "maestro test --test-output-dir=artifacts/maestro .maestro",
+    "e2e:screenshots": "maestro test --test-output-dir=artifacts/maestro .maestro/flows/capture-core-screens.yaml",
     "check:revenuecat": "node scripts/checkRevenueCatSetup.js",
     "check:revenuecat:prod": "node scripts/checkRevenueCatSetup.js --env=production",
     "build:dev:android": "eas build --platform android --profile development",

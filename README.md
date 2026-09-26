@@ -134,6 +134,14 @@ npm run check:revenuecat
 npm run check:revenuecat:prod
 ```
 
+Device-level screenshot capture:
+
+```bash
+npm run e2e:screenshots
+```
+
+See [docs/maestro-screenshot-testing.md](/Users/timmorgan/Development/mobile/react/planteriorai/docs/maestro-screenshot-testing.md:1) for setup, output location, and the next Maestro coverage slices.
+
 Current note:
 
 - `npx tsc --noEmit` is not clean right now due to the Firebase auth import in [src/config/firebase.ts](/Users/timmorgan/Development/mobile/react/planteriorai/src/config/firebase.ts:8)

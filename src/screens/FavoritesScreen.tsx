@@ -219,7 +219,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Favorites</Text>
+          <Text style={styles.title} testID="screen-favorites">Favorites</Text>
           <Text style={styles.subtitle}>Your favorite designs and saved collections</Text>
         </View>
 

@@ -234,7 +234,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
         scrollEventThrottle={16}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.title} testID="screen-settings">Settings</Text>
           <Text style={styles.subtitle}>Control quality and app behavior</Text>
         </View>
 

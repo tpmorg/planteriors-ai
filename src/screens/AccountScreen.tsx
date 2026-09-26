@@ -248,7 +248,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>Account</Text>
+              <Text style={styles.title} testID="screen-account">Account</Text>
               <Text style={styles.subtitle}>Your plan, profile, and preferences</Text>
             </View>
             {isSheetPresentation && onClose ? (

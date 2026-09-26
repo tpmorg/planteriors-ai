@@ -1,0 +1,80 @@
+appId: com.bcs.planterior
+name: Capture core app screens
+tags:
+  - screenshots
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Planterior AI|Getting Started|Gallery"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 00-launch
+
+# A fresh or signed-out install cannot enter the app without native auth. Capture
+# that state and leave the sign-in sheet untouched.
+- runFlow:
+    when:
+      visible:
+        id: auth-google
+    commands:
+      - takeScreenshot: 01-auth-android
+- runFlow:
+    when:
+      visible:
+        id: auth-apple
+    commands:
+      - takeScreenshot: 01-auth-ios
+
+# Preserve first-run state. Onboarding gets its own screenshot without marking it
+# complete, so a capture run never changes whether the user has finished it.
+- runFlow:
+    when:
+      visible:
+        id: onboarding-continue
+    commands:
+      - takeScreenshot: 02-onboarding
+
+# When the device already has an authenticated session, capture the durable app
+# surfaces in a predictable order.
+- runFlow:
+    when:
+      visible:
+        text: "^Gallery$"
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: "^Gallery$"
+          timeout: 15000
+      - takeScreenshot: 10-gallery
+      - tapOn: Open account
+      - extendedWaitUntil:
+          visible:
+            text: "^Account$"
+          timeout: 15000
+      - takeScreenshot: 11-account
+      - launchApp:
+          clearState: false
+      - extendedWaitUntil:
+          visible:
+            text: "^Gallery$"
+          timeout: 30000
+      - tapOn: "^Library$"
+      - extendedWaitUntil:
+          visible:
+            text: "^Library$"
+          timeout: 15000
+      - takeScreenshot: 12-library
+      - tapOn: "^Favorites$"
+      - extendedWaitUntil:
+          visible:
+            text: "^Favorites$"
+          timeout: 15000
+      - takeScreenshot: 13-favorites
+      - tapOn: "^Settings$"
+      - extendedWaitUntil:
+          visible:
+            text: "^Settings$"
+          timeout: 15000
+      - takeScreenshot: 14-settings

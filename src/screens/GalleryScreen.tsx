@@ -623,7 +623,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <>
           <View style={styles.topBar}>
             <View style={styles.topBarCopy}>
-              <Text style={styles.topBarTitle}>Gallery</Text>
+              <Text style={styles.topBarTitle} testID="screen-gallery">Gallery</Text>
               <Text style={styles.topBarSubtitle}>
                 {designs.length === 0
                   ? 'Your saved room previews will show up here'
@@ -632,6 +632,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
             </View>
 
             <Pressable
+              testID="gallery-open-account"
               onPress={openAccountSheet}
               accessibilityRole="button"
               accessibilityLabel="Open account"
