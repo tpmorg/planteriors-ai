@@ -5,13 +5,13 @@
     "slug": "plant-interior-ai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f9fafb"
+      "backgroundColor": "#F6F3EE"
     },
     "scheme": "plant-interior-ai",
     "plugins": [
@@ -133,10 +133,11 @@
     },
     "android": {
       "package": "com.bcs.planterior",
-      "icon": "./assets/logo.png",
+      "icon": "./assets/app-icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#F6F3EE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -151,7 +152,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {

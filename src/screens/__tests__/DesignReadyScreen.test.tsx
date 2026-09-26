@@ -25,21 +25,20 @@ function Harness({ onGenerate = jest.fn() }: { onGenerate?: jest.Mock }) {
     onBack={noop} onClose={noop} onCustomize={noop} onChooseSpot={noop} onChangeTarget={noop} onReplacePhoto={noop} onCropPhoto={noop} />;
 }
 
-it('edits Restyle directly and submits the chosen options with a valid matching style', () => {
+it('edits Restyle directly with only style, amount, and instructions', () => {
   const onGenerate = jest.fn();
   const screen = render(<Harness onGenerate={onGenerate} />);
   expect(screen.queryByText('Customize')).toBeNull();
-  fireEvent.press(screen.getByLabelText('Plant type: Succulents'));
-  expect(screen.getByRole('radio', { name: 'Style: Modern', checked: true })).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Style: Rustic'));
-  fireEvent.press(screen.getByLabelText('Pot color: Navy'));
-  fireEvent.press(screen.getByLabelText('Planter boxes: On'));
+  expect(screen.queryByText('Pot style')).toBeNull();
+  expect(screen.queryByText('Care level')).toBeNull();
+  expect(screen.getByRole('radio', { name: 'Style: Japandi', checked: true })).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Style: Mid-century'));
+  fireEvent.press(screen.getByLabelText('Amount: Generous'));
   fireEvent.changeText(screen.getByLabelText('Special instructions'), 'Keep the sofa');
   fireEvent.press(screen.getByText('Generate design'));
   expect(onGenerate).toHaveBeenCalledWith(expect.objectContaining({
-    mode: 'multi-plant', plantType: expect.objectContaining({ id: 'succulents' }),
-    plantStyle: expect.objectContaining({ id: 'rustic' }), prompt: 'Keep the sofa',
-    plantOptions: expect.objectContaining({ potColor: expect.objectContaining({ id: 'navy' }), usePlanterBox: true }),
+    mode: 'multi-plant', restyle: { styleId: 'mid-century', amount: 'generous' },
+    plantType: expect.objectContaining({ name: 'Mid-century' }), prompt: 'Keep the sofa',
   }));
 });
 

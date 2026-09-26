@@ -394,7 +394,7 @@ export const SubscriptionScreen: React.FC<RootStackScreenProps<'Subscription'>> 
         <View style={styles.heroSection}>
           <View style={styles.iconCircle}>
             <Image
-              source={require('../../assets/logo.png')}
+              source={theme.isDark ? require('../../assets/logo-dark.png') : require('../../assets/logo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />

@@ -118,7 +118,7 @@ export default function SplashScreen() {
       <Animated.View style={[styles.logoContainer, animatedStyle]}>
         <View style={[styles.logoRing, { borderColor: theme.colors.border }]} />
         <Image
-          source={require('../../assets/logo.png')}
+          source={theme.isDark ? require('../../assets/logo-dark.png') : require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

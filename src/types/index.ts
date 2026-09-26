@@ -137,11 +137,39 @@ export interface PlantOptions {
   placementDensity: PlacementDensity;
 }
 
+export type RestyleStyleId = 'japandi' | 'mid-century';
+export type RestyleAmount = 'restrained' | 'generous';
+
+export interface RestyleChoice {
+  styleId: RestyleStyleId;
+  amount: RestyleAmount;
+}
+
+// The server's validated Restyle plan: real library species and where they were placed.
+export interface RestylePlan {
+  styleId: RestyleStyleId;
+  styleName: string;
+  amount: RestyleAmount;
+  rationale: string;
+  plants: Array<{
+    speciesId: string;
+    name: string;
+    scientificName: string;
+    role: 'statement' | 'supporting' | 'accent';
+    size: PlantSize;
+    placement: 'floor' | 'raised' | 'surface' | 'hanging';
+    position: string;
+    vessel: string;
+  }>;
+}
+
 export interface GenerationRequest {
   imageUri: string;
   imagePrepared?: boolean;
   originalImageUri?: string;
   mode: PlantSelectionMode;
+  // Style-led Restyle choice; plantType/plantStyle then only carry display labels.
+  restyle?: RestyleChoice;
   // Multi-plant mode fields (existing)
   plantType?: PlantType;
   plantStyle?: PlantStyle;
@@ -195,6 +223,7 @@ export interface DesignFlowDraft {
   step: DesignFlowStep;
   photo?: DesignPhotoAsset;
   intent?: DesignIntent;
+  restyle?: RestyleChoice;
   plantType?: PlantType;
   plantStyle?: PlantStyle;
   plantOptions?: PlantOptions;

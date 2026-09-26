@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
 import { auth } from '../config/firebase';
-import { GenerationRequest, IdentifiedDesignPlant, PlantIdentificationResult } from '../types';
+import { GenerationRequest, IdentifiedDesignPlant, PlantIdentificationResult, RestylePlan } from '../types';
 import { env } from '../utils/env';
 import { compressImageForAI } from '../utils/imageUtils';
 
@@ -48,7 +48,7 @@ class AiApiService {
   async generatePlantImage(
     request: GenerationRequest,
     onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
-  ): Promise<{ imageUri: string; isGenerated: true; jobId: string }> {
+  ): Promise<{ imageUri: string; isGenerated: true; jobId: string; restylePlan?: RestylePlan }> {
     onPhase?.('preparing');
     const uploadId = await this.uploadImage(request.imageUri, onPhase, request.imagePrepared);
     onPhase?.('generating');
@@ -67,7 +67,8 @@ class AiApiService {
 
     onPhase?.('downloading');
     const imageUri = await this.downloadResult(job.id, job.resultUrl);
-    return { imageUri, isGenerated: true, jobId: job.id };
+    const restylePlan = (job.result as { restylePlan?: RestylePlan } | null | undefined)?.restylePlan;
+    return { imageUri, isGenerated: true, jobId: job.id, restylePlan };
   }
 
   async identifyPlant(imageUri: string): Promise<PlantIdentificationResult> {
@@ -121,6 +122,15 @@ class AiApiService {
   }
 
   private generationPayload(uploadId: string, request: GenerationRequest) {
+    if (request.mode === 'multi-plant' && request.restyle) {
+      // Household rules (pets) are omitted until they exist as an account setting; the server defaults them.
+      return {
+        uploadId,
+        mode: request.mode,
+        restyle: request.restyle,
+        customInstructions: request.prompt || undefined,
+      };
+    }
     if (request.mode === 'multi-plant') {
       if (!request.plantType || !request.plantStyle || !request.plantOptions) {
         throw new Error('Plant type, style, and options are required.');

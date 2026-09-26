@@ -6,90 +6,65 @@ import type {
   GenerationRequest,
   IndividualPlant,
   IndividualPlantSelection,
-  MaintenanceLevel,
-  PlacementDensity,
-  PlantOptions,
   PurchaseCompletionEvent,
   PlantStyle,
   PlantType,
-  PotColor,
-  PotStyle,
   PlantSearchResult,
   PlantSize,
+  IdentifiedDesignPlant,
+  RestyleAmount,
+  RestyleChoice,
+  RestylePlan,
+  RestyleStyleId,
 } from '../types';
+import { getPlantById } from '../data/plantDatabase';
 
-export const PLANT_TYPES: PlantType[] = [
-  {
-    id: 'succulents', name: 'Succulents', description: 'Low-maintenance, water-storing plants', icon: 'Cactus',
-    styles: [
-      { id: 'modern', name: 'Modern', description: 'Clean, geometric arrangements', icon: 'Lightning' },
-      { id: 'rustic', name: 'Rustic', description: 'Natural, organic feel', icon: 'Tree' },
-      { id: 'minimalist', name: 'Minimalist', description: 'Simple, elegant displays', icon: 'Circle' },
-    ],
-  },
-  {
-    id: 'tropical', name: 'Tropical', description: 'Lush, green foliage plants', icon: 'Leaf',
-    styles: [
-      { id: 'jungle', name: 'Jungle', description: 'Dense, wild arrangements', icon: 'Tree' },
-      { id: 'contemporary', name: 'Contemporary', description: 'Stylish, curated look', icon: 'StarFour' },
-      { id: 'bohemian', name: 'Bohemian', description: 'Eclectic, artistic vibe', icon: 'PaintBrush' },
-    ],
-  },
-  {
-    id: 'flowering', name: 'Flowering', description: 'Colorful blooms and flowers', icon: 'Flower',
-    styles: [
-      { id: 'cottage', name: 'Cottage', description: 'Charming, homey feel', icon: 'House' },
-      { id: 'elegant', name: 'Elegant', description: 'Sophisticated arrangements', icon: 'Crown' },
-      { id: 'vibrant', name: 'Vibrant', description: 'Bold, colorful displays', icon: 'Palette' },
-    ],
-  },
-  {
-    id: 'hanging', name: 'Hanging', description: 'Trailing and cascading plants', icon: 'Plant',
-    styles: [
-      { id: 'cascading', name: 'Cascading', description: 'Flowing, waterfall effect', icon: 'Drop' },
-      { id: 'structured', name: 'Structured', description: 'Organized, planned layout', icon: 'Ruler' },
-      { id: 'natural', name: 'Natural', description: 'Organic, free-flowing', icon: 'Leaf' },
-    ],
-  },
+// Restyle styles are design recipes defined on the server (planterior-ai-web lib/ai/restyle);
+// the app only needs their ids and copy.
+export const RESTYLE_STYLES: Array<{ id: RestyleStyleId; name: string; tagline: string }> = [
+  { id: 'japandi', name: 'Japandi', tagline: 'Calm, sparse, sculptural. One plant carries the room.' },
+  { id: 'mid-century', name: 'Mid-century', tagline: 'Bold leaves as sculpture, lifted on legs, warm wood and glaze.' },
 ];
 
-export const POT_STYLES: PotStyle[] = [
-  { id: 'ceramic', name: 'Ceramic', icon: 'PottedPlant' },
-  { id: 'terracotta', name: 'Terracotta', icon: 'CookingPot' },
-  { id: 'modern', name: 'Modern', icon: 'Square' },
-  { id: 'woven', name: 'Woven', icon: 'Basket' },
-  { id: 'concrete', name: 'Concrete', icon: 'Cube' },
+export const RESTYLE_AMOUNTS: Array<{ id: RestyleAmount; name: string; description: string }> = [
+  { id: 'restrained', name: 'Restrained', description: 'A few well-placed plants' },
+  { id: 'generous', name: 'Generous', description: 'More green, same design sense' },
 ];
 
-export const POT_COLORS: PotColor[] = [
-  { id: 'white', name: 'White', hex: '#FFFFFF' },
-  { id: 'black', name: 'Black', hex: '#2D2D2D' },
-  { id: 'terracotta', name: 'Terracotta', hex: '#C45C3E' },
-  { id: 'sage', name: 'Sage', hex: '#9CAF88' },
-  { id: 'navy', name: 'Navy', hex: '#1E3A5F' },
-  { id: 'cream', name: 'Cream', hex: '#F5F5DC' },
-];
+export const DEFAULT_RESTYLE: RestyleChoice = { styleId: 'japandi', amount: 'restrained' };
 
-export const MAINTENANCE_LEVELS: MaintenanceLevel[] = [
-  { id: 'low', name: 'Low', description: 'Minimal care needed', icon: 'BatteryLow' },
-  { id: 'medium', name: 'Medium', description: 'Regular attention', icon: 'BatteryMedium' },
-  { id: 'high', name: 'High', description: 'Daily care required', icon: 'BatteryHigh' },
-];
+// Saved designs, the gallery, and sync label multi-plant designs by plantType/plantStyle names,
+// so Restyle fills those with the style and amount instead of changing the saved schema.
+export function restyleLabels(choice: RestyleChoice): { plantType: PlantType; plantStyle: PlantStyle } {
+  const style = RESTYLE_STYLES.find((value) => value.id === choice.styleId) || RESTYLE_STYLES[0];
+  const amount = RESTYLE_AMOUNTS.find((value) => value.id === choice.amount) || RESTYLE_AMOUNTS[0];
+  const plantStyle = { id: amount.id, name: amount.name, description: amount.description, icon: 'Leaf' };
+  return { plantType: { id: style.id, name: style.name, description: style.tagline, icon: 'Plant', styles: [plantStyle] }, plantStyle };
+}
 
-export const PLACEMENT_DENSITIES: PlacementDensity[] = [
-  { id: 'sparse', name: 'Sparse', description: 'Few accent plants', icon: 'Plant' },
-  { id: 'moderate', name: 'Moderate', description: 'Balanced arrangement', icon: 'Leaf' },
-  { id: 'lush', name: 'Lush', description: 'Abundant greenery', icon: 'Tree' },
-];
+// Recovers the Restyle choice behind a saved design's labels, or null for older designs.
+export function restyleFromLabels(plantTypeName?: string, plantStyleName?: string): RestyleChoice | null {
+  const style = RESTYLE_STYLES.find((value) => value.name === plantTypeName);
+  const amount = RESTYLE_AMOUNTS.find((value) => value.name === plantStyleName);
+  return style && amount ? { styleId: style.id, amount: amount.id } : null;
+}
 
-export const DEFAULT_RESTYLE_PRESET = {
-  plantTypeId: 'tropical',
-  plantStyleId: 'contemporary',
-  potStyleId: 'ceramic',
-  potColorId: 'white',
-  maintenanceLevelId: 'low',
-  placementDensityId: 'moderate',
-} as const;
+// Planned plants become the design's plant list right away, with care and light from the library.
+export function restylePlanToDesignPlants(plan: RestylePlan): IdentifiedDesignPlant[] {
+  return plan.plants.map((plant) => {
+    const libraryPlant = getPlantById(plant.speciesId);
+    return {
+      commonName: plant.name,
+      scientificName: plant.scientificName,
+      confidence: 1,
+      placement: plant.placement === 'surface' ? 'table' : plant.placement === 'raised' ? 'floor' : plant.placement,
+      visibleCount: 1,
+      careLevel: libraryPlant?.careLevel || 'moderate',
+      lightRequirement: libraryPlant?.lightRequirement || 'bright-indirect',
+      notes: `${plant.position}. ${plant.vessel}.`,
+    };
+  });
+}
 
 // Local-only recovery policy: keep the newest three unsaved/saved flow results for seven days.
 // These references live in AsyncStorage and are intentionally excluded from Firestore sync.
@@ -116,8 +91,6 @@ export function shouldResumeAfterPurchase(
 
 export function createDesignDraft(ownerId: string, entryPoint: DesignFlowEntryPoint = 'new-design'): DesignFlowDraft {
   const now = Date.now();
-  const plantType = PLANT_TYPES.find((value) => value.id === DEFAULT_RESTYLE_PRESET.plantTypeId)!;
-  const plantStyle = plantType.styles.find((value) => value.id === DEFAULT_RESTYLE_PRESET.plantStyleId)!;
   return {
     id: `design-${now}-${Math.random().toString(36).slice(2, 8)}`,
     ownerId,
@@ -126,15 +99,7 @@ export function createDesignDraft(ownerId: string, entryPoint: DesignFlowEntryPo
     updatedAt: now,
     entryPoint,
     step: 'photo',
-    plantType,
-    plantStyle,
-    plantOptions: {
-      potStyle: POT_STYLES.find((value) => value.id === DEFAULT_RESTYLE_PRESET.potStyleId)!,
-      potColor: POT_COLORS.find((value) => value.id === DEFAULT_RESTYLE_PRESET.potColorId)!,
-      usePlanterBox: false,
-      maintenanceLevel: MAINTENANCE_LEVELS.find((value) => value.id === DEFAULT_RESTYLE_PRESET.maintenanceLevelId)!,
-      placementDensity: PLACEMENT_DENSITIES.find((value) => value.id === DEFAULT_RESTYLE_PRESET.placementDensityId)!,
-    },
+    restyle: DEFAULT_RESTYLE,
     requestStatus: 'idle',
     results: [],
   };
@@ -201,17 +166,15 @@ export function buildGenerationRequest(draft: DesignFlowDraft): GenerationReques
   if (!draft.intent) throw new Error('Choose what you want to do before generating.');
   const mode = intentToMode(draft.intent);
   if (mode === 'multi-plant') {
-    if (!draft.plantType || !draft.plantStyle || !draft.plantOptions) {
-      throw new Error('The Restyle setup is incomplete.');
-    }
+    // Drafts persisted before style-led Restyle have no choice yet and take the default.
+    const restyle = draft.restyle || DEFAULT_RESTYLE;
     return {
       imageUri: draft.refinementSourceUri || draft.photo.preparedUri,
       imagePrepared: true,
       originalImageUri: draft.photo.originalUri,
       mode,
-      plantType: draft.plantType,
-      plantStyle: draft.plantStyle,
-      plantOptions: draft.plantOptions,
+      restyle,
+      ...restyleLabels(restyle),
       prompt: draft.prompt?.trim() || undefined,
     };
   }

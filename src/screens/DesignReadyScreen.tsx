@@ -8,10 +8,8 @@ import { RestyleOptions } from '../components/RestyleOptions';
 import { useTheme } from '../contexts/ThemeContext';
 import type { DesignFlowDraft } from '../types';
 
+// Restyle shows its editable options instead of a summary.
 function summaryFor(draft: DesignFlowDraft) {
-  if (draft.intent === 'restyle') {
-    return [draft.plantType?.name, draft.plantStyle?.name, draft.plantOptions?.placementDensity.name, `${draft.plantOptions?.maintenanceLevel.name} care`].filter(Boolean);
-  }
   return [
     draft.individualPlant?.plant.name,
     draft.individualPlant ? `${draft.individualPlant.size} size` : undefined,

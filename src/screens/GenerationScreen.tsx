@@ -22,7 +22,8 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { AppIcon } from '../components/AppIcon';
 import { AppButton } from '../components/AppButton';
-import { GenerationRequest, GeneratedImage } from "../types";
+import { GenerationRequest, GeneratedImage, IdentifiedDesignPlant } from "../types";
+import { restylePlanToDesignPlants } from "../designFlow/designFlow";
 import { createGeminiService } from "../services/geminiService";
 import { describeAiError } from "../services/aiErrorPresentation";
 import { databaseService } from "../services/databaseService";
@@ -75,6 +76,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     initialResultUri || null,
   );
   const [isImageGenerated, setIsImageGenerated] = useState<boolean>(!!initialResultUri);
+  // Restyle results name their plants up front; recovered results fall back to Identify plants.
+  const [plannedPlants, setPlannedPlants] = useState<IdentifiedDesignPlant[] | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [errorReference, setErrorReference] = useState<string | null>(null);
@@ -103,7 +106,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     ? `${request.individualPlant!.plant.name} • ${request.individualPlant!.size} • ${
         request.mode === 'replace-plant' ? 'replacement' : request.individualPlant!.placement
       }`
-    : `${request.plantType?.name} • ${request.plantStyle?.name} Style`;
+    : request.restyle
+      ? `${request.plantType?.name} • ${request.plantStyle?.name}`
+      : `${request.plantType?.name} • ${request.plantStyle?.name} Style`;
   const requestActionLabel =
     request.mode === 'replace-plant'
       ? 'Replacing plant with:'
@@ -243,7 +248,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setApiCallStarted(true);
 
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated, jobId } = await geminiService.generatePlantImage(
+      const { imageUri: generatedUri, isGenerated, jobId, restylePlan } = await geminiService.generatePlantImage(
         request,
         (phase) => setCurrentStatus({
           preparing: 'Preparing photo...',
@@ -256,6 +261,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setCurrentStatus("Generation complete!");
 
       setGeneratedImageUri(generatedUri);
+      setPlannedPlants(restylePlan ? restylePlanToDesignPlants(restylePlan) : undefined);
       setIsImageGenerated(isGenerated);
       setIsGenerating(false);
       if (isGenerated) {
@@ -330,6 +336,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           individualPlantSize: request.individualPlant?.size,
           individualPlantPlacement: request.individualPlant?.placement,
           individualPlantId: request.individualPlant?.plant.id,
+          generatedPlants: plannedPlants,
           customPrompt: request.prompt,
         });
 
@@ -339,6 +346,7 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
           generatedImageUri: generatedImageUri,
           plantType: request.plantType!,
           plantStyle: request.plantStyle!,
+          generatedPlants: plannedPlants,
           prompt: request.prompt || "",
           createdAt: new Date(),
         };

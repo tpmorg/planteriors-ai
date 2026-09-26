@@ -4,6 +4,9 @@ import {
   createDesignDraft,
   getDefaultPlantSize,
   pruneRecoverableResults,
+  restyleFromLabels,
+  restyleLabels,
+  restylePlanToDesignPlants,
   selectPlant,
   shouldResumeAfterPurchase,
 } from '../designFlow';
@@ -25,7 +28,7 @@ const TEST_PLANT = {
 };
 
 describe('design flow request adapter', () => {
-  it('uses the named Restyle preset without array-index defaults', () => {
+  it('sends the default Restyle style choice with display labels', () => {
     const draft = createDesignDraft('user-1');
     const request = buildGenerationRequest({
       ...draft,
@@ -34,9 +37,24 @@ describe('design flow request adapter', () => {
     });
 
     expect(request.mode).toBe('multi-plant');
-    expect(request.plantType?.id).toBe('tropical');
-    expect(request.plantStyle?.id).toBe('contemporary');
-    expect(request.plantOptions?.placementDensity.id).toBe('moderate');
+    expect(request.restyle).toEqual({ styleId: 'japandi', amount: 'restrained' });
+    expect(request.plantType?.name).toBe('Japandi');
+    expect(request.plantStyle?.name).toBe('Restrained');
+    expect(request.plantOptions).toBeUndefined();
+  });
+
+  it('round-trips a saved Restyle design back to its style choice', () => {
+    const { plantType, plantStyle } = restyleLabels({ styleId: 'mid-century', amount: 'generous' });
+    expect(restyleFromLabels(plantType.name, plantStyle.name)).toEqual({ styleId: 'mid-century', amount: 'generous' });
+    expect(restyleFromLabels('Tropical', 'Contemporary')).toBeNull();
+  });
+
+  it('turns a Restyle plan into design plants with library care and light', () => {
+    const [plant] = restylePlanToDesignPlants({
+      styleId: 'japandi', styleName: 'Japandi', amount: 'restrained', rationale: 'Calm corner.',
+      plants: [{ speciesId: 'snake-plant', name: 'Snake Plant', scientificName: 'Sansevieria trifasciata', role: 'supporting', size: 'medium', placement: 'surface', position: 'on the side table', vessel: 'charcoal cylinder' }],
+    });
+    expect(plant).toMatchObject({ commonName: 'Snake Plant', placement: 'table', careLevel: 'easy', lightRequirement: 'low-to-bright' });
   });
 
   it('requires a current-photo target for Replace', () => {

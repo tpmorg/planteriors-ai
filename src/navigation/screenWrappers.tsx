@@ -28,7 +28,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { DesignFlowProvider, useDesignFlow } from '../contexts/DesignFlowContext';
-import { buildGenerationRequest, pruneRecoverableResults, shouldResumeAfterPurchase } from '../designFlow/designFlow';
+import { buildGenerationRequest, pruneRecoverableResults, restyleFromLabels, restyleLabels, shouldResumeAfterPurchase } from '../designFlow/designFlow';
 import { cropImageToAspect } from '../utils/imageUtils';
 import { INDIVIDUAL_PLANTS } from '../data/plantDatabase';
 import { databaseService } from '../services/databaseService';
@@ -731,6 +731,12 @@ export function DesignDetailScreenWrapper({
     }
 
     if (!currentDesign.plantType || !currentDesign.plantStyle) {
+      return;
+    }
+
+    const restyle = restyleFromLabels(currentDesign.plantType.name, currentDesign.plantStyle.name);
+    if (restyle) {
+      void navigateToGenerationIfAllowed({ imageUri, mode: 'multi-plant', restyle, ...restyleLabels(restyle), prompt });
       return;
     }
 

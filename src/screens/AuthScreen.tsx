@@ -54,7 +54,7 @@ export const AuthScreen: React.FC = () => {
         <View style={styles.headerCard}>
           <Text style={styles.kicker}>Interior Plant Design</Text>
           <Image
-            source={require('../../assets/logo.png')}
+            source={theme.isDark ? require('../../assets/logo-dark.png') : require('../../assets/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
