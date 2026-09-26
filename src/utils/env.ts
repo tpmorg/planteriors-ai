@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 interface EnvConfig {
   GOOGLE_CLIENT_ID: string;
@@ -63,9 +64,9 @@ class EnvironmentManager {
   }
 
   private isRequired(key: keyof EnvConfig): boolean {
-    const required = [
-      'GOOGLE_CLIENT_ID',
-    ];
+    const required = Platform.OS === 'android'
+      ? ['GOOGLE_CLIENT_ID']
+      : [];
     return required.includes(key);
   }
 
@@ -108,7 +109,10 @@ class EnvironmentManager {
 
   // Validation method to check if all required env vars are set
   validateConfig(): { isValid: boolean; missingVars: string[] } {
-    const requiredVars = ['GOOGLE_CLIENT_ID', 'AI_API_URL'];
+    const requiredVars = [
+      'AI_API_URL',
+      ...(Platform.OS === 'android' ? ['GOOGLE_CLIENT_ID'] : []),
+    ];
     const missingVars: string[] = [];
 
     for (const varName of requiredVars) {

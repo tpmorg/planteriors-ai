@@ -34,7 +34,6 @@ const GALLERY_HINTS_SEEN_KEY = '@planterior_gallery_hints_seen';
 
 interface GalleryScreenProps {
   onNewDesign: () => void;
-  onIdentifyPlant: () => void;
   onDesignSelect: (design: SavedDesign, designs: SavedDesign[], initialIndex: number) => void;
   onUpgradePress?: (initialProductKind?: 'monthly' | 'room_pack') => void;
 }
@@ -182,7 +181,6 @@ const DesignCard = React.memo(({
 
 export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   onNewDesign,
-  onIdentifyPlant,
   onDesignSelect,
   onUpgradePress,
 }) => {
@@ -326,13 +324,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       dismissGalleryHints();
     }
     onNewDesign();
-  };
-
-  const startPlantIdentification = () => {
-    if (showGalleryHints) {
-      dismissGalleryHints();
-    }
-    onIdentifyPlant();
   };
 
   const openAccountSheet = useCallback(() => {
@@ -718,21 +709,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         }
         ListEmptyComponent={renderEmptyState}
       />
-
-      {!isSelectionMode && (
-        <View pointerEvents="box-none" style={styles.floatingActionLayer}>
-          <AppButton
-            variant="icon"
-            size="lg"
-            icon="MagnifyingGlass"
-            elevated
-            onPress={startPlantIdentification}
-            accessibilityLabel="Identify plant"
-            accessibilityHint="Open plant identification"
-            style={[styles.secondaryFloatingButton, { bottom: tabBarHeight + 26 }]}
-          />
-        </View>
-      )}
 
       <CollectionPickerModal
         visible={showCollectionsModal}
@@ -1131,9 +1107,6 @@ const createStyles = (
   emptyCreateButton: {
     marginTop: 24,
   },
-  floatingActionLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
   accountSheetModal: {
     flex: 1,
     flexDirection: 'row',
@@ -1154,12 +1127,5 @@ const createStyles = (
     shadowOpacity: theme.isDark ? 0.35 : 0.14,
     shadowRadius: 20,
     elevation: 16,
-  },
-  secondaryFloatingButton: {
-    position: 'absolute',
-    right: 108,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
   },
 });

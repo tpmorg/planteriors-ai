@@ -29,6 +29,17 @@
         "APP_ENV": "preview"
       }
     },
+    "simulator": {
+      "extends": "preview",
+      "environment": "production",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "APP_ENV": "production"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": {

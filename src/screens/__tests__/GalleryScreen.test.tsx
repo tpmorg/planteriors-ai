@@ -160,7 +160,6 @@ const mockDesignTwo = {
 const renderGallery = (overrides = {}) => {
   const props = {
     onNewDesign: jest.fn(),
-    onIdentifyPlant: jest.fn(),
     onDesignSelect: jest.fn(),
     onUpgradePress: jest.fn(),
     ...overrides,
@@ -180,25 +179,19 @@ describe('GalleryScreen', () => {
   });
 
   it('opens the account sheet from the top-right profile button', async () => {
-    const { findByText, getByLabelText } = renderGallery();
+    const { findByLabelText, findByText } = renderGallery();
 
-    expect(await findByText('No designs yet')).toBeOnTheScreen();
-
-    fireEvent.press(getByLabelText('Open account'));
+    fireEvent.press(await findByLabelText('Open account'));
 
     expect(await findByText('Account screen')).toBeOnTheScreen();
   });
 
-  it('opens plant identification from the floating magnifying glass button', async () => {
-    const { findByText, getByLabelText, getByText, props } = renderGallery();
+  it('does not expose the retired plant identification action', async () => {
+    const { findByText, queryByLabelText } = renderGallery();
 
     await findByText('No designs yet');
 
-    expect(getByText('MagnifyingGlass')).toBeOnTheScreen();
-
-    fireEvent.press(getByLabelText('Identify plant'));
-
-    expect(props.onIdentifyPlant).toHaveBeenCalledTimes(1);
+    expect(queryByLabelText('Identify plant')).not.toBeOnTheScreen();
   });
 
   it('shows the empty state and starts a first design from its CTA', async () => {

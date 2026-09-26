@@ -20,11 +20,9 @@ import { GalleryScreen } from '../screens/GalleryScreen';
 import { DesignDetailScreen } from '../screens/DesignDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
-import { PlantIdentifyScreen } from '../screens/PlantIdentifyScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
-import { CreateEntryScreen } from '../screens/CreateEntryScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTabBar } from '../contexts/TabBarContext';
@@ -311,33 +309,6 @@ export function OnboardingScreenWrapper({
   return <OnboardingScreen fromSettings={fromSettings} onComplete={handleComplete} />;
 }
 
-export function CreateEntryScreenWrapper({
-  navigation,
-}: RootStackScreenProps<'CreateEntry'>) {
-  const handleClose = () => {
-    navigation.goBack();
-  };
-
-  const handleCreateDesign = () => {
-    navigation.replace('DesignFlow', {
-      screen: 'Camera',
-      params: { mode: 'room' },
-    });
-  };
-
-  const handleIdentifyPlant = () => {
-    navigation.replace('PlantIdentify');
-  };
-
-  return (
-    <CreateEntryScreen
-      onClose={handleClose}
-      onCreateDesign={handleCreateDesign}
-      onIdentifyPlant={handleIdentifyPlant}
-    />
-  );
-}
-
 export function DesignFlowNavigator() {
   const { user } = useAuth();
   return (
@@ -466,7 +437,7 @@ function DesignIntentScreenWrapper({ navigation }: DesignFlowScreenProps<'Intent
 
 function PlantChooserScreenWrapper({ navigation }: DesignFlowScreenProps<'PlantChooser'>) {
   const { draft, setPlant } = useDesignFlow();
-  return <PlantChooserScreen backgroundImageUri={draft.photo?.originalUri} onSelect={(selection) => { setPlant(selection); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} onIdentify={() => navigation.getParent()?.navigate('PlantIdentify')} />;
+  return <PlantChooserScreen backgroundImageUri={draft.photo?.originalUri} onSelect={(selection) => { setPlant(selection); navigation.navigate('Ready'); }} onBack={() => navigation.goBack()} onClose={() => closeDesignFlow(navigation)} />;
 }
 
 function PlantLocationScreenWrapper({
@@ -494,6 +465,16 @@ function DesignReadyScreenWrapper({ navigation }: DesignFlowScreenProps<'Ready'>
   const { user } = useAuth();
   const { refreshStatus, freeGenerationsRemaining, purchaseCompletion } = useSubscription();
   const submissionRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ready remains mounted while Generation is on top of it. If generation
+      // fails and the user comes back to edit the request, unlock submission so
+      // the corrected draft can be sent while still guarding rapid double taps.
+      submissionRef.current = false;
+    }, [])
+  );
+
   const generate = async (skipAccessCheck: boolean = false) => {
     if (submissionRef.current) return;
     submissionRef.current = true;
@@ -617,30 +598,12 @@ function GenerationScreenWrapper({
 
 function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
   useRestoreTabBarOnFocus();
-  const { user } = useAuth();
-  const { refreshStatus } = useSubscription();
 
   const handleNewDesign = () => {
     navigation.getParent()?.navigate('DesignFlow', {
       screen: 'Camera',
       params: { mode: 'room' },
     });
-  };
-
-  const handleIdentifyPlant = async () => {
-    if (!user?.id) {
-      navigation.getParent()?.navigate('PlantIdentify');
-      return;
-    }
-
-    const { canGenerate } = await usageTrackingService.canGenerateImage(user.id);
-    if (!canGenerate) {
-      await refreshStatus();
-      navigation.getParent()?.navigate('Subscription');
-      return;
-    }
-
-    navigation.getParent()?.navigate('PlantIdentify');
   };
 
   const handleDesignSelect = (
@@ -661,76 +624,8 @@ function GalleryScreenWrapper({ navigation }: TabScreenProps<'Gallery'>) {
   return (
     <GalleryScreen
       onNewDesign={handleNewDesign}
-      onIdentifyPlant={handleIdentifyPlant}
       onDesignSelect={handleDesignSelect}
       onUpgradePress={handleUpgradePress}
-    />
-  );
-}
-
-export function PlantIdentifyScreenWrapper({
-  navigation,
-  route,
-}: RootStackScreenProps<'PlantIdentify'>) {
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  const handleOpenCamera = () => {
-    navigation.navigate('PlantCamera');
-  };
-
-  const handleCapturedImageHandled = React.useCallback(() => {
-    navigation.setParams({
-      capturedImageUri: undefined,
-      capturedImageAt: undefined,
-    });
-  }, [navigation]);
-
-  const handleUpgradePress = () => {
-    navigation.navigate('Subscription');
-  };
-
-  return (
-    <PlantIdentifyScreen
-      onBack={handleBack}
-      onOpenCamera={handleOpenCamera}
-      onUpgradePress={handleUpgradePress}
-      onCapturedImageHandled={handleCapturedImageHandled}
-      capturedImageUri={route.params?.capturedImageUri}
-      capturedImageAt={route.params?.capturedImageAt}
-    />
-  );
-}
-
-export function PlantCameraScreenWrapper({
-  navigation,
-}: RootStackScreenProps<'PlantCamera'>) {
-  const handleClose = () => {
-    navigation.goBack();
-  };
-
-  const handleImageTaken = (imageUri: string) => {
-    const params = { capturedImageUri: imageUri, capturedImageAt: Date.now() };
-
-    if (typeof navigation.popTo === 'function') {
-      navigation.popTo('PlantIdentify', params);
-      return;
-    }
-
-    navigation.navigate({
-      name: 'PlantIdentify',
-      params,
-      merge: true,
-    });
-  };
-
-  return (
-    <CameraScreen
-      mode="plant-id"
-      onImageTaken={handleImageTaken}
-      onClose={handleClose}
-      recentSourceImages={[]}
     />
   );
 }

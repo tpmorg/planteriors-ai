@@ -204,14 +204,6 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
     }
   };
 
-  const nudgeSelection = (dx: number, dy: number) => {
-    const x = Math.max(imageFrame.x, Math.min(imageFrame.x + imageFrame.width - selectionWidth.value, selectionX.value + dx));
-    const y = Math.max(imageFrame.y, Math.min(imageFrame.y + imageFrame.height - selectionHeight.value, selectionY.value + dy));
-    selectionX.value = withSpring(x);
-    selectionY.value = withSpring(y);
-    updateFinalSelection(x, y, selectionWidth.value, selectionHeight.value);
-  };
-
   const plantName = request.individualPlant?.plant.name || 'Plant';
   const plantSize = request.individualPlant?.size || 'medium';
 
@@ -338,23 +330,15 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.footerContent}>
-          {placementMode === 'choose' && !hasSelection ? (
-            <Text style={styles.footerHint}>
-              {isReplaceMode
-                ? 'Tap and drag around the plant you want replaced'
-                : 'Tap and drag to mark the exact spot'}
-            </Text>
-          ) : placementMode === 'choose' ? (
-            <View style={styles.selectionPreview}>
-              <Text style={styles.selectionPreviewText}>
-                Selected area
+          {placementMode === 'choose' ? (
+            <View style={styles.footerHintSlot}>
+              <Text style={styles.footerHint} numberOfLines={1}>
+                {hasSelection
+                  ? 'Selection ready — drag again to redraw'
+                  : isReplaceMode
+                    ? 'Drag around the plant you want replaced'
+                    : 'Drag to mark the exact spot'}
               </Text>
-              <View style={styles.adjustRow}>
-                <AppButton variant="icon" size="sm" icon="ArrowLeft" onPress={() => nudgeSelection(-8, 0)} accessibilityLabel="Move selection left" />
-                <AppButton variant="icon" size="sm" icon="ArrowUp" onPress={() => nudgeSelection(0, -8)} accessibilityLabel="Move selection up" />
-                <AppButton variant="icon" size="sm" icon="ArrowDown" onPress={() => nudgeSelection(0, 8)} accessibilityLabel="Move selection down" />
-                <AppButton variant="icon" size="sm" icon="ArrowRight" onPress={() => nudgeSelection(8, 0)} accessibilityLabel="Move selection right" />
-              </View>
             </View>
           ) : (
             <View style={styles.selectionPreview}>
@@ -582,6 +566,10 @@ const createStyles = (theme: any) =>
       fontSize: 12,
       color: theme.colors.textSecondary,
       textAlign: 'center',
+    },
+    footerHintSlot: {
+      height: 28,
+      justifyContent: 'center',
       marginBottom: 8,
     },
     selectionPreview: {
@@ -598,12 +586,6 @@ const createStyles = (theme: any) =>
       color: theme.colors.primary,
       fontWeight: '500',
       textAlign: 'center',
-    },
-    adjustRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 10,
     },
     placementAction: {
       flex: 1,

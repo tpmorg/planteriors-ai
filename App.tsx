@@ -19,14 +19,11 @@ import { EnvValidator } from "./src/components/EnvValidator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/components/SplashScreen";
 import {
-  CreateEntryScreenWrapper,
   DesignDetailScreenWrapper,
   DesignFlowNavigator,
   MainTabNavigator,
   OnboardingScreenWrapper,
-  PlantCameraScreenWrapper,
   PlantDetailScreenWrapper,
-  PlantIdentifyScreenWrapper,
 } from "./src/navigation/screenWrappers";
 import type { RootStackParamList } from "./src/types/navigation";
 import { databaseService } from "./src/services/databaseService";
@@ -181,14 +178,6 @@ function AppContent() {
             <Stack.Screen name="Onboarding" component={OnboardingScreenWrapper} />
             <Stack.Screen name="MainApp" component={MainTabNavigator} />
             <Stack.Screen
-              name="CreateEntry"
-              component={CreateEntryScreenWrapper}
-              options={{
-                presentation: "modal",
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
               name="DesignFlow"
               component={DesignFlowNavigator}
               options={{
@@ -218,18 +207,6 @@ function AppContent() {
               name="Subscription"
               component={SubscriptionScreen}
               options={{ presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="PlantIdentify"
-              component={PlantIdentifyScreenWrapper}
-            />
-            <Stack.Screen
-              name="PlantCamera"
-              component={PlantCameraScreenWrapper}
-              options={{
-                presentation: "modal",
-                headerShown: false,
-              }}
             />
           </Stack.Navigator>
         </NavigationContainer>

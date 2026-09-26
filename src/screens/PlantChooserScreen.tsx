@@ -14,12 +14,11 @@ import { selectPlant, toIndividualPlant } from '../designFlow/designFlow';
 import { databaseService } from '../services/databaseService';
 import type { IndividualPlant, IndividualPlantSelection, PlantSearchResult } from '../types';
 
-export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClose, onIdentify }: {
+export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClose }: {
   backgroundImageUri?: string;
   onSelect: (selection: IndividualPlantSelection) => void;
   onBack: () => void;
   onClose: () => void;
-  onIdentify: () => void;
 }) {
   const { theme } = useTheme();
   const { showToast } = useToast();
@@ -157,7 +156,7 @@ export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClo
             ListEmptyComponent={loadingSaved ? (
               <ActivityIndicator color={theme.colors.primary} />
             ) : (
-              <View style={styles.empty}><Text style={styles.emptyTitle}>{source === 'mine' ? 'No saved plants yet' : 'No matching plants'}</Text><Text style={styles.emptyText}>{source === 'mine' ? 'Identify a plant or browse the catalog.' : 'Edit your search or clear the pet-safe filter.'}</Text><View style={styles.emptyActions}><AppButton variant="secondary" size="sm" title="Browse plants" onPress={() => { setSource('browse'); setQuery(''); }} />{source === 'mine' ? <AppButton variant="primary" size="sm" title="Identify a plant" onPress={onIdentify} /> : null}</View></View>
+              <View style={styles.empty}><Text style={styles.emptyTitle}>{source === 'mine' ? 'No saved plants yet' : 'No matching plants'}</Text><Text style={styles.emptyText}>{source === 'mine' ? 'Browse the catalog to choose a plant.' : 'Edit your search or clear the pet-safe filter.'}</Text><View style={styles.emptyActions}><AppButton variant="secondary" size="sm" title="Browse plants" onPress={() => { setSource('browse'); setQuery(''); }} /></View></View>
             )}
           />
           <ScrollMoreCue visible={overflow.hasMoreBelow} onPress={() => listRef.current?.scrollToOffset({ offset: overflow.nextOffset(), animated: true })} />

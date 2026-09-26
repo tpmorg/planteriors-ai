@@ -13,13 +13,10 @@ import type {
 export type RootStackParamList = {
   Auth: undefined;
   MainApp: NavigatorScreenParams<TabParamList> | undefined;
-  CreateEntry: undefined;
   DesignFlow: NavigatorScreenParams<DesignFlowStackParamList> | undefined;
   DesignDetail: { design: SavedDesign; designs?: SavedDesign[]; initialIndex?: number };
   PlantDetail: { plant: PlantSearchResult };
   Subscription: { initialProductKind?: 'monthly' | 'room_pack' } | undefined;
-  PlantIdentify: { capturedImageUri?: string; capturedImageAt?: number } | undefined;
-  PlantCamera: undefined;
   Onboarding: { fromSettings?: boolean } | undefined;
 };
 
