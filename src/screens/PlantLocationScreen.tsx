@@ -15,7 +15,6 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { AppIcon } from '../components/AppIcon';
 import { AppButton } from '../components/AppButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { PlantLocation, GenerationRequest } from '../types';
@@ -208,8 +207,7 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
   const plantSize = request.individualPlant?.size || 'medium';
 
   return (
-    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
-      {/* Header */}
+    <SafeAreaView edges={['top', 'right', 'left']} style={styles.container}>
       <View style={styles.header}>
         <AppButton
           variant="icon"
@@ -219,34 +217,26 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
           accessibilityLabel="Back"
         />
         <Text style={styles.headerTitle}>{isReplaceMode ? 'Mark Plant' : 'Place Plant'}</Text>
-        <AppButton
+        {hasSelection ? <AppButton
           variant="icon"
           size="md"
           icon="ArrowCounterClockwise"
           onPress={handleReset}
-          disabled={!hasSelection}
           accessibilityLabel="Reset selection"
           accessibilityHint="Clears the marked area"
-        />
+        /> : <View style={styles.headerActionSpacer} />}
       </View>
 
-      {/* Instructions */}
-      <View style={styles.instructionContainer}>
-        <View style={styles.instructionIcon}>
-          <AppIcon name="ArrowsOutCardinal" size={20} color={theme.colors.primary} />
-        </View>
-        <View style={styles.instructionText}>
-          <Text style={styles.instructionTitle}>
-            {isReplaceMode
-              ? 'Mark the plant you want to replace'
-              : `Place ${plantName} exactly where you want it`}
-          </Text>
-          <Text style={styles.instructionSubtitle}>
-            {isReplaceMode
-              ? 'Drag a box around the current plant so the replacement stays in place.'
-              : `Drag a box where the ${plantSize} plant should go.`}
-          </Text>
-        </View>
+      <View style={styles.guidance}>
+        <Text style={styles.guidanceText}>
+          {placementMode === 'auto'
+            ? `AI will find a natural spot for ${plantName}.`
+            : hasSelection
+              ? 'Spot selected. Tap or drag to adjust.'
+              : isReplaceMode
+                ? 'Tap or drag around the plant to replace.'
+                : `Tap or drag where the ${plantSize} ${plantName} should go.`}
+        </Text>
       </View>
 
       {!isReplaceMode ? <View style={styles.modeToggle}>
@@ -268,7 +258,6 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
         />
       </View> : null}
 
-      {/* Image with Selection Area */}
       <View style={styles.imageSection}>
         <GestureDetector gesture={selectionGesture}>
           <View
@@ -281,105 +270,24 @@ export const PlantLocationScreen: React.FC<PlantLocationScreenProps> = ({
               resizeMode="contain"
             />
 
-            {/* Dark overlay outside selection when has selection */}
-            {hasSelection && (
-              <View style={styles.overlay} pointerEvents="none" />
-            )}
-
-            {/* Selection Rectangle */}
             <Animated.View style={[selectionAnimatedStyle]} pointerEvents="none">
-              <View style={styles.selectionBox}>
-                {/* Corner handles */}
-                <View style={[styles.cornerHandle, styles.topLeft]} />
-                <View style={[styles.cornerHandle, styles.topRight]} />
-                <View style={[styles.cornerHandle, styles.bottomLeft]} />
-                <View style={[styles.cornerHandle, styles.bottomRight]} />
-
-                {/* Center indicator */}
-                <View style={styles.centerIndicator}>
-                  <AppIcon
-                    name={request.individualPlant?.plant.icon || 'Leaf'}
-                    size={24}
-                    color={theme.colors.primary}
-                    style={styles.plantEmoji}
-                  />
-                </View>
-              </View>
+              <View style={styles.selectionBox} />
             </Animated.View>
           </View>
         </GestureDetector>
-
-        <View
-          style={[
-            styles.selectionInfo,
-            !(hasSelection && placementMode === 'choose') && styles.selectionInfoHidden,
-          ]}
-          pointerEvents="none"
-        >
-          <View style={styles.selectionInfoRow}>
-            <AppIcon name={request.individualPlant?.plant.icon || 'Leaf'} size={14} color={theme.colors.primary} />
-            <Text style={styles.selectionInfoText}>
-              {isReplaceMode
-                ? `${plantName} will replace the marked plant`
-                : `${plantName} will be placed in the selected area`}
-            </Text>
-          </View>
-        </View>
       </View>
 
-      {/* Footer */}
-      <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(12, insets.bottom) }]}>
         <View style={styles.footerContent}>
-          {placementMode === 'choose' ? (
-            <View style={styles.footerHintSlot}>
-              <Text style={styles.footerHint} numberOfLines={1}>
-                {hasSelection
-                  ? 'Selection ready — drag again to redraw'
-                  : isReplaceMode
-                    ? 'Drag around the plant you want replaced'
-                    : 'Drag to mark the exact spot'}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.selectionPreview}>
-              <Text style={styles.selectionPreviewText}>
-                {isReplaceMode
-                  ? 'AI will identify the current plant to replace'
-                  : 'AI will choose the most realistic placement'}
-              </Text>
-            </View>
-          )}
-
-          {placementMode === 'choose' ? (
-            <View style={styles.placementActions}>
-              <AppButton
-                variant="secondary"
-                size="lg"
-                icon="ArrowCounterClockwise"
-                title="Reset"
-                disabled={!hasSelection}
-                onPress={handleReset}
-                style={styles.placementAction}
-              />
-              <AppButton
-                variant="primary"
-                size="lg"
-                title={isReplaceMode ? 'Confirm target' : 'Confirm spot'}
-                disabled={!hasSelection}
-                onPress={handleContinue}
-                elevated
-                style={styles.placementAction}
-              />
-            </View>
-          ) : (
-            <AppButton
-              variant="primary"
-              size="lg"
-              title="Use automatic placement"
-              onPress={handleContinue}
-              elevated
-            />
-          )}
+          <AppButton
+            variant="primary"
+            size="lg"
+            title={placementMode === 'auto' ? 'Generate design' : isReplaceMode ? 'Confirm target' : 'Confirm spot'}
+            disabled={placementMode === 'choose' && !hasSelection}
+            onPress={handleContinue}
+            elevated
+            fullWidth
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -407,34 +315,21 @@ const createStyles = (theme: any) =>
       fontWeight: '600',
       color: theme.colors.primary,
     },
-    instructionContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    headerActionSpacer: {
+      width: 48,
+      height: 48,
+    },
+    guidance: {
       backgroundColor: theme.colors.surface,
-      padding: 8,
-      marginBottom: 4,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 10,
     },
-    instructionIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 10,
-    },
-    instructionText: {
-      flex: 1,
-    },
-    instructionTitle: {
+    guidanceText: {
       fontSize: 13,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 2,
-    },
-    instructionSubtitle: {
-      fontSize: 11,
+      lineHeight: 18,
       color: theme.colors.textSecondary,
+      textAlign: 'center',
     },
     modeToggle: {
       flexDirection: 'row',
@@ -464,92 +359,13 @@ const createStyles = (theme: any) =>
       width: '100%',
       height: '100%',
     },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    },
     selectionBox: {
       flex: 1,
-      borderWidth: 3,
+      borderWidth: 2,
       borderColor: theme.colors.primary,
       borderStyle: 'dashed',
-      backgroundColor: 'rgba(134, 239, 172, 0.2)',
-      borderRadius: 8,
-    },
-    cornerHandle: {
-      position: 'absolute',
-      width: 16,
-      height: 16,
-      backgroundColor: theme.colors.primary,
-      borderRadius: 3,
-    },
-    topLeft: {
-      top: -8,
-      left: -8,
-    },
-    topRight: {
-      top: -8,
-      right: -8,
-    },
-    bottomLeft: {
-      bottom: -8,
-      left: -8,
-    },
-    bottomRight: {
-      bottom: -8,
-      right: -8,
-    },
-    centerIndicator: {
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: [{ translateX: -24 }, { translateY: -24 }],
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    plantEmoji: {
-      fontSize: 24,
-    },
-    selectionInfo: {
-      position: 'absolute',
-      left: 12,
-      right: 12,
-      bottom: 12,
+      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.16)' : 'rgba(37, 112, 71, 0.12)',
       borderRadius: 10,
-      backgroundColor: theme.isDark ? 'rgba(134, 239, 172, 0.15)' : '#ecfdf5',
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      minHeight: 36,
-      justifyContent: 'center',
-      zIndex: 3,
-    },
-    selectionInfoHidden: {
-      height: 0,
-      minHeight: 0,
-      marginTop: 0,
-      paddingVertical: 0,
-      opacity: 0,
-    },
-    selectionInfoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-    },
-    selectionInfoText: {
-      fontSize: 14,
-      color: theme.colors.primary,
-      fontWeight: '500',
-      textAlign: 'center',
     },
     footer: {
       backgroundColor: theme.colors.surface,
@@ -558,41 +374,9 @@ const createStyles = (theme: any) =>
       paddingBottom: 6,
     },
     footerContent: {
-      paddingHorizontal: 12,
-      paddingTop: 6,
-      paddingBottom: 6,
-    },
-    footerHint: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-    },
-    footerHintSlot: {
-      height: 28,
-      justifyContent: 'center',
-      marginBottom: 8,
-    },
-    selectionPreview: {
-      borderRadius: 14,
-      backgroundColor: theme.colors.borderLight,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      marginBottom: 12,
-    },
-    selectionPreviewText: {
-      fontSize: 14,
-      color: theme.colors.primary,
-      fontWeight: '500',
-      textAlign: 'center',
-    },
-    placementAction: {
-      flex: 1,
-    },
-    placementActions: {
-      flexDirection: 'row',
-      gap: 10,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 0,
     },
   });
 

@@ -29,13 +29,15 @@ export type DesignFlowStackParamList = {
     preserveDraft?: boolean;
   } | undefined;
   Intent: undefined;
-  PlantChooser: undefined;
+  PlantChooser: {
+    replacementPhotoUri?: string;
+  } | undefined;
   Ready: undefined;
   Customize: undefined;
   PlantLocation: {
     purpose: 'add' | 'replace';
   };
-  Generation: { request?: GenerationRequest } | undefined;
+  Generation: { request?: GenerationRequest; requestId?: string; recoverOnly?: boolean } | undefined;
 };
 
 export type TabParamList = {

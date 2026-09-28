@@ -413,7 +413,6 @@ export const DesignDetailScreen: React.FC<DesignDetailScreenProps> = ({
     if (showInfoModal) {
       hideModal();
     }
-    showToast('Choose a replacement plant', 'info');
     onReplacePlant(design);
   };
 

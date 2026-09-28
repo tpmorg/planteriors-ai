@@ -6,8 +6,13 @@ export class GeminiService {
   async generatePlantImage(
     request: GenerationRequest,
     onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
+    idempotencyKey?: string,
   ): Promise<{ imageUri: string; isGenerated: boolean; jobId: string; restylePlan?: RestylePlan }> {
-    return aiApiService.generatePlantImage(request, onPhase);
+    return aiApiService.generatePlantImage(request, onPhase, idempotencyKey);
+  }
+
+  recoverGeneration(idempotencyKey: string, onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void) {
+    return aiApiService.recoverGeneration(idempotencyKey, onPhase);
   }
 }
 

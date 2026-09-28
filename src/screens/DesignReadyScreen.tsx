@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { AppIcon } from '../components/AppIcon';
@@ -17,17 +17,16 @@ function summaryFor(draft: DesignFlowDraft) {
   ].filter(Boolean);
 }
 
-export function DesignReadyScreen({ draft, updateDraft, onBack, onClose, onGenerate, onCustomize, onChooseSpot, onChangeTarget, onReplacePhoto, onCropPhoto, allowanceText }: {
+export function DesignReadyScreen({ draft, updateDraft, onBack, onClose, onGenerate, onRecover, onCustomize, onChooseSpot, onChangeTarget, allowanceText }: {
   draft: DesignFlowDraft;
   updateDraft: (patch: Partial<DesignFlowDraft>) => void;
   onBack: () => void;
   onClose: () => void;
   onGenerate: () => void;
+  onRecover: () => void;
   onCustomize: () => void;
   onChooseSpot: () => void;
   onChangeTarget: () => void;
-  onReplacePhoto: () => void;
-  onCropPhoto: () => void;
   allowanceText: string;
 }) {
   const { theme } = useTheme();
@@ -36,21 +35,16 @@ export function DesignReadyScreen({ draft, updateDraft, onBack, onClose, onGener
   const title = isRestyle ? 'Style your room' : draft.intent === 'replace' ? 'Ready to replace' : 'Ready to add';
   return (
     <DesignFlowShell title={title} subtitle={isRestyle ? 'Make it yours, then generate' : 'Review the setup before generation'} onBack={onBack} onClose={onClose} scroll
-      footer={<><Text style={styles.allowance}>{allowanceText}</Text><AppButton title="Generate design" icon="ArrowRight" iconPosition="right" size="lg" elevated onPress={onGenerate} testID="generate-design" /></>}>
+      footer={<><Text style={styles.allowance}>{allowanceText}</Text><AppButton title={draft.requestStatus === 'unknown' && draft.requestId ? 'Check previous request' : 'Generate design'} icon="ArrowRight" iconPosition="right" size="lg" elevated onPress={draft.requestStatus === 'unknown' && draft.requestId ? onRecover : onGenerate} testID="generate-design" /></>}>
       <View style={[styles.photoWrap, isRestyle && styles.restylePhoto]}>
         <Image source={{ uri: draft.refinementSourceUri || draft.photo?.originalUri }} style={styles.photo} resizeMode="cover" />
         {draft.refinementSourceUri ? <View style={styles.adjustingBadge}><Text style={styles.adjustingBadgeText}>Adjusting latest result</Text></View> : null}
-        <AppButton variant="chip" size="sm" icon="PencilSimple" title="Edit photo" overlay style={styles.editPhoto} textStyle={styles.editPhotoText} onPress={() => Alert.alert('Edit photo', undefined, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Replace photo', onPress: onReplacePhoto },
-          { text: 'Crop center', onPress: onCropPhoto },
-        ])} />
       </View>
       {isRestyle ? <RestyleOptions draft={draft} updateDraft={updateDraft} /> : <View style={styles.summary}>
         <Text style={styles.eyebrow}>YOUR SETUP</Text>
         {summaryFor(draft).map((value) => <View key={value} style={styles.row}><AppIcon name="CheckCircle" size={18} color={theme.colors.primary} /><Text style={styles.rowText}>{value}</Text></View>)}
       </View>}
-      {draft.requestStatus === 'unknown' ? <View style={styles.unknownNotice}><AppIcon name="WarningCircle" size={18} color="#b45309" /><Text style={styles.unknownText}>The previous request has an unknown status. Generating again starts a new request.</Text></View> : null}
+      {draft.requestStatus === 'unknown' ? <View style={styles.unknownNotice}><AppIcon name="WarningCircle" size={18} color="#b45309" /><Text style={styles.unknownText}>The previous request was interrupted. Check its result before starting another design.</Text></View> : null}
       {!isRestyle ? <View style={styles.secondaryActions}>
         {draft.intent === 'add' ? <AppButton variant="secondary" title={draft.location ? 'Change spot' : 'Choose a spot'} onPress={onChooseSpot} style={styles.flexButton} /> : null}
         {draft.intent === 'replace' ? <AppButton variant="secondary" title="Change target" onPress={onChangeTarget} style={styles.flexButton} /> : null}
@@ -64,8 +58,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   photoWrap: { marginTop: 10, height: 235, borderRadius: 22, overflow: 'hidden', backgroundColor: theme.colors.borderLight },
   restylePhoto: { height: 140 },
   photo: { width: '100%', height: '100%' },
-  editPhoto: { position: 'absolute', right: 12, bottom: 12 },
-  editPhotoText: { fontSize: 13, fontWeight: '700' },
   adjustingBadge: { position: 'absolute', left: 12, top: 12, borderRadius: 14, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: 'rgba(0,0,0,0.72)' },
   adjustingBadgeText: { color: 'white', fontSize: 12, fontWeight: '700' },
   summary: { marginTop: 18, padding: 17, borderRadius: 18, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, gap: 11 },

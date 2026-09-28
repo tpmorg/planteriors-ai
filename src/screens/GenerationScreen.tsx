@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import * as Crypto from 'expo-crypto';
 import {
   ActivityIndicator,
   View,
@@ -36,6 +37,8 @@ import { useToast } from "../contexts/ToastContext";
 
 interface GenerationScreenProps {
   request: GenerationRequest;
+  requestId?: string;
+  recoverOnly?: boolean;
   onGenerationComplete: (result: GeneratedImage) => void;
   onBack: () => void;
   onClose: () => void;
@@ -43,6 +46,8 @@ interface GenerationScreenProps {
   initialResultUri?: string;
   initialSavedDesignId?: string;
   onRequestUnknown?: () => void;
+  onRequestResolved?: () => void;
+  onRequestStarted?: (requestId: string) => Promise<void>;
   onUpgradePress?: () => void;
 }
 
@@ -50,6 +55,8 @@ interface GenerationScreenProps {
 
 export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   request,
+  requestId,
+  recoverOnly = false,
   onGenerationComplete,
   onBack,
   onClose,
@@ -57,6 +64,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   initialResultUri,
   initialSavedDesignId,
   onRequestUnknown,
+  onRequestResolved,
+  onRequestStarted,
   onUpgradePress,
 }) => {
   const { user } = useAuth();
@@ -87,6 +96,8 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
   const [isRequestUnknown, setIsRequestUnknown] = useState(false);
   const [savedDesignId, setSavedDesignId] = useState<string | null>(initialSavedDesignId || null);
   const generationInFlightRef = useRef(false);
+  const requestIdRef = useRef(requestId || Crypto.randomUUID());
+  const recoverOnlyRef = useRef(recoverOnly);
   const saveInFlightRef = useRef(false);
 
   // Match the saved-design detail view: pinch to zoom, drag while zoomed,
@@ -115,7 +126,13 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       : 'Creating your design with:';
 
   useEffect(() => {
-    if (!initialResultUri) checkUsageAndStart();
+    if (initialResultUri) return;
+    if (recoverOnly) {
+      setIsGenerating(true);
+      startGeneration();
+    } else {
+      checkUsageAndStart();
+    }
   }, []);
 
   const checkUsageAndStart = async () => {
@@ -248,15 +265,17 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       setApiCallStarted(true);
 
       const geminiService = createGeminiService();
-      const { imageUri: generatedUri, isGenerated, jobId, restylePlan } = await geminiService.generatePlantImage(
-        request,
-        (phase) => setCurrentStatus({
+      const onPhase = (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => setCurrentStatus({
           preparing: 'Preparing photo...',
           uploading: 'Uploading photo...',
           generating: 'Generating design...',
           downloading: 'Downloading result...',
-        }[phase])
-      );
+        }[phase]);
+      const result = recoverOnlyRef.current
+        ? await geminiService.recoverGeneration(requestIdRef.current, onPhase)
+        : await geminiService.generatePlantImage(request, onPhase, requestIdRef.current);
+      if (!result) throw new Error('No previous generation was found. Return to setup to start a new one.');
+      const { imageUri: generatedUri, isGenerated, jobId, restylePlan } = result;
       reportNetworkSuccess('generation');
       setCurrentStatus("Generation complete!");
 
@@ -288,8 +307,9 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
       } else if (failure.kind === 'timeout') {
         setIsRequestUnknown(true);
         onRequestUnknown?.();
-        setError('The request was interrupted, so its final status is unknown. Edit the setup before deciding whether to submit a new generation.');
+        setError('The request was interrupted. Return to setup and check the previous request before generating again.');
       } else {
+        onRequestResolved?.();
         setError(failure.message);
       }
 
@@ -301,7 +321,11 @@ export const GenerationScreen: React.FC<GenerationScreenProps> = ({
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    const nextRequestId = Crypto.randomUUID();
+    await onRequestStarted?.(nextRequestId);
+    requestIdRef.current = nextRequestId;
+    recoverOnlyRef.current = false;
     setError(null);
     setErrorTitle(null);
     setErrorReference(null);

@@ -21,8 +21,8 @@ function Harness({ onGenerate = jest.fn() }: { onGenerate?: jest.Mock }) {
     photo: { originalUri: 'file://room.jpg', preparedUri: 'file://prepared.jpg', width: 1000, height: 800, revision: 1 },
   }));
   return <DesignReadyScreen draft={draft} updateDraft={(patch) => setDraft((value) => ({ ...value, ...patch }))}
-    onGenerate={() => onGenerate(buildGenerationRequest(draft))} allowanceText="5 design credits available"
-    onBack={noop} onClose={noop} onCustomize={noop} onChooseSpot={noop} onChangeTarget={noop} onReplacePhoto={noop} onCropPhoto={noop} />;
+    onGenerate={() => onGenerate(buildGenerationRequest(draft))} onRecover={noop} allowanceText="5 design credits available"
+    onBack={noop} onClose={noop} onCustomize={noop} onChooseSpot={noop} onChangeTarget={noop} />;
 }
 
 it('edits Restyle directly with only style, amount, and instructions', () => {
@@ -60,4 +60,23 @@ it('shows the scroll cue only when content remains below, including after a view
   expect(screen.queryByText('More below')).toBeNull();
   fireEvent(scroll, 'contentSizeChange', 360, 2500);
   expect(screen.getByText('More below')).toBeTruthy();
+});
+
+it('checks an interrupted request before offering another generation', () => {
+  const onRecover = jest.fn();
+  const onGenerate = jest.fn();
+  const draft: DesignFlowDraft = {
+    ...createDesignDraft('test-user'),
+    requestId: 'saved-request-key',
+    requestStatus: 'unknown',
+    intent: 'restyle',
+    photo: { originalUri: 'file://room.jpg', preparedUri: 'file://prepared.jpg', revision: 1 },
+  };
+  const screen = render(<DesignReadyScreen draft={draft} updateDraft={noop} onGenerate={onGenerate}
+    onRecover={onRecover} allowanceText="5 design credits available" onBack={noop} onClose={noop}
+    onCustomize={noop} onChooseSpot={noop} onChangeTarget={noop} />);
+
+  fireEvent.press(screen.getByText('Check previous request'));
+  expect(onRecover).toHaveBeenCalledTimes(1);
+  expect(onGenerate).not.toHaveBeenCalled();
 });

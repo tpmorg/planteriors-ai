@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'react-native';
 
 import { applyPhotoRevision, createDesignDraft, pruneRecoverableResults } from '../designFlow/designFlow';
@@ -21,6 +21,7 @@ interface DesignFlowContextValue {
   draft: DesignFlowDraft;
   isRestoring: boolean;
   updateDraft: (patch: DraftPatch) => void;
+  startGenerationRequest: (requestId: string, sourceDraft?: DesignFlowDraft) => Promise<void>;
   setStep: (step: DesignFlowStep) => void;
   setIntent: (intent: DesignIntent) => void;
   setPlant: (selection: IndividualPlantSelection) => void;
@@ -41,6 +42,14 @@ export function DesignFlowProvider({ ownerId, children }: { ownerId: string; chi
   const [draft, setDraft] = useState(() => createDesignDraft(ownerId));
   const [isRestoring, setIsRestoring] = useState(true);
   const storageKey = `${STORAGE_PREFIX}${ownerId}`;
+  const writeQueue = useRef(Promise.resolve());
+
+  const persistDraft = useCallback((value: DesignFlowDraft) => {
+    const write = writeQueue.current.catch(() => undefined)
+      .then(() => AsyncStorage.setItem(storageKey, JSON.stringify(value)));
+    writeQueue.current = write;
+    return write;
+  }, [storageKey]);
 
   useEffect(() => {
     let mounted = true;
@@ -74,14 +83,28 @@ export function DesignFlowProvider({ ownerId, children }: { ownerId: string; chi
 
   useEffect(() => {
     if (isRestoring || draft.ownerId !== ownerId) return;
-    AsyncStorage.setItem(storageKey, JSON.stringify(draft)).catch((error) => {
+    persistDraft(draft).catch((error) => {
       console.warn('Failed to persist design draft:', error);
     });
-  }, [draft, isRestoring, ownerId, storageKey]);
+  }, [draft, isRestoring, ownerId, persistDraft]);
 
   const updateDraft = useCallback((patch: DraftPatch) => {
     setDraft((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
   }, []);
+
+  const startGenerationRequest = useCallback(async (requestId: string, sourceDraft?: DesignFlowDraft) => {
+    const next = {
+      ...(sourceDraft || draft),
+      requestId,
+      requestStatus: 'submitting' as const,
+      step: 'generating' as const,
+      resumeAfterPurchase: false,
+      purchaseEventBaselineId: undefined,
+      updatedAt: Date.now(),
+    };
+    await persistDraft(next);
+    setDraft(next);
+  }, [draft, persistDraft]);
 
   const setStep = useCallback((step: DesignFlowStep) => updateDraft({ step }), [updateDraft]);
 
@@ -134,8 +157,8 @@ export function DesignFlowProvider({ ownerId, children }: { ownerId: string; chi
   }, [ownerId]);
 
   const value = useMemo(() => ({
-    draft, isRestoring, updateDraft, setStep, setIntent, setPlant, setLocation, setPhoto, resetDraft,
-  }), [draft, isRestoring, resetDraft, setIntent, setLocation, setPhoto, setPlant, setStep, updateDraft]);
+    draft, isRestoring, updateDraft, startGenerationRequest, setStep, setIntent, setPlant, setLocation, setPhoto, resetDraft,
+  }), [draft, isRestoring, resetDraft, setIntent, setLocation, setPhoto, setPlant, setStep, startGenerationRequest, updateDraft]);
 
   return <DesignFlowContext.Provider value={value}>{children}</DesignFlowContext.Provider>;
 }

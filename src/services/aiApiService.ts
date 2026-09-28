@@ -27,6 +27,44 @@ const RATE_LIMIT_MAX_DELAY_MS = 15000;
 const POLL_MAX_DELAY_MS = 10000;
 const DEFAULT_POLL_DELAY_MS = 1500;
 
+export const PLANT_PLACEMENT_SURFACE_RULES = [
+  'Apply these placement rules only to newly generated plants; never move or alter plants already present in the source photo.',
+  'Before placing each new plant, identify the type, rigidity, stability, and load-bearing suitability of its supporting surface.',
+  'Place new plants only on the floor or on a stable, rigid shelf that can safely support the plant and its pot.',
+  'Never place a new plant on a couch, sofa, chair, bed, cushion, pillow, upholstered furniture, soft surface, fabric, or on the seat, arm, or back of furniture.',
+  'If a requested or automatic location is unsuitable, move only the new plant to the nearest valid floor or shelf.',
+  'These surface-safety rules override all other placement instructions.',
+].join(' ');
+
+export const ADD_PLANT_PRESERVATION_RULES = [
+  'This is strictly an ADD operation, not a replacement operation.',
+  'Add one new selected plant while preserving every existing plant and every existing room object exactly as shown.',
+  'Do not remove, replace, move, resize, restyle, cover, or obscure any existing plant, including plants near the destination.',
+  'When a target rectangle is provided, it marks destination space for the new plant; it never selects an existing object for editing.',
+  'Use additive insertion only. If the exact destination is obstructed, place the new plant on the nearest valid empty floor or shelf without modifying existing content.',
+].join(' ');
+
+export const REPLACE_PLANT_PRESERVATION_RULES = [
+  'This is a REPLACE operation.',
+  'Replace only the existing plant inside the target rectangle.',
+  'Preserve every other plant, object, surface, and room detail exactly as shown.',
+].join(' ');
+
+export function buildGenerationInstructions(
+  mode: GenerationRequest['mode'],
+  customInstructions?: string,
+): string {
+  const userInstructions = customInstructions?.trim();
+  const operationRules = mode === 'individual'
+    ? ADD_PLANT_PRESERVATION_RULES
+    : mode === 'replace-plant'
+      ? REPLACE_PLANT_PRESERVATION_RULES
+      : '';
+  return [userInstructions, operationRules, PLANT_PLACEMENT_SURFACE_RULES]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export class AiApiError extends Error {
   constructor(
     message: string,
@@ -48,27 +86,69 @@ class AiApiService {
   async generatePlantImage(
     request: GenerationRequest,
     onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
+    idempotencyKey?: string,
   ): Promise<{ imageUri: string; isGenerated: true; jobId: string; restylePlan?: RestylePlan }> {
     onPhase?.('preparing');
     const uploadId = await this.uploadImage(request.imageUri, onPhase, request.imagePrepared);
     onPhase?.('generating');
 
     const body = this.generationPayload(uploadId, request);
-    const response = await this.request<{ jobId: string; job: ApiJob }>(
-      '/api/v1/generations',
-      {
-        method: 'POST',
-        headers: { 'Idempotency-Key': Crypto.randomUUID() },
-        body: JSON.stringify(body),
-      },
-    );
-    const job = await this.waitForJob(response.job || { id: response.jobId, status: 'queued' });
+    let response: { jobId: string; job: ApiJob };
+    try {
+      response = await this.request<{ jobId: string; job: ApiJob }>(
+        '/api/v1/generations',
+        {
+          method: 'POST',
+          headers: { 'Idempotency-Key': idempotencyKey || Crypto.randomUUID() },
+          body: JSON.stringify(body),
+        },
+      );
+    } catch (error) {
+      if (error instanceof AiApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
+        throw error;
+      }
+      throw new AiApiError('The request was interrupted. Check its status before generating again.', 'request_unknown', 408, true);
+    }
+    return this.finishGeneration(response.job || { id: response.jobId, status: 'queued' }, onPhase);
+  }
+
+  async recoverGeneration(
+    idempotencyKey: string,
+    onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
+  ): Promise<{ imageUri: string; isGenerated: true; jobId: string; restylePlan?: RestylePlan } | null> {
+    let response: { job: ApiJob | null };
+    try {
+      response = await this.request<{ job: ApiJob | null }>(
+        `/api/v1/generations?requestKey=${encodeURIComponent(idempotencyKey)}`,
+      );
+    } catch (error) {
+      if (error instanceof AiApiError && error.status === 401) throw error;
+      throw new AiApiError('Could not check the previous request. Try checking again when connected.', 'request_unknown', 408, true);
+    }
+    if (!Object.prototype.hasOwnProperty.call(response, 'job')) {
+      throw new AiApiError('This app version cannot check the previous request yet. Try again later.', 'request_unknown', 408, true);
+    }
+    if (!response.job) return null;
+    onPhase?.('generating');
+    return this.finishGeneration(response.job, onPhase);
+  }
+
+  private async finishGeneration(
+    initialJob: ApiJob,
+    onPhase?: (phase: 'preparing' | 'uploading' | 'generating' | 'downloading') => void,
+  ) {
+    const job = await this.waitForJob(initialJob);
     if (!job.resultUrl) throw this.jobError(job, 'Generation returned no image.');
 
     onPhase?.('downloading');
-    const imageUri = await this.downloadResult(job.id, job.resultUrl);
+    let imageUri: string;
+    try {
+      imageUri = await this.downloadResult(job.id, job.resultUrl);
+    } catch {
+      throw new AiApiError('The result could not be downloaded. Check the request again.', 'request_unknown', 408, true);
+    }
     const restylePlan = (job.result as { restylePlan?: RestylePlan } | null | undefined)?.restylePlan;
-    return { imageUri, isGenerated: true, jobId: job.id, restylePlan };
+    return { imageUri, isGenerated: true as const, jobId: job.id, restylePlan };
   }
 
   async identifyPlant(imageUri: string): Promise<PlantIdentificationResult> {
@@ -122,13 +202,14 @@ class AiApiService {
   }
 
   private generationPayload(uploadId: string, request: GenerationRequest) {
+    const customInstructions = buildGenerationInstructions(request.mode, request.prompt);
     if (request.mode === 'multi-plant' && request.restyle) {
       // Household rules (pets) are omitted until they exist as an account setting; the server defaults them.
       return {
         uploadId,
         mode: request.mode,
         restyle: request.restyle,
-        customInstructions: request.prompt || undefined,
+        customInstructions,
       };
     }
     if (request.mode === 'multi-plant') {
@@ -150,7 +231,7 @@ class AiApiService {
           maintenanceLevel: request.plantOptions.maintenanceLevel.id,
           placementDensity: density,
         },
-        customInstructions: request.prompt || undefined,
+        customInstructions,
       };
     }
 
@@ -169,7 +250,7 @@ class AiApiService {
         lightRequirement: plant.lightRequirement,
       },
       location: request.location,
-      customInstructions: request.prompt || undefined,
+      customInstructions,
     };
   }
 
@@ -177,7 +258,12 @@ class AiApiService {
     let current = job;
     while (current.status === 'queued' || current.status === 'running') {
       await this.pause(current.pollAfterMs || DEFAULT_POLL_DELAY_MS, POLL_MAX_DELAY_MS);
-      const response = await this.request<{ job: ApiJob }>(`/api/v1/generations/${encodeURIComponent(current.id)}`);
+      let response: { job: ApiJob };
+      try {
+        response = await this.request<{ job: ApiJob }>(`/api/v1/generations/${encodeURIComponent(current.id)}`);
+      } catch {
+        throw new AiApiError('The request was interrupted. Check its status before generating again.', 'request_unknown', 408, true);
+      }
       current = response.job;
     }
     if (current.status !== 'succeeded') throw this.jobError(current, 'Generation failed.');

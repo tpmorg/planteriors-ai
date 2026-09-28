@@ -1,4 +1,9 @@
-import { aiApiService } from '../aiApiService';
+import {
+  ADD_PLANT_PRESERVATION_RULES,
+  aiApiService,
+  buildGenerationInstructions,
+  PLANT_PLACEMENT_SURFACE_RULES,
+} from '../aiApiService';
 import type { GenerationRequest } from '../../types';
 
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid-1' }));
@@ -76,6 +81,23 @@ const request: GenerationRequest = {
   },
 };
 
+describe('generation placement instructions', () => {
+  it('always requires a suitable rigid floor or shelf and explicitly forbids couches', () => {
+    expect(buildGenerationInstructions('multi-plant')).toBe(PLANT_PLACEMENT_SURFACE_RULES);
+    expect(PLANT_PLACEMENT_SURFACE_RULES).toContain('type, rigidity, stability, and load-bearing suitability');
+    expect(PLANT_PLACEMENT_SURFACE_RULES).toContain('only on the floor or on a stable, rigid shelf');
+    expect(PLANT_PLACEMENT_SURFACE_RULES).toContain('Never place a new plant on a couch');
+  });
+
+  it('makes Add an insertion-only operation and preserves nearby existing plants', () => {
+    const instructions = buildGenerationInstructions('individual', 'Use a charcoal planter.');
+    expect(instructions).toBe(`Use a charcoal planter.\n\n${ADD_PLANT_PRESERVATION_RULES}\n\n${PLANT_PLACEMENT_SURFACE_RULES}`);
+    expect(instructions).toContain('strictly an ADD operation, not a replacement operation');
+    expect(instructions).toContain('including plants near the destination');
+    expect(instructions).toContain('Use additive insertion only');
+  });
+});
+
 describe('aiApiService rate-limit handling', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -84,6 +106,49 @@ describe('aiApiService rate-limit handling', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('sends a marked Add as individual mode with insertion-only preservation rules', async () => {
+    let generationPayload: Record<string, unknown> | undefined;
+    global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input)).pathname;
+      if (path === '/api/v1/uploads') return jsonResponse(UPLOAD_SLOT);
+      if (path === '/api/v1/generations') {
+        generationPayload = JSON.parse(String(init?.body));
+        return jsonResponse(SUCCEEDED_JOB);
+      }
+      throw new Error(`Unexpected request to ${path}`);
+    }) as unknown as typeof fetch;
+
+    const location = { x: 0.12, y: 0.62, width: 0.18, height: 0.24 };
+    await aiApiService.generatePlantImage({
+      imageUri: 'file:///photo.jpg',
+      imagePrepared: true,
+      mode: 'individual',
+      individualPlant: {
+        plant: {
+          id: 'snake-plant',
+          name: 'Snake Plant',
+          scientificName: 'Dracaena trifasciata',
+          description: 'An upright indoor plant',
+          icon: 'Leaf',
+          category: 'tropical',
+          lightRequirement: 'low-to-bright',
+          waterRequirement: 'low',
+          availableSizes: ['medium'],
+          suitablePlacements: ['floor'],
+          careLevel: 'easy',
+          petSafe: false,
+        },
+        size: 'medium',
+        placement: 'auto',
+      },
+      location,
+    });
+
+    expect(generationPayload).toMatchObject({ mode: 'individual', location });
+    expect(generationPayload?.customInstructions).toEqual(expect.stringContaining('strictly an ADD operation'));
+    expect(generationPayload?.customInstructions).toEqual(expect.stringContaining('including plants near the destination'));
   });
 
   it('retries a throttled generation request and still returns the image', async () => {
@@ -101,6 +166,40 @@ describe('aiApiService rate-limit handling', () => {
 
     await expect(pending).resolves.toMatchObject({ isGenerated: true, jobId: 'job-1' });
     expect(calls.filter((path) => path === '/api/v1/generations')).toHaveLength(2);
+  });
+
+  it('recovers a finished request by key without uploading or submitting again', async () => {
+    let requestedUrl = '';
+    global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      requestedUrl = String(input);
+      return jsonResponse({ job: SUCCEEDED_JOB.job });
+    }) as unknown as typeof fetch;
+
+    await expect(aiApiService.recoverGeneration('saved-request-key')).resolves.toMatchObject({
+      isGenerated: true,
+      jobId: 'job-1',
+    });
+    expect(requestedUrl).toContain('requestKey=saved-request-key');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a dropped submission response as unknown and preserves the request key', async () => {
+    let submittedKey: string | undefined;
+    global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input)).pathname;
+      if (path === '/api/v1/uploads') return jsonResponse(UPLOAD_SLOT);
+      if (path === '/api/v1/generations') {
+        submittedKey = (init?.headers as Record<string, string>)?.['Idempotency-Key'];
+        throw new TypeError('Network request failed');
+      }
+      throw new Error(`Unexpected request to ${path}`);
+    }) as unknown as typeof fetch;
+
+    await expect(aiApiService.generatePlantImage(request, undefined, 'saved-request-key')).rejects.toMatchObject({
+      code: 'request_unknown',
+      status: 408,
+    });
+    expect(submittedKey).toBe('saved-request-key');
   });
 
   it('does not retry when the server marks the 429 as not retryable', async () => {

@@ -14,8 +14,9 @@ import { selectPlant, toIndividualPlant } from '../designFlow/designFlow';
 import { databaseService } from '../services/databaseService';
 import type { IndividualPlant, IndividualPlantSelection, PlantSearchResult } from '../types';
 
-export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClose }: {
+export function PlantChooserScreen({ backgroundImageUri, title = 'Add a plant', onSelect, onBack, onClose }: {
   backgroundImageUri?: string;
+  title?: string;
   onSelect: (selection: IndividualPlantSelection) => void;
   onBack: () => void;
   onClose: () => void;
@@ -105,7 +106,7 @@ export function PlantChooserScreen({ backgroundImageUri, onSelect, onBack, onClo
           <View style={styles.header}>
             <AppButton variant="icon" icon="ArrowLeft" onPress={onBack} accessibilityLabel="Back" />
             <View style={styles.heading}>
-              <Text style={styles.title}>Add a plant</Text>
+              <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</Text>
             </View>
             <AppButton variant="icon" icon="X" onPress={onClose} accessibilityLabel="Close" />
