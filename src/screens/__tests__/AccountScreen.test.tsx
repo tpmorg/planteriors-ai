@@ -1,9 +1,20 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { AccountScreen } from '../AccountScreen';
 
 jest.mock('../../components/AppIcon', () => ({ AppIcon: () => null }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: { multiRemove: jest.fn().mockResolvedValue(undefined) },
+}));
+jest.mock('../../services/accountDeletionService', () => ({
+  requestAccountDeletion: jest.fn().mockResolvedValue({ status: 'pending', requestedAt: '2026-09-29T00:00:00.000Z' }),
+}));
+jest.mock('../../services/databaseService', () => ({
+  databaseService: { deleteLocalAccountData: jest.fn().mockResolvedValue(undefined) },
+}));
 jest.mock('../../contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user-1', name: 'Plant User', email: 'plant@example.com', provider: 'google' },
@@ -66,4 +77,22 @@ it('separates owned purchases from optional credit products and routes the selec
 
   fireEvent.press(screen.getByTestId('account-monthly-plan'));
   expect(onUpgradePress).toHaveBeenLastCalledWith('monthly');
+});
+
+it('requests deletion only after confirmation, then clears local account data', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  const { requestAccountDeletion } = jest.requireMock('../../services/accountDeletionService');
+  const { databaseService } = jest.requireMock('../../services/databaseService');
+  const screen = render(<AccountScreen />);
+
+  fireEvent.press(screen.getByTestId('account-delete'));
+  expect(requestAccountDeletion).not.toHaveBeenCalled();
+  const confirmation = alert.mock.calls[0][2];
+  await act(async () => {
+    confirmation?.find((action) => action.text === 'Request deletion')?.onPress?.();
+  });
+
+  await waitFor(() => expect(requestAccountDeletion).toHaveBeenCalledWith('plant@example.com'));
+  await waitFor(() => expect(databaseService.deleteLocalAccountData).toHaveBeenCalledWith('user-1'));
+  alert.mockRestore();
 });

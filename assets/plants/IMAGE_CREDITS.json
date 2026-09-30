@@ -790,5 +790,13 @@
     "pageUrl": "https://unsplash.com/photos/green-plant-on-brown-clay-pot-nW5F0MYSBQ8",
     "query": "Corn plant in pot",
     "appliedAt": "2026-09-24T16:55:06.957Z"
+  },
+  "rhipsalis-baccifera.jpg": {
+    "plantId": "rhipsalis-baccifera",
+    "source": "openai-generated",
+    "model": "built-in image generation",
+    "promptSummary": "Photorealistic indoor catalog image of one mature Rhipsalis baccifera in a warm-white hanging pot, with dense slender spineless trailing stems and a few white berries against a neutral wall",
+    "attributionRequired": false,
+    "appliedAt": "2026-09-28T22:42:43Z"
   }
 }

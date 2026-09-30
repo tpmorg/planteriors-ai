@@ -2320,6 +2320,47 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  async deleteLocalAccountData(userId: string): Promise<void> {
+    await this.ensureConnection();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const designs = await this.db.getAllAsync<{
+      original_image_uri: string;
+      generated_image_uri: string;
+      local_image_path: string | null;
+    }>(
+      'SELECT original_image_uri, generated_image_uri, local_image_path FROM saved_designs WHERE user_id = ?',
+      [userId],
+    );
+    const appDirectories = [FileSystem.documentDirectory, FileSystem.cacheDirectory].filter(
+      (directory): directory is string => typeof directory === 'string' && directory.length > 0,
+    );
+    const ownedPaths = new Set(
+      designs.flatMap((design) => [design.original_image_uri, design.generated_image_uri, design.local_image_path])
+        .filter((path): path is string => Boolean(path) && appDirectories.some((directory) => path?.startsWith(directory) && path !== directory)),
+    );
+
+    for (const path of ownedPaths) {
+      const shared = await this.db.getFirstAsync<{ present: number }>(
+        `SELECT 1 AS present FROM saved_designs
+         WHERE (user_id IS NULL OR user_id != ?)
+           AND (original_image_uri = ? OR generated_image_uri = ? OR local_image_path = ?)
+         LIMIT 1`,
+        [userId, path, path, path],
+      );
+      if (!shared) await FileSystem.deleteAsync(path, { idempotent: true });
+    }
+
+    await this.db.withExclusiveTransactionAsync(async (transaction) => {
+      await transaction.runAsync('DELETE FROM saved_designs WHERE user_id = ?', [userId]);
+      await transaction.runAsync('DELETE FROM collections WHERE user_id = ?', [userId]);
+      await transaction.runAsync('DELETE FROM usage_tracking WHERE user_id = ?', [userId]);
+      await transaction.runAsync('DELETE FROM subscriptions WHERE user_id = ?', [userId]);
+      await transaction.runAsync('DELETE FROM free_trial_usage WHERE user_id = ?', [userId]);
+    });
+    this.notifyLibraryChanged();
+  }
 }
 
 export const databaseService = new DatabaseService();

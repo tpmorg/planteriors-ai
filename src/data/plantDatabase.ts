@@ -299,6 +299,22 @@ export const INDIVIDUAL_PLANTS: IndividualPlant[] = [
     petSafe: true,
     imageUrl: require('../../assets/plants/christmas-cactus.jpg'),
   },
+  {
+    id: 'rhipsalis-baccifera',
+    name: 'Mistletoe Cactus',
+    scientificName: 'Rhipsalis baccifera',
+    description: 'Trailing forest cactus with slender green stems and white berries',
+    icon: 'Cactus',
+    category: 'succulent',
+    lightRequirement: 'bright-indirect',
+    waterRequirement: 'moderate',
+    availableSizes: ['small', 'medium'],
+    suitablePlacements: ['shelf', 'hanging'],
+    careLevel: 'easy',
+    growthRate: 'slow',
+    petSafe: true,
+    imageUrl: require('../../assets/plants/rhipsalis-baccifera.jpg'),
+  },
 
   // === VINES & TRAILING ===
   {

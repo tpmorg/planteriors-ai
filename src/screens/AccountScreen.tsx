@@ -1,4 +1,5 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -18,6 +19,8 @@ import { useTabBar } from '../contexts/TabBarContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { firestoreSyncService } from '../services/firestoreSyncService';
+import { requestAccountDeletion } from '../services/accountDeletionService';
+import { databaseService } from '../services/databaseService';
 
 interface AccountScreenProps {
   onUpgradePress?: (initialProductKind?: 'monthly' | 'room_pack') => void;
@@ -47,9 +50,68 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
   const [isRestoring, setRestoring] = React.useState(false);
   const [isSyncingLibrary, setSyncingLibrary] = React.useState(false);
+  const [isDeletingAccount, setDeletingAccount] = React.useState(false);
 
   const handleLogout = () => {
     signOut();
+  };
+
+  const handleDeleteAccount = () => {
+    if (!user) {
+      Alert.alert('Sign in required', 'Please sign in to delete your account.');
+      return;
+    }
+    if (!user.email?.trim()) {
+      Alert.alert(
+        'Email needed',
+        'Open account settings on the website to provide an email for the completion notice.',
+        [
+          { text: 'Open account settings', onPress: () => openExternalLink('https://planterior.app/app/account') },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your account and cloud-stored designs and photos. Designs saved on this device will be removed now. A subscription billed by an app store must be cancelled there separately.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Request deletion',
+          style: 'destructive',
+          onPress: () => { void submitDeletionRequest(); },
+        },
+      ],
+    );
+  };
+
+  const submitDeletionRequest = async () => {
+    if (!user || !requireNetwork('Please connect to the internet to delete your account.')) return;
+    setDeletingAccount(true);
+    let requestAccepted = false;
+    try {
+      await requestAccountDeletion(user.email);
+      requestAccepted = true;
+      await databaseService.deleteLocalAccountData(user.id);
+      await AsyncStorage.multiRemove([
+        `@planterior/design-draft/v1/${user.id}`,
+        `@planterior_token_banner_seen:${user.id}`,
+      ]);
+      await signOut();
+      Alert.alert('Deletion requested', 'Your request was received. We will complete it within 30 days and email you when it is done.');
+    } catch (error) {
+      console.error('Account deletion request failed:', error);
+      Alert.alert(
+        requestAccepted ? 'Local cleanup incomplete' : 'Could not request deletion',
+        requestAccepted
+          ? 'Your cloud deletion request was received, but this device could not finish removing local data. Please try Delete Account again.'
+          : 'Please try again when you are connected.',
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const handleUpgrade = (initialProductKind: 'monthly' | 'room_pack' = 'monthly') => {
@@ -452,7 +514,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.menuItem, styles.menuItemLast, pressed && styles.menuItemPressed]}
+            style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
             onPress={() => openExternalLink('https://planterior.app/privacy')}
             accessibilityRole="button"
             accessibilityLabel="Privacy Policy"
@@ -461,6 +523,21 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             <AppIcon name="FileText" size={24} color={theme.colors.text} />
             <Text style={styles.menuText}>Privacy Policy</Text>
             <AppIcon name="CaretRight" size={20} color={theme.colors.textSecondary} />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, styles.menuItemLast, pressed && styles.menuItemPressed]}
+            onPress={handleDeleteAccount}
+            disabled={isDeletingAccount}
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+            testID="account-delete"
+          >
+            <AppIcon name="Trash" size={24} color={theme.colors.destructive} />
+            <Text style={[styles.menuText, { color: theme.colors.destructive }]}>
+              {isDeletingAccount ? 'Requesting deletion…' : 'Delete Account'}
+            </Text>
+            <AppIcon name="CaretRight" size={20} color={theme.colors.destructive} />
           </Pressable>
         </View>
 

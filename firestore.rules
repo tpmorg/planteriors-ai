@@ -74,6 +74,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
+    function deletionNotRequested(uid) {
+      return !exists(/databases/$(database)/documents/account_deletion_requests/$(uid));
+    }
+
     function isNonEmptyString(value, minLen, maxLen) {
       return value is string && value.size() >= minLen && value.size() <= maxLen;
     }
@@ -265,30 +269,30 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create: if isOwner(uid) && isValidUserProfile(uid);
+      allow create: if isOwner(uid) && deletionNotRequested(uid) && isValidUserProfile(uid);
       allow read: if isOwner(uid);
-      allow update: if isOwner(uid) && isValidUserProfile(uid) && unchanged(['uid', 'createdAt']);
+      allow update: if isOwner(uid) && deletionNotRequested(uid) && isValidUserProfile(uid) && unchanged(['uid', 'createdAt']);
       allow delete: if false;
 
       match /sync_meta/{docId} {
         allow read: if isOwner(uid);
-        allow create: if isOwner(uid) && docId == 'profile' && isValidSyncMeta();
-        allow update: if isOwner(uid) && docId == 'profile' && isValidSyncMeta() && unchanged(['createdAt']);
+        allow create: if isOwner(uid) && deletionNotRequested(uid) && docId == 'profile' && isValidSyncMeta();
+        allow update: if isOwner(uid) && deletionNotRequested(uid) && docId == 'profile' && isValidSyncMeta() && unchanged(['createdAt']);
         allow delete: if false;
       }
 
       match /collections/{collectionId} {
         allow read: if isOwner(uid);
-        allow create: if isOwner(uid) && isValidCollection(collectionId);
-        allow update: if isOwner(uid) && isValidCollection(collectionId) && unchanged(['id', 'createdAt']);
-        allow delete: if isOwner(uid);
+        allow create: if isOwner(uid) && deletionNotRequested(uid) && isValidCollection(collectionId);
+        allow update: if isOwner(uid) && deletionNotRequested(uid) && isValidCollection(collectionId) && unchanged(['id', 'createdAt']);
+        allow delete: if isOwner(uid) && deletionNotRequested(uid);
       }
 
       match /designs/{designId} {
         allow read: if isOwner(uid);
-        allow create: if isOwner(uid) && isValidDesign(uid, designId);
-        allow update: if isOwner(uid) && isValidDesign(uid, designId) && unchanged(['id', 'createdAt']);
-        allow delete: if isOwner(uid);
+        allow create: if isOwner(uid) && deletionNotRequested(uid) && isValidDesign(uid, designId);
+        allow update: if isOwner(uid) && deletionNotRequested(uid) && isValidDesign(uid, designId) && unchanged(['id', 'createdAt']);
+        allow delete: if isOwner(uid) && deletionNotRequested(uid);
       }
 
       // AI control-plane records are server-owned. Admin SDK access is
