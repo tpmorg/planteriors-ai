@@ -206,7 +206,10 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
   }
 
   return (
-    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+    <SafeAreaView
+      edges={['top', 'right', 'bottom', 'left']}
+      style={styles.container}
+    >
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
 
@@ -218,11 +221,6 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onDesignSelect
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title} testID="screen-favorites">Favorites</Text>
-          <Text style={styles.subtitle}>Your favorite designs and saved collections</Text>
-        </View>
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Favorites</Text>
@@ -458,22 +456,6 @@ const createStyles = (theme: any, isTablet: boolean) =>
     },
     loadingText: {
       fontSize: 16,
-      color: theme.colors.textSecondary,
-    },
-    header: {
-      marginTop: 12,
-      marginHorizontal: 16,
-      marginBottom: 14,
-    },
-    title: {
-      fontSize: 30,
-      fontWeight: '700',
-      color: theme.colors.text,
-      fontFamily: 'serif',
-    },
-    subtitle: {
-      marginTop: 4,
-      fontSize: 14,
       color: theme.colors.textSecondary,
     },
     section: {

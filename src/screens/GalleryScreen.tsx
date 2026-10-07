@@ -622,15 +622,6 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
       ) : (
         <>
           <View style={styles.topBar}>
-            <View style={styles.topBarCopy}>
-              <Text style={styles.topBarTitle} testID="screen-gallery">Gallery</Text>
-              <Text style={styles.topBarSubtitle}>
-                {designs.length === 0
-                  ? 'Your saved room previews will show up here'
-                  : `${designs.length} saved ${designs.length === 1 ? 'design' : 'designs'}`}
-              </Text>
-            </View>
-
             <Pressable
               testID="gallery-open-account"
               onPress={openAccountSheet}
@@ -923,27 +914,12 @@ const createStyles = (
     color: theme.colors.textSecondary,
   },
   topBar: {
-    marginTop: 12,
+    marginTop: 8,
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  topBarCopy: {
-    flex: 1,
-  },
-  topBarTitle: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: theme.colors.text,
-    fontFamily: 'serif',
-  },
-  topBarSubtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    justifyContent: 'flex-end',
   },
   accountButton: {
     width: 48,

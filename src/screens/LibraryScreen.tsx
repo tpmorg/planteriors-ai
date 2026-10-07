@@ -308,11 +308,10 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({ onPlantSelect }) =
   }, [isVoiceSearchAvailable, isVoiceSearchBusy, showToast, voiceSearchContext]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]} testID="screen-library">Library</Text>
-      </View>
-
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['top']}
+    >
       <View style={[styles.searchContainer, { paddingHorizontal: listHorizontalPadding }]}>
         <View style={styles.searchRow}>
           <View
@@ -592,21 +591,6 @@ function getOptionLabel(key: FilterKey, value: string) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    fontFamily: 'serif',
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    marginTop: 2,
   },
   searchContainer: {
     paddingTop: 10,

@@ -224,7 +224,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
   const styles = createStyles(theme);
 
   return (
-    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.container}>
+    <SafeAreaView
+      edges={['top', 'right', 'bottom', 'left']}
+      style={styles.container}
+    >
       <View style={styles.backdropBlobA} />
       <View style={styles.backdropBlobB} />
       <ScrollView
@@ -233,11 +236,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenOnboarding
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        <View style={styles.header}>
-          <Text style={styles.title} testID="screen-settings">Settings</Text>
-          <Text style={styles.subtitle}>Control quality and app behavior</Text>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
 
@@ -429,24 +427,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
-  },
-  header: {
-    marginTop: 8,
-    marginBottom: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 10,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: theme.colors.text,
-    letterSpacing: 0.2,
-    fontFamily: 'serif',
-  },
-  subtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
   },
   section: {
     backgroundColor: theme.colors.surface,
